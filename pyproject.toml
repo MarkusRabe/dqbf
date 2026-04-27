@@ -11,16 +11,20 @@ requires-python = ">=3.11"
 license = { file = "LICENSE" }
 authors = [{ name = "Markus Rabe" }]
 dependencies = [
-  "py-aiger>=6.0",
-  "py-aiger-bv>=4.0",
   "lark>=1.1",
   "click>=8.1",
 ]
 
 [project.optional-dependencies]
+aiger = [
+  "py-aiger>=6.0",
+  "py-aiger-bv>=4.0",
+]
+
 dev = [
   "pytest>=8",
   "pytest-xdist>=3",
+  "pytest-timeout>=2",
   "ruff>=0.4",
   "mypy>=1.10",
 ]
@@ -58,3 +62,6 @@ warn_unused_ignores = true
 testpaths = ["provers", "tools", "benchmarks", "tests"]
 python_files = ["*_test.py", "test_*.py"]
 addopts = "-q"
+markers = [
+  "integration: end-to-end tests under tests/integration (slow; nightly)",
+]

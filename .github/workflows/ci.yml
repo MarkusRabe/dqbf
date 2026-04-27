@@ -1,0 +1,77 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Lint (ruff)
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Type check (mypy)
+        run: mypy provers tools benchmarks/runner
+      - name: Unit tests
+        run: pytest -m "not integration"
+
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect Rust crates
+        id: detect
+        run: |
+          if git ls-files '**/Cargo.toml' | grep -q .; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: dtolnay/rust-toolchain@stable
+        if: steps.detect.outputs.present == 'true'
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        if: steps.detect.outputs.present == 'true'
+      - name: cargo fmt
+        if: steps.detect.outputs.present == 'true'
+        run: |
+          for f in $(git ls-files '**/Cargo.toml'); do
+            cargo fmt --manifest-path "$f" -- --check
+          done
+      - name: cargo clippy
+        if: steps.detect.outputs.present == 'true'
+        run: |
+          for f in $(git ls-files '**/Cargo.toml'); do
+            cargo clippy --manifest-path "$f" --all-targets -- -D warnings
+          done
+      - name: cargo test
+        if: steps.detect.outputs.present == 'true'
+        run: |
+          for f in $(git ls-files '**/Cargo.toml'); do
+            cargo test --manifest-path "$f"
+          done
+      - name: No Rust crates yet
+        if: steps.detect.outputs.present != 'true'
+        run: echo "No Cargo.toml found; skipping Rust checks."
