@@ -50,13 +50,27 @@ forkres/
 
 ## Plan
 
-- [ ] `formula.py` + round-trip parse/print tests.
-- [ ] `rules.py` with property tests (resolution soundness, fork
-      annotation invariants).
-- [ ] Naive saturation search; pass `tests/integration/tiny/`.
-- [ ] Certificate extraction; every SAT result verified by
-      `tools/verify/`.
-- [ ] Refutation trace + independent checker.
-- [ ] Rust port: `dqdimacs` crate fuzzed against the Python parser, then
-      `rules.py` ported 1:1 with proptest fixtures, then search loop with
-      watched literals; wire into `benchmarks/runner/`.
+Phased; each phase is green before the next starts.
+
+1. **Python core.** `formula.py` (DQDIMACS parse + round-trip print
+   tests), `clause.py`, `rules.py` (Res / ∀Red / FEx / SFEx as pure
+   functions, property-tested for soundness + annotation invariants),
+   naive saturation `search.py`. Pass the hand-sized SAT/UNSAT set in
+   `tests/integration/tiny/`.
+2. **Certificate extraction.** Track per-clause provenance during search;
+   on SAT, synthesize Skolem AIGs via py-aiger; round-trip every result
+   through `tools/verify/`.
+3. **Refutation trace.** Line-based `.frp` proof format; independent
+   replayer in `tools/verify/` reusing `rules.py`.
+4. **Rust port** (only once 1–3 are stable):
+   - [ ] `rust/dqdimacs/` crate; fuzz against the Python parser.
+   - [ ] Port `rules.py` 1:1; proptest each rule against the Python
+         reference via a JSON fixture corpus (or PyO3).
+   - [ ] Search loop with watched-literal clause DB.
+   - [ ] Wire into `benchmarks/runner/`;
+         `tests/integration/diff_provers.py` enforces parity.
+   - [ ] Profile on `benchmarks/dqbf/qbfeval/`; optimize hot paths
+         (lift `forbid(unsafe_code)` only where profiling justifies it).
+5. **Heuristics.** Variable / clause selection, dependency-aware
+   ordering, restart schedule. Gated behind flags; **off by default** in
+   the Python reference so it stays a clean oracle.
