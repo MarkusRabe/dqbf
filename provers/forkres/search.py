@@ -1,9 +1,10 @@
 """Naive fork-resolution refutation search.
 
 Correctness-only: saturate Res+∀Red, then apply FEx on information-fork
-clauses and re-saturate, up to a step budget. Returns UNSAT when the
-empty clause is derived; SAT when saturation is reached with no fork
-clauses left; otherwise UNKNOWN.
+clauses and re-saturate, up to a step budget. Returns UNSAT (with a
+checkable Proof) when the empty clause is derived; SAT (with a Skolem
+certificate found by brute force) when saturation is reached with no
+fork clauses left; otherwise UNKNOWN.
 """
 
 from __future__ import annotations
@@ -13,11 +14,13 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from core.formula import Clause, Formula
+from core.semantics import Skolem, find_skolem
+from provers.forkres.proof import Proof
 from provers.forkres.rules import (
     find_information_fork,
     fork_extend,
     is_tautology,
-    resolvents,
+    resolve,
     universal_reduce,
 )
 
@@ -29,22 +32,104 @@ class Result(Enum):
 
 
 @dataclass
-class Trace:
-    steps: list[str] = field(default_factory=list)
-
-    def log(self, msg: str) -> None:
-        self.steps.append(msg)
-
-
-@dataclass
 class SearchConfig:
     max_clauses: int = 5_000
     max_forks: int = 32
     timeout_s: float = 1.0
+    extract_cert: bool = True
 
 
-def _saturate(f: Formula, clauses: set[Clause], cfg: SearchConfig, deadline: float) -> set[Clause]:
-    """Res+∀Red to fixpoint or budget."""
+@dataclass
+class SearchOutput:
+    result: Result
+    proof: Proof | None = None
+    skolem: Skolem | None = None
+    log: list[str] = field(default_factory=list)
+
+
+def solve(f: Formula, cfg: SearchConfig | None = None) -> SearchOutput:
+    cfg = cfg or SearchConfig()
+    deadline = time.monotonic() + cfg.timeout_s
+    out = SearchOutput(result=Result.UNKNOWN)
+    proof = Proof()
+
+    idx: dict[Clause, int] = {}
+
+    def admit(c: Clause, **kw) -> int:
+        if c in idx:
+            return idx[c]
+        i = proof.add(clause=tuple(sorted(c)), **kw)
+        idx[c] = i
+        return i
+
+    g = f
+    clauses: set[Clause] = set()
+    for c in g.clauses:
+        if is_tautology(c):
+            continue
+        ai = admit(c, rule="axiom")
+        rc = universal_reduce(g, c)
+        if rc != c:
+            admit(rc, rule="ured", premises=(ai,))
+        clauses.add(rc)
+
+    if frozenset() in clauses:
+        out.result = Result.UNSAT
+        out.proof = proof
+        return out
+
+    forks = 0
+    while True:
+        clauses, derived_empty = _saturate(g, clauses, idx, admit, cfg, deadline)
+        if derived_empty:
+            out.result = Result.UNSAT
+            out.proof = proof
+            out.log.append(f"derived ⊥ after {len(clauses)} clauses, {forks} forks")
+            return out
+        if time.monotonic() > deadline or len(clauses) > cfg.max_clauses:
+            out.log.append(f"budget exhausted: {len(clauses)} clauses, {forks} forks")
+            return out
+        forked_any = False
+        for c in sorted(clauses, key=lambda x: (len(x), tuple(sorted(x)))):
+            pair = find_information_fork(g, c)
+            if pair is None:
+                continue
+            a, _b = pair
+            part = frozenset(lit for lit in c if abs(lit) == a or g.dep(abs(lit)) <= g.dep(a))
+            fr = fork_extend(g, c, part)
+            g = fr.formula
+            src = idx[c]
+            admit(fr.left, rule="fex", premises=(src,), part=tuple(sorted(part)), fresh=fr.fresh)
+            admit(fr.right, rule="fex", premises=(src,), part=tuple(sorted(part)), fresh=fr.fresh)
+            clauses.discard(c)
+            for nc in (fr.left, fr.right):
+                rnc = universal_reduce(g, nc)
+                if rnc != nc:
+                    admit(rnc, rule="ured", premises=(idx[nc],))
+                clauses.add(rnc)
+            forks += 1
+            forked_any = True
+            out.log.append(f"FEx on {sorted(c)} → x{fr.fresh}")
+            break
+        if not forked_any:
+            out.result = Result.SAT
+            out.log.append(f"saturated, no forks: {len(clauses)} clauses")
+            if cfg.extract_cert:
+                out.skolem = find_skolem(f)
+            return out
+        if forks >= cfg.max_forks:
+            out.log.append(f"fork budget exhausted ({forks})")
+            return out
+
+
+def _saturate(
+    g: Formula,
+    clauses: set[Clause],
+    idx: dict[Clause, int],
+    admit,
+    cfg: SearchConfig,
+    deadline: float,
+) -> tuple[set[Clause], bool]:
     todo = list(clauses)
     db = set(clauses)
     while todo:
@@ -54,58 +139,18 @@ def _saturate(f: Formula, clauses: set[Clause], cfg: SearchConfig, deadline: flo
         for d in list(db):
             if d is c:
                 continue
-            for r in resolvents(f, c, d):
-                if r not in db:
-                    db.add(r)
-                    todo.append(r)
-                    if not r:
-                        return db
-    return db
-
-
-def solve(f: Formula, cfg: SearchConfig | None = None) -> tuple[Result, Trace]:
-    cfg = cfg or SearchConfig()
-    deadline = time.monotonic() + cfg.timeout_s
-    trace = Trace()
-
-    clauses: set[Clause] = set()
-    for c in f.clauses:
-        rc = universal_reduce(f, c)
-        if not is_tautology(rc):
-            clauses.add(rc)
-    if frozenset() in clauses:
-        trace.log("empty clause in input after ∀-reduction")
-        return Result.UNSAT, trace
-
-    g = f
-    forks = 0
-    while True:
-        clauses = _saturate(g, clauses, cfg, deadline)
-        if frozenset() in clauses:
-            trace.log(f"derived ⊥ after {len(clauses)} clauses, {forks} forks")
-            return Result.UNSAT, trace
-        if time.monotonic() > deadline or len(clauses) > cfg.max_clauses:
-            trace.log(f"budget exhausted: {len(clauses)} clauses, {forks} forks")
-            return Result.UNKNOWN, trace
-        forked_any = False
-        for c in sorted(clauses, key=len):
-            pair = find_information_fork(g, c)
-            if pair is None:
-                continue
-            a, _b = pair
-            part = frozenset(lit for lit in c if abs(lit) == a or g.dep(abs(lit)) <= g.dep(a))
-            fr = fork_extend(g, c, part)
-            g = fr.formula
-            clauses.discard(c)
-            clauses.add(universal_reduce(g, fr.left))
-            clauses.add(universal_reduce(g, fr.right))
-            forks += 1
-            forked_any = True
-            trace.log(f"FEx on {sorted(c)} → fresh x{fr.fresh}")
-            break
-        if not forked_any:
-            trace.log(f"saturated, no forks: {len(clauses)} clauses")
-            return Result.SAT, trace
-        if forks >= cfg.max_forks:
-            trace.log(f"fork budget exhausted ({forks})")
-            return Result.UNKNOWN, trace
+            for lit in c:
+                if -lit not in d:
+                    continue
+                r = resolve(c, d, abs(lit))
+                if r is None:
+                    continue
+                rr = universal_reduce(g, r)
+                if rr in db:
+                    continue
+                admit(rr, rule="res", premises=(idx[c], idx[d]), pivot=abs(lit))
+                db.add(rr)
+                todo.append(rr)
+                if not rr:
+                    return db, True
+    return db, False
