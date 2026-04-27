@@ -13,6 +13,9 @@ from __future__ import annotations
 
 import itertools
 import json
+import shutil
+import subprocess
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -137,6 +140,58 @@ def encode_verification(f: Formula, aig: Aag) -> VerifyCNF:
     return VerifyCNF(
         n_vars=next_id - 1, clauses=clauses, varmap=varmap, dep_violations=dep_violations
     )
+
+
+# --- optional SAT-solver backends -----------------------------------------
+
+
+def solve_cnf(n_vars: int, clauses: list[list[int]]) -> tuple[bool | None, list[int] | None]:
+    """SAT-solve via the first available backend.
+
+    Returns (is_sat, model) where model is the list of true-polarity
+    literals; (None, None) if no backend is installed.
+    """
+    try:
+        from pysat.solvers import Solver  # type: ignore[import-not-found]
+
+        with Solver(name="cadical195", bootstrap_with=clauses) as s:
+            sat = s.solve()
+            return (sat, s.get_model() if sat else None)
+    except ImportError:
+        pass
+    for exe in ("cadical", "kissat"):
+        path = shutil.which(exe)
+        if not path:
+            continue
+        with tempfile.NamedTemporaryFile("w", suffix=".cnf", delete=False) as tf:
+            tf.write(f"p cnf {n_vars} {len(clauses)}\n")
+            for c in clauses:
+                tf.write(" ".join(str(x) for x in c) + " 0\n")
+            tmp = tf.name
+        cp = subprocess.run([path, tmp], capture_output=True, text=True)
+        Path(tmp).unlink(missing_ok=True)
+        if cp.returncode == 10:
+            model = [
+                int(t)
+                for ln in cp.stdout.splitlines()
+                if ln.startswith("v ")
+                for t in ln[2:].split()
+                if t != "0"
+            ]
+            return (True, model)
+        if cp.returncode == 20:
+            return (False, None)
+        return (None, None)
+    return (None, None)
+
+
+def decode_model(model: list[int], varmap: dict[str, dict[str, int]]) -> dict[str, object]:
+    """Turn a SAT model of the verification CNF into a counterexample."""
+    pos = {abs(x) for x in model if x > 0}
+    return {
+        "universals": {u: (v in pos) for u, v in varmap["universals"].items()},
+        "violated_clauses": [i for i, v in varmap["violated_clause"].items() if v in pos],
+    }
 
 
 # --- tiny-instance fallback (kept for tests; enumerates 2^|U|) ------------

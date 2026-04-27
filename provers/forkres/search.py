@@ -21,6 +21,7 @@ from provers.forkres.rules import (
     fork_extend,
     is_tautology,
     resolve,
+    strong_fork_extend,
     universal_reduce,
 )
 
@@ -96,11 +97,22 @@ def solve(f: Formula, cfg: SearchConfig | None = None) -> SearchOutput:
                 continue
             a, _b = pair
             part = frozenset(lit for lit in c if abs(lit) == a or g.dep(abs(lit)) <= g.dep(a))
-            fr = fork_extend(g, c, part)
-            g = fr.formula
+            d1, d2 = g.clause_dep(part), g.clause_dep(c - part)
+            inter = d1 & d2
             src = idx[c]
-            admit(fr.left, rule="fex", premises=(src,), part=tuple(sorted(part)), fresh=fr.fresh)
-            admit(fr.right, rule="fex", premises=(src,), part=tuple(sorted(part)), fresh=fr.fresh)
+            spart = tuple(sorted(part))
+            if inter and (inter == d1 or inter == d2):
+                u = min(inter)
+                fr = strong_fork_extend(g, c, part, c3=frozenset({u}))
+                rule, c3 = "sfex", (u,)
+                out.log.append(f"SFEx on {sorted(c)} c3={{{u}}} → x{fr.fresh}")
+            else:
+                fr = fork_extend(g, c, part)
+                rule, c3 = "fex", None
+                out.log.append(f"FEx on {sorted(c)} → x{fr.fresh}")
+            g = fr.formula
+            admit(fr.left, rule=rule, premises=(src,), part=spart, c3=c3, fresh=fr.fresh)
+            admit(fr.right, rule=rule, premises=(src,), part=spart, c3=c3, fresh=fr.fresh)
             clauses.discard(c)
             for nc in (fr.left, fr.right):
                 rnc = universal_reduce(g, nc)
@@ -109,7 +121,6 @@ def solve(f: Formula, cfg: SearchConfig | None = None) -> SearchOutput:
                 clauses.add(rnc)
             forks += 1
             forked_any = True
-            out.log.append(f"FEx on {sorted(c)} → x{fr.fresh}")
             break
         if not forked_any:
             out.result = Result.SAT

@@ -20,6 +20,9 @@ aiger = [
   "py-aiger>=6.0",
   "py-aiger-bv>=4.0",
 ]
+solver = [
+  "python-sat>=1.8",
+]
 
 dev = [
   "pytest>=8",
