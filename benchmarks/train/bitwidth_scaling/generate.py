@@ -1,11 +1,22 @@
-"""Generate bitwidth-scaling EQFOB instances: one BV op, swept over width N.
+"""Generate bitwidth-scaling instances: one BV op, swept over width N.
 
 Each instance is `∃f. ∀x[,y]. f(args) == expr(args)`, compiled to DQBF.
+All instances are SAT by construction (f := the op).
 """
 
 from __future__ import annotations
 
+import gzip
+import json
 from collections.abc import Iterator
+from pathlib import Path
+
+import click
+
+from core import dqdimacs
+from tools.eqfob.eqfob.bitblast import bitblast
+from tools.eqfob.eqfob.parse import parse
+from tools.eqfob.eqfob.typecheck import check
 
 OPS_UNARY = {"id": "x", "not": "~x", "inc": "x + 1"}
 OPS_BINARY = {"add": "x + y", "and": "x & y", "or": "x | y", "xor": "x ^ y"}
@@ -33,13 +44,29 @@ def _src_binary(rhs: str) -> str:
     )
 
 
-def main() -> None:
-    import json
-
+@click.command()
+@click.option("--out", type=click.Path(), default="benchmarks/train/bitwidth_scaling/build")
+@click.option("-D", "widths", default="1,2,3,4")
+def main(out: str, widths: str) -> None:
+    outdir = Path(out)
+    outdir.mkdir(parents=True, exist_ok=True)
+    ws = [int(x) for x in widths.split(",")]
     manifest = []
-    for name, params, _src in instances(widths=[2, 4, 8]):
-        manifest.append({"name": name, "params": params, "expected": "sat"})
-    print(json.dumps(manifest, indent=2))
+    for name, params, src in instances(ws):
+        f = bitblast(check(parse(src), overrides=params))
+        path = outdir / f"{name}.dqdimacs.gz"
+        with gzip.open(path, "wt") as fp:
+            fp.write(dqdimacs.dumps(f))
+        manifest.append(
+            {
+                "path": path.name,
+                "expected": "sat",
+                "params": params,
+                "tags": ["bitwidth_scaling", name.rsplit("_", 1)[0]],
+            }
+        )
+    (outdir / "manifest.json").write_text(json.dumps(manifest, indent=2))
+    print(f"wrote {len(manifest)} instances to {outdir}/")
 
 
 if __name__ == "__main__":

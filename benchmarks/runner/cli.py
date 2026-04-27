@@ -45,5 +45,16 @@ def table_cmd(results: str, group_by: str) -> None:
     print(summarize(load_jsonl(results), group_by=group_by))
 
 
+@main.command("compare")
+@click.argument("baseline", type=click.Path(exists=True))
+@click.argument("candidate", type=click.Path(exists=True))
+def compare_cmd(baseline: str, candidate: str) -> None:
+    from benchmarks.runner.compare import compare, load, render
+
+    cmp = compare(load(baseline), load(candidate))
+    print(render(cmp))
+    sys.exit(0 if cmp["accept"] else 1)
+
+
 if __name__ == "__main__":
     main()

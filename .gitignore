@@ -5,6 +5,9 @@ INTERNAL.md
 # Local-only reference PDFs (copyright)
 docs/references/local/*.pdf
 
+# Generated report
+docs/site/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -35,6 +38,7 @@ benchmarks/**/*.tar.gz
 benchmarks/**/*.tar.bz2
 benchmarks/**/*.zip
 benchmarks/_downloads/
+benchmarks/train/**/build/
 
 # Solver outputs / certificates
 *.aag.out
