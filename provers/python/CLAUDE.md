@@ -8,13 +8,15 @@ it.
 
 ```
 forkres/
-  formula.py     DQDIMACS parser → Formula(universals, existentials: {var: deps}, clauses)
-  clause.py      annotated clause = literals + per-literal annotation (fork copy index)
-  rules.py       resolve(c1, c2, pivot), fork(c, uvar), merge(c) — each pure, each unit-tested
-  search.py      proof search loop (saturation / CDCL-style; pluggable strategy)
-  certificate.py Skolem-function extraction → py-aiger AIG
-  proof.py       refutation trace emit + replay
-  cli.py         argparse entry point honoring the shared contract in ../CLAUDE.md
+  formula.py      DQDIMACS parser → Formula(universals, existentials: {var: deps}, clauses)
+  formula_test.py
+  clause.py       annotated clause = literals + per-literal annotation (fork copy index)
+  rules.py        resolve(c1, c2, pivot), fork(c, uvar), merge(c) — each pure
+  rules_test.py
+  search.py       proof search loop (saturation / CDCL-style; pluggable strategy)
+  certificate.py  Skolem-function extraction → py-aiger AIG
+  proof.py        refutation trace emit + replay
+  cli.py          argparse entry point honoring the shared contract in ../CLAUDE.md
 ```
 
 ## Conventions

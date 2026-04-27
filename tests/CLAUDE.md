@@ -1,8 +1,11 @@
 # tests/
 
-- `unit/` — per-module pytest. Fast; runs on every commit.
-- `integration/` — end-to-end SAT/UNSAT oracle suite (cadet-style).
-  Slower; gated behind `pytest -m integration` and run in CI nightly.
+**End-to-end integration tests only.** Unit tests live next to the code
+they test (`foo.py` → `foo_test.py` in the same directory) so they're
+easy to find and move with the module.
 
-Shared fixtures live in `conftest.py` (tmp dirs, tiny DQDIMACS builders,
-a stub SAT oracle).
+- `integration/` — cadet-style SAT/UNSAT oracle suite. Slower; gated
+  behind `pytest -m integration` and run in CI nightly.
+
+`conftest.py` here holds fixtures shared across integration tests (tmp
+dirs, tiny DQDIMACS builders, a stub SAT oracle).

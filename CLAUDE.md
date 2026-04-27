@@ -28,7 +28,7 @@ tools/
   bmc2dqbf/   bounded model checking → DQBF
   ltlsynth2dqbf/  LTL bounded synthesis → DQBF
 benchmarks/   competition sets + EQFOB families + parallel runner
-tests/        unit + e2e integration (cadet-style SAT/UNSAT oracles)
+tests/        e2e integration only (cadet-style SAT/UNSAT oracles)
 docs/         reference material, format specs
 ```
 
@@ -49,14 +49,16 @@ build-out plan. **Read the local one before editing.**
 - **Top-level absolute imports**, no `from .foo import bar`.
 - **Separate logic from CLI/jit/dispatch wrappers** so core functions are
   unit-testable without process setup.
+- **Tests live next to the code.** `foo.py` → `foo_test.py` in the same
+  directory. `tests/` is for end-to-end integration only.
 
 ## Dev loop
 
 ```bash
 pip install -e ".[dev]"
 ruff check . && mypy .
-pytest                   # unit
-pytest tests/integration # e2e (slow)
+pytest                    # unit: discovers *_test.py next to each module
+pytest tests/integration  # e2e (slow)
 ```
 
 Run a single benchmark family:

@@ -31,6 +31,7 @@ dqbf-verify = "tools.verify.cli:main"
 dqbf-bench = "benchmarks.runner.cli:main"
 
 [tool.hatch.build.targets.wheel]
+exclude = ["**/*_test.py"]
 packages = [
   "provers/python/forkres",
   "tools/eqfob/eqfob",
@@ -54,5 +55,6 @@ strict_optional = true
 warn_unused_ignores = true
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["provers", "tools", "benchmarks", "tests"]
+python_files = ["*_test.py", "test_*.py"]
 addopts = "-q"
