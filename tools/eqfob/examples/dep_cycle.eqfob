@@ -1,0 +1,14 @@
+-- The dependency-cycle counterexample (journal §6) lifted to width N.
+-- y1:{x1,x2}, y2:{x2,x3}, y3:{x1,x3}; matrix: (y1⊕y2⊕y3) ↔ (x1∧x2∧x3).
+-- UNSAT for N=1; exercises Strong Fork Extension.
+param N = 1
+
+fun y1 : bv[N], bv[N] -> bv[1]
+fun y2 : bv[N], bv[N] -> bv[1]
+fun y3 : bv[N], bv[N] -> bv[1]
+
+forall x1 : bv[N]
+forall x2 : bv[N]
+forall x3 : bv[N]
+
+(y1(x1,x2) ^ y2(x2,x3) ^ y3(x1,x3)) == (x1 & x2 & x3)

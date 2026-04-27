@@ -1,0 +1,7 @@
+[
+  {"path": "tiny/copy_sat.dqdimacs",     "expected": "sat"},
+  {"path": "tiny/wrongdep_unsat.dqdimacs","expected": "unsat"},
+  {"path": "tiny/fork_unsat.dqdimacs",   "expected": "unsat"},
+  {"path": "tiny/prop_unsat.dqdimacs",   "expected": "unsat"},
+  {"path": "tiny/trivial_sat.dqdimacs",  "expected": "sat"}
+]

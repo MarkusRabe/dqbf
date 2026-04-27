@@ -1,0 +1,5 @@
+[package]
+name = "dqdimacs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
