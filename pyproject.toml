@@ -30,6 +30,7 @@ dev = [
 ]
 
 [project.scripts]
+forkres = "provers.forkres.cli:main"
 eqfob = "tools.eqfob.cli:main"
 dqbf-verify = "tools.verify.cli:main"
 dqbf-bench = "benchmarks.runner.cli:main"
