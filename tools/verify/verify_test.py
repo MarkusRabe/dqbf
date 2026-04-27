@@ -29,7 +29,10 @@ def test_verify_skolem_rejects_wrong() -> None:
         dependencies={3: [1], 4: [2]},
         clauses=[[-1, 3], [1, -3], [-2, 4], [2, -4]],
     )
-    bad = {3: {(False,): True, (True,): False}, 4: {(False,): False, (True,): True}}
+    bad: dict[int, dict[tuple[bool, ...], bool]] = {
+        3: {(False,): True, (True,): False},
+        4: {(False,): False, (True,): True},
+    }
     assert verify_skolem(f, bad) is False
 
 
@@ -44,7 +47,10 @@ def test_verify_proof_end_to_end() -> None:
 
 def test_aag_writer_produces_valid_header() -> None:
     f = make_formula(universals=[1, 2], dependencies={3: [1], 4: [2]}, clauses=[[-1, 3]])
-    sk = {3: {(False,): False, (True,): True}, 4: {(False,): True, (True,): False}}
+    sk: dict[int, dict[tuple[bool, ...], bool]] = {
+        3: {(False,): False, (True,): True},
+        4: {(False,): True, (True,): False},
+    }
     aag = skolem_to_aag(f, sk)
     assert aag.startswith("aag ")
     lines = aag.strip().splitlines()

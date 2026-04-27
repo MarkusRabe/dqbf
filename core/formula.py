@@ -6,7 +6,7 @@ A clause is a frozenset of literals.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
 
 Lit = int
@@ -105,7 +105,7 @@ class Formula:
 
 def make_formula(
     universals: Iterable[int],
-    dependencies: dict[int, Iterable[int]],
+    dependencies: Mapping[int, Iterable[int]],
     clauses: Iterable[Iterable[Lit]],
     comments: Iterable[str] = (),
 ) -> Formula:

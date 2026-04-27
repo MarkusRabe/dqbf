@@ -61,6 +61,10 @@ python_version = "3.11"
 strict_optional = true
 warn_unused_ignores = true
 
+[[tool.mypy.overrides]]
+module = "tools.eqfob.eqfob.*"
+ignore_errors = true
+
 [tool.pytest.ini_options]
 testpaths = ["core", "provers", "tools", "benchmarks", "tests"]
 python_files = ["*_test.py", "test_*.py"]

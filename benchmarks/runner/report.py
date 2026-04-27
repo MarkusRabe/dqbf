@@ -19,7 +19,7 @@ def summarize(results: list[dict], group_by: str = "family") -> str:
     rows = []
     for g, rs in sorted(groups.items()):
         n = len(rs)
-        by = defaultdict(int)
+        by: dict[str, int] = defaultdict(int)
         for r in rs:
             by[r["status"]] += 1
         walls = sorted(r["wall_s"] for r in rs)
