@@ -54,23 +54,14 @@ jobs:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
         if: steps.detect.outputs.present == 'true'
-      - name: cargo fmt
+      - name: cargo fmt / clippy / test
         if: steps.detect.outputs.present == 'true'
         run: |
-          for f in $(git ls-files '**/Cargo.toml'); do
-            cargo fmt --manifest-path "$f" -- --check
-          done
-      - name: cargo clippy
-        if: steps.detect.outputs.present == 'true'
-        run: |
-          for f in $(git ls-files '**/Cargo.toml'); do
-            cargo clippy --manifest-path "$f" --all-targets -- -D warnings
-          done
-      - name: cargo test
-        if: steps.detect.outputs.present == 'true'
-        run: |
-          for f in $(git ls-files '**/Cargo.toml'); do
-            cargo test --manifest-path "$f"
+          set -euo pipefail
+          for d in $(git ls-files '**/rust/Cargo.toml' | xargs -n1 dirname); do
+            (cd "$d" && cargo fmt --all -- --check)
+            (cd "$d" && cargo clippy --all-targets -- -D warnings)
+            (cd "$d" && cargo test --workspace)
           done
       - name: No Rust crates yet
         if: steps.detect.outputs.present != 'true'

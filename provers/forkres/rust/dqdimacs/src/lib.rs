@@ -33,15 +33,16 @@ pub fn parse(text: &str) -> Result<Formula, ParseError> {
                 if toks.len() != 4 || toks[1] != "cnf" {
                     return Err(ParseError::BadHeader(line.into()));
                 }
-                f.n_vars = toks[2].parse().map_err(|_| ParseError::BadHeader(line.into()))?;
+                f.n_vars = toks[2]
+                    .parse()
+                    .map_err(|_| ParseError::BadHeader(line.into()))?;
                 seen_header = true;
             }
             "a" | "e" | "d" => {
                 if !seen_header {
                     return Err(ParseError::BadLine(lineno + 1, "before header".into()));
                 }
-                let nums: Vec<i32> =
-                    toks[1..].iter().map(|t| t.parse().unwrap_or(0)).collect();
+                let nums: Vec<i32> = toks[1..].iter().map(|t| t.parse().unwrap_or(0)).collect();
                 let body: Vec<u32> = nums[..nums.len() - 1].iter().map(|&x| x as u32).collect();
                 match toks[0] {
                     "a" => f.universals.extend(body),
@@ -52,9 +53,9 @@ pub fn parse(text: &str) -> Result<Formula, ParseError> {
                         }
                     }
                     "d" => {
-                        let (y, ds) = body.split_first().ok_or_else(|| {
-                            ParseError::BadLine(lineno + 1, "empty d".into())
-                        })?;
+                        let (y, ds) = body
+                            .split_first()
+                            .ok_or_else(|| ParseError::BadLine(lineno + 1, "empty d".into()))?;
                         f.dependencies.insert(*y, ds.to_vec());
                     }
                     _ => unreachable!(),
