@@ -184,10 +184,10 @@ Whether `IR-calc` simulates Fork Resolution is open.
 
 ## Primary source materials
 
-- The Google Drive PDF
-  ([link](https://drive.google.com/file/d/1Nt7G73w4qh82EOHWeC-6TUkDrXB74Mcq/view))
-  is the full SAT 2017 proceedings (LNCS 10491) containing the original
-  paper at pp. 314–325.
+- The original SAT 2017 paper appears in LNCS 10491 at pp. 314–325
+  ([doi:10.1007/978-3-319-66263-3_20](https://link.springer.com/chapter/10.1007/978-3-319-66263-3_20)).
+  A local copy is kept at `docs/references/local/rabe_sat2017_forkres.pdf`
+  (not committed; see `docs/references/local/README.md`).
 - The journal revision's LaTeX source is mirrored under
   `docs/references/fork_resolution_journal/`; `main.tex` is the canonical
   rule definitions.

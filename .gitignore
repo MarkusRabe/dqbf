@@ -2,6 +2,9 @@
 INTERNAL.md
 .claude/
 
+# Local-only reference PDFs (copyright)
+docs/references/local/*.pdf
+
 # Python
 __pycache__/
 *.py[cod]
