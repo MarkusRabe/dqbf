@@ -20,6 +20,7 @@ touching the provers.
 ## Layout
 
 ```
+core/         shared Formula IR, DQDIMACS I/O, semantics oracle, certs, AIGER
 provers/      one dir per prover (python and/or rust inside each)
   forkres/    fork-resolution prover — python reference + rust/
 tools/
