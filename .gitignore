@@ -1,5 +1,6 @@
 # Internal-only instructions (not for public repo)
 INTERNAL.md
+.claude/
 
 # Python
 __pycache__/
