@@ -152,7 +152,7 @@ def section_example() -> str:
 <code>forkres copy_sat.dqdimacs --cert copy.skolem.json</code>{pre(cert)}
 <p>emits <code>copy.skolem.json.aag</code>:</p>{pre(aag)}
 <h3>5. Verification CNF + variable map</h3>
-<code>dqbf-verify sat copy_sat.dqdimacs copy.skolem.json.aag -o verify.cnf --map verify.map.json</code>
+<code>dqbf-verify sat copy_sat.dqdimacs copy.skolem.json.aag -o v.cnf --map v.map.json</code>
 {pre(ver)}{pre(cnf_head)}<p>variable map:</p>{pre(vmap)}
 <p>Hand <code>verify.cnf</code> to any SAT solver; <b>UNSAT ⇒ certificate valid</b>.</p>
 """
