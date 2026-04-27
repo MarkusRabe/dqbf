@@ -34,7 +34,7 @@ def test_invalid_cert_yields_sat_cnf() -> None:
         dependencies={3: [1], 4: [2]},
         clauses=[[-1, 3], [1, -3], [-2, 4], [2, -4]],
     )
-    bad_sk = {
+    bad_sk: dict[int, dict[tuple[bool, ...], bool]] = {
         3: {(False,): True, (True,): False},  # y3 = ¬x1 (wrong)
         4: {(False,): False, (True,): True},
     }
@@ -53,7 +53,7 @@ def test_dependency_violation_detected() -> None:
 
 def test_varmap_contents() -> None:
     f = make_formula(universals=[1], dependencies={2: [1]}, clauses=[[2, -1]])
-    sk = {2: {(False,): True, (True,): True}}
+    sk: dict[int, dict[tuple[bool, ...], bool]] = {2: {(False,): True, (True,): True}}
     aig = parse_aag(skolem_to_aag(f, sk))
     enc = encode_verification(f, aig)
     assert "1" in enc.varmap["universals"]

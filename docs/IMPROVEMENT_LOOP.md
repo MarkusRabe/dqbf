@@ -143,7 +143,11 @@ family.
 
 - [x] `benchmarks/{holdout,train}/` split; policy in top-level
       `CLAUDE.md`.
-- [ ] P1: PySAT-backed `tools/verify/sat.py` (`verify_skolem_sat`).
+- [x] P0: verifiers decoupled from `provers/`. `tools/verify/unsat.py`
+      is self-contained; `tools/verify/sat.py` emits DIMACS CNF + var
+      map from a DQDIMACS+AIGER pair (any SAT solver checks it).
+- [ ] P1: wire a SAT solver (PySAT or shell-out to CaDiCaL) so the
+      runner can call `dqbf-verify sat` and get VALID/INVALID directly.
 - [ ] P3: `benchmarks/train/bitwidth_scaling/generate.py` writes real
       `.dqdimacs.gz` + manifest; `dqbf-bench run --family
       train/bitwidth_scaling -D N=2,4,8` works end to end.
