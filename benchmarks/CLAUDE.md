@@ -22,12 +22,12 @@ _downloads/ (gitignored) tarball cache for the download script
 | QBFEVAL'23 PCNF | https://qbf23.pages.sai.jku.at/gallery/ | QDIMACS | 160 MB | script |
 | QBFEVAL'23 QCIR | same | QCIR | 640 MB | script |
 | QBFEVAL'20 PCNF | same | QDIMACS | 368 MB | script |
-| **QBFEVAL DQBF track** | same | DQDIMACS | **4.3 MB** | **yes** → `dqbf/qbfeval/` |
-| **Freiburg HQS** (PEC, controller-synth, BMC) | https://abs.informatik.uni-freiburg.de/src/projectfiles/21/HQS.zip | DQDIMACS | **3.7 MB** | **yes** → `dqbf/hqs/` |
+| **QBFEVAL DQBF track** | same | DQDIMACS | **11 MB** (354 inst.) | **yes** → `dqbf/qbfeval/` |
+| Freiburg HQS PEC/synth | see `dqbf/hqs/README.md` (the published `HQS.zip` is solver source, not instances; benchmark archive TBD) | DQDIMACS | — | README only |
 | QBFLIB historical | https://www.qbflib.org/index_eval.php | QDIMACS | varies | script |
 | SMT-LIB BV (quantified) | https://zenodo.org/records/15493090 | SMT-LIB2 | 102 MB | script |
-| **SMT-LIB UFBV** | same | SMT-LIB2 | **1.6 MB** | **yes** → `qbvf/ufbv/` |
-| **SMT-LIB ABV** | same | SMT-LIB2 | **1.2 MB** | **yes** → `qbvf/abv/` |
+| SMT-LIB UFBV | same | SMT-LIB2 | ~1 GB unpacked | script — see `qbvf/ufbv/README.md` |
+| SMT-LIB ABV | same | SMT-LIB2 | ~29 MB unpacked | script — see `qbvf/abv/README.md` |
 | Pedant eval set | https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.SAT.2022.20 | DQDIMACS | small | reference |
 | DQBDD eval set | https://github.com/jurajsic/DQBDD | DQDIMACS | small | reference |
 
@@ -49,6 +49,8 @@ redistribution terms stays behind `scripts/download_benchmarks.sh`.
 
 - [ ] `scripts/download_benchmarks.sh` — fetch + checksum the large sets
       into `_downloads/`, unpack into `qbf/` / `qbvf/`.
-- [ ] Commit the four small sets listed above with provenance README.
+- [x] Commit QBFEVAL DQBF track with provenance README.
+- [ ] Locate the actual HQS PEC/controller-synth instance archive (the
+      published `HQS.zip` is the solver, not the benchmarks).
 - [ ] `runner/` MVP: parallel exec + per-family summary table.
 - [ ] EQFOB generators for each family under `eqfob/`.

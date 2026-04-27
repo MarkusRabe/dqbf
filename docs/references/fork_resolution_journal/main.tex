@@ -1,0 +1,1066 @@
+% \documentclass[smallcondensed]{svjour3}
+\documentclass{svjour3}
+
+\smartqed  % flush right qed marks, e.g. at end of proof
+
+\journalname{Journal of Automated Reasoning}
+
+% math
+\usepackage{amsmath}
+\usepackage{amssymb}
+%\usepackage{amsthm}
+\usepackage{stmaryrd} % semantic brackets
+\usepackage{wasysym}
+\usepackage{mathtools} % := symbol
+
+%\usepackage{times}
+
+% Figures
+%\usepackage{dblfloatfix}
+\usepackage{rotating}
+\usepackage{pdflscape}
+
+% common
+\usepackage{verbatim}
+\usepackage[hidelinks]{hyperref}
+\usepackage{color}
+
+% pseodocode
+\usepackage[noend]{algpseudocode}
+\usepackage{algorithm}
+
+% Biblatex
+\usepackage{cite}
+
+% proof
+\usepackage{proof}
+
+% tikz
+\usepackage{tikz}
+\usetikzlibrary{arrows,automata,positioning,petri,topaths}
+\usetikzlibrary{decorations.pathmorphing}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.7}
+
+% macros
+\newcommand{\abs}{\mathsf{abs}}
+\newcommand{\ldot}{\mathpunct{.}}
+\newcommand{\btrue}{\text{true}}
+\newcommand{\bfalse}{\text{false}}
+\newcommand{\abscube}{\vec{t}}
+\newcommand{\set}[1]{{\{#1\}}}
+\newcommand{\tuple}[1]{{\langle#1\rangle}}
+\newcommand{\dep}{\mathit{dep}}
+\newcommand{\var}{\mathit{var}}
+\newcommand{\sign}{\mathit{sign}}
+\newcommand{\level}{\mathit{level}}
+\newcommand{\assignment}{\alpha}
+\newcommand{\Assignment}{\mathcal{A}}
+\newcommand{\ass}[1]{\mathbf{#1}}
+\newcommand{\uc}{\mathit{failed}}
+\newcommand{\res}{\mathit{result}}
+\newcommand{\wildcard}{\underline{\hspace{2.5mm}} {}}
+\newcommand{\sat}{\text{SAT}}
+\newcommand{\unsat}{\text{UNSAT}}
+\newcommand{\poset}{\mathit{poset}}
+
+% Nicer overlining for variables with index
+\newcommand{\overlineindex}[1]{\overline{#1\mkern-3mu}\mkern 3mu}
+
+% solver names
+\newcommand{\caqe}{CAQE}
+\newcommand{\rareqs}{RAReQS}
+\newcommand{\depqbf}{DepQBF}
+\newcommand{\ghostq}{GhostQ}
+\newcommand{\qube}{QuBE}
+\newcommand{\bloqqer}{Bloqqer}
+
+\newcommand{\markus}[1]{\marginpar{\textbf{M:} #1}}
+\newcommand{\leander}[1]{\marginpar{\textbf{L:} #1}}
+\newcommand{\marktext}[1]{\textcolor{red}{#1}}
+
+\allowdisplaybreaks
+
+%\pagestyle{plain}
+
+% Document title
+\title{Solving DQBF without Universal Expansion}%\thanks{Grants}}
+%\title{Incremental Determinization with Dependencies}
+%\subtitle{Incremental Determinization for QBF and DQBF} 
+% Incremental Determinization for QBF with Uninterpreted Functions
+\author{Markus N. Rabe \and Leander Tentrup}
+\institute{Markus N. Rabe \at Google \and Leander Tentrup \at Saarland University}
+
+\date{Received: date / Accepted: date}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+	We present a sound and complete proof system for Dependency Quantified Boolean Formulas (DQBF).
+	To that end we introduce a new proof rule that we call \emph{Fork Extension}, which allows us to split certain clauses by introducing a new variable with fewer dependencies than the variables in the original clause.
+	This provides an alternative to expansion-based proof systems for DQBF.
+\end{abstract}
+\keywords{satisfiability \and logic \and verification \and synthesis \and quantified Boolean formulas \and automated reasoning \and proof systems}
+
+%============================================================
+\section{Introduction}
+%============================================================
+% The logic Dependency Quantified Boolean Formulas (DQBF) allows us to existentially quantify over functions and thereby enables the concise encoding of many problems in verification and synthesis.
+
+Dependency quantified Boolean formulas (DQBF) is a logic that extends quantified Boolean formulas (QBF) by \emph{Henkin quantifiers} $\exists x:Y.~\varphi$, which  bind a variable $x$, like an existential quantifier, but they also explicitly specify a \emph{dependency set} $Y$ of universal variables that $x$ may depend on~\cite{PetersonReif/1979/MultiplePersonAlternation,Henkin/1961/SomeRemarksOnInfinitelyLongFormulas}.
+Henkin quantifiers allow us to succinctly express the existence of functions satisfying quantified constraints. 
+%For example, we can formulate the existence of a function $\mathit{add}:\mathbb{B}^{32}\times\mathbb{B}^{32}\to\mathbb{B}^{32}$ implementing the axioms of addition in 32-bit arithmetic: $\forall x.~ \mathit{add}(x,0)=x ~\wedge~ S(x)\!=\! x+1 ~\wedge~ \forall x,y.~ \mathit{add}(x,S(y))=S(add(x,y))$, where $x+1$ stands for the increment-by-one circuit encoded as constraints.
+For example, we can formulate the existence of a function $\mathit{add}:\mathbb{B}^{32}\times\mathbb{B}^{32}\to\mathbb{B}^{32}$ implementing the axioms of addition in 32-bit arithmetic: $\forall x.~ \mathit{add}(x,0)=x ~\wedge~ \forall x,y.~ \mathit{add}(x,y+1)=add(x,y)+1$, where $x+1$ stands for the increment-by-one circuit encoded as constraints.
+
+%This encoding additionally requires the definition of the successor function $S$, which has to be encoded as additional constraints.
+%To prove the formula, we have to find an implementation for $\mathit{add}$ satisfying the quantified requirements. 
+%Algorithms for DQBF have to find an implementation for $\mathit{add}$ satisfying the quantified requirements or show the absence of such a function. 
+Previous works developed encodings of bounded reactive synthesis~\cite{FaymonvilleFinkbeinerRabeTentrup/2017/EncodingsOfBoundedSynthesis} and partial equivalence checking of circuits~\cite{GitinaReimerSauerWimmerSchollBecker/2012/PECusingDQBF}.
+In Section~\ref{sect:functions} we show that arbitrary quantification over functions can be expressed succincly in DQBF, which means that we can concisely encode a wide range of applications from verification and synthesis in DQBF.
+We then provide simple encodings of several program verification and program synthesis tasks in Section~\ref{ssect:applications}.
+
+While DQBF is very succinct its syntax is minimal, consisting only of Henkin quantifiers and the usual Boolean connectives.
+Like for SAT and for QBF, we can convert DQBF into a (prenex) conjunctive normal form to simplify the syntax even further.
+This simplicity helps the development of algorithms and DQBF is thus considered to be a potential interface between efficient logical reasoning algorithms and applications in synthesis, verification, and artificial intelligence. % that require impractically large encodings in other logics such as QBF and propositional Boolean logic (SAT).
+Accordingly, several practical reasoning algorithms for DQBF have been proposed~\cite{FrohlichEtAl/2012/ADPLLAlgorithmForSolvingDQBF,GitinaReimerSauerWimmerSchollBecker/2012/PECusingDQBF,FinkbeinerT/2014/FastDQBFRefutation,frohlich2014idq,Gitina2015SolvingDT,WimmerReimerMarinBecker/2017/hqspre,TentrupRabe/2019/ClausalAbstractionForDQBF}, but their performance is still unsatisfactory.
+We argue that this is due to the lack of suitable proof systems.
+
+Resolution is one of the fundamental proof rules for first-order logic~\cite{DavisPutnam/1960/AComputingProcedureForQuantificationTheory} and is the basis for the conflict analysis step in modern SAT solvers~\cite{SilvaSakallah/1997/GRASPaNewSearchAlgorithmForSatisfiability}.
+It says that given two clauses $(x\vee a_1\vee\dots\vee a_n)$ and $(\neg x\vee b_1\vee\dots\vee b_m)$ we can infer the clause $(a_1\vee\dots\vee a_n \vee b_1\vee\dots\vee b_m)$, which we call the \emph{resolvent}.
+Resolution is sufficient to disprove any invalid (unsat) propositional Boolean formula---we say that it is \emph{refutationally complete}.
+
+While resolution is refutationally complete for propositional Boolean formulas, we need a second proof rule for QBF. 
+The \emph{universal reduction} rule says that we can delete a literal of a universal variable from a clause, if no variable in the clause depends on it, i.e., no existential variable in this clause is bound in the scope of the universal variable. % Comment: this is actually wrong in case the universal variable occurs in both polarities
+Resolution and universal reduction form the Q-resolution proof system, which plays a similar role for QBF as resolution plays for SAT~\cite{BuningKarpinskiFlogel/1995/ResolutionforQBF}. 
+Some of the recently popular algorithms for QBF, QCDCL~\cite{ZhangMalik/2002/ConflictDrivenLearningInAQBFSolver,LonsingBiere/2010/DepQBF}, CEGAR~\cite{JanotaSilva/2011/AbstractionBasedAlgorithmFor2QBF,JanotaM/2015/SolvingQBFByClauseSelection,RabeTentrup/2015/CAQEACertifyingQBFSolver,Tentrup/2016/nonprenexqbfsolvingusingabstraction}, and Incremental Determinization~\cite{RabeSeshia/2016/IncrementalDeterminization}, can be phrased as variants of Q-Resolution~\cite{Tentrup/2017/OnExpansionAndResolutionInCEGARbasedQBFsolving}.\leander{Incorrect for RAReQS: $\forall$-exp+res does not have univ reduction.} 
+%But not  JanotaKMC/2012/QBFWithCEGAR
+%Certificates for unsatisfiable SAT and QBF are typically given as resolution proofs. 
+
+While resolution is complete for propositional Boolean logic, and Q-resolution is complete for QBF~\cite{BuningKarpinskiFlogel/1995/ResolutionforQBF}, resolution and Q-resolution are incomplete for DQBF~\cite{BalabanovChiangJiang/2014/ACertificationPerspectiveOfDQBF,BeyersdorffChewSchmidtSuda/2016/LiftingQBFResolutionCalculitoDQBF}. 
+The only known complete proof systems for DQBF resort to universal expansion or (similarly) annotating literals with partial instantiations of the universal variables~\cite{BeyersdorffChewSchmidtSuda/2016/LiftingQBFResolutionCalculitoDQBF}. 
+Intuitively, universal expansion corresponds to making case distinctions.
+And while case distinctions are an important proof technique, humans typically avoid making too many case distinctions in mathematical proofs when the domains are large, as there are more efficient proof techniques. % during proofs and prefer other kinds of arguments  and  they are unsuited as a general solving technique when the domains of the functions to synthesize are very large (e.g. 64-bit integers).
+% This is confirmed experimentally in QBF, where expansion is widely used in preprocessors~\cite{BiereLS/2011/QBCE_Bloqqer,WimmerReimerMarinBecker/2017/hqspre,LonsingEgly/2019/QRATPrePlus}, but using expansion as the primary solving technique is less popular due to its often excessive memory requirements.
+% Instead, most of the popular solvers for SAT and QBF rely on resolution in their reasoning.
+We argue that in order to develop efficient reasoning algorithms for DQBF, we need alternatives to universal expansion.
+% An expansion-free proof system for DQBF might therefore help to develop efficient reasoning algorithms for DQBF.
+
+The contribution of this paper is a new proof system for DQBF, called \emph{Fork Res\-o\-lu\-tion}.
+It uses resolution, universal reduction, and, to achieve completeness, introduces a new proof rule called \emph{Fork Extension}. 
+The new proof rule, Fork Extension, is derived from the classical extension rule~\cite{Tseitin/1968/OnTheComplexityOfDerivationInPropositionalCalculus} which says that, given a clause $C_1 \vee C_2$, we can infer the clauses $C_1 \vee x$ and $C_2\vee\neg x$, where $x$ is a fresh variable.
+Fork extension lifts extension to DQBF by defining the dependency set of the fresh variable $x$ to be the intersection of the dependency sets of $C_1$ and $C_2$. \leander{clauses do not have dependency sets?}
+This provides an alternative to proof systems relying on enumerating cases.
+
+%So, arguably, extension is the inverse of resolution. 
+%The introduction of new variables with the extension rule is a double-edged sword. 
+%On the one hand extended resolution enables compact proofs in propositional boolean logic in cases where the smallest resolution proof has exponential size, e.g. for the pigeon hole principle~\cite{BussTuran1988resolution}. 
+%On the other hand it does not offer a natural termination criterion like resolution and Q-resolutions (i.e. no new resolvents can be derived), because each application of the extension rule enables applications of the resolution rule. 
+%To show completeness of Fork Resolution, we thus need a restricted version of the extension rule.
+
+The key insight in this paper is that the culprit of incompleteness of Q-resolution for DQBF is a specific type of clauses that we call \emph{information forks}.\footnote{The term is borrowed from reactive synthesis of distributed systems~\cite{FinkbeinerSchewe/2005/UniformDistributedSynthesis}.}
+An information fork is a clause that contains variables with incomparable dependency sets. 
+Once we split information forks with the Fork Extension rule the proof system is refutationally complete for DQBF in a normal form that we discuss in Section~\ref{ssect:MNF}.
+
+To understand the intuition behind the Fork Extension rule, let us consider a simple example for the case of disjoint dependency sets: $\exists x_1: \{y_1\}.~\exists x_2:\{y_2\}.~(x_1\vee x_2)$.
+The proof of satisfiability of this formula can be phrased as the question how to split the responsibility to satisfy the clause between variables $x_1$ and $x_2$.
+But $x_1$ and $x_2$ cannot coordinate their decisions, since their dependency sets are disjoint.
+Hence, either $x_1$ or $x_2$ is responsible for satisfying the clause for all universal assignments.
+% Indeed there is no solution to the formula above where not at least one of the Skolem functions is true independent of its input.
+In other words, there must be a constant that indicates which side of the clause is responsible for satisfying the clause. 
+%
+% To prove the satisfiability of the formula, we need to find Skolem functions for $x_1$ and $x_2$ that depend on $y_1$ and $y_2$, respectively, and that satisfy the clause under all universal assignments.
+%To satisfy the clause with a Skolem function, we have to decide in which cases the clause is satisfied by $x_1$ and in which cases it is satisfied by $x_2$. 
+% Variables $x_1$ and $x_2$ have disjoint dependency sets, which means that they cannot depend on the value of the other variable.
+% So the only way to make sure the clause is always satisfied is to require that one of $x_1$ and $x_2$ is \emph{always} responsible for satisfying the clause. 
+With the Fork Extension rule, we introduce a variable $x$ that represents this constant. 
+We split the clause into two clauses $(x_1\vee x)$ and $(\neg x \vee x_2)$ and introduce $x$ with the empty dependency set ($\exists x:\emptyset$). 
+%
+In general, the decision of which side of the clause has to satisfy the clause must be decided based only on the information that is available to both literals, i.e. the intersection of their dependency sets.
+
+The refutational completeness result for Fork Resolution depends on a normal form that we call multi-linear DQBF.
+The normal form restricts the dependency sets to be either disjoint or have a subset relationship (see Section~\ref{ssect:MNF}).
+To get a refutationally complete proof system for general DQBF, we need to strengthen the Fork Extension proof rule.
+In Section~\ref{sect:strong-fork-res} we introduce Strong Fork Resolution and lift the proof of refutational completeness to general DQBF.
+
+This article is structured as follows. 
+We introduce basic notation in Section~\ref{sect:prelim} and provide an encoding of functions in DQBF in Section~\ref{sect:functions} and discuss which applications are enabled by the quantification over functions in Section~\ref{ssect:applications}.
+In Section~\ref{sect:proofsystem} we introduce the Fork Resolution proof system and show its soundness, and in Section~\ref{sect:completeness} we prove its completeness.
+Section~\ref{sect:example} demonstrates that Fork Resolution can refute a formula for which Q-resolution is incomplete.
+To solve DQBF without the normal form from Section~\ref{ssect:MNF}, we strengthen the Fork Resolution proof rule in Section~\ref{sect:strong-fork-res}.
+Finally, in Section~\ref{sect:separation} we discuss how Fork Resolution is separated exponentially from expansion based proof systems.
+% Section~\ref{sect:related} discusses related work.
+
+
+%============================================================
+\section{Dependency Quantified Boolean Formulas}
+\label{sect:prelim}
+%============================================================
+
+Dependency quantified Boolean formulas (DQBFs) over a set of variables $V$ are generated by the following grammar with starting symbol $\psi$: 
+%\vspace{-3pt}
+\[
+\begin{array}{l}
+  \psi ~\coloneqq~ \exists\, v : \set{ v,\dots,v} \ldot \psi ~\mid~ \varphi \\
+  \varphi ~\coloneqq~ 0 ~\mid~ 1 ~\mid~ v ~\mid~ \neg \varphi ~\mid~ \varphi \lor \varphi ~\mid~ \varphi \land \varphi \enspace,
+%  \vspace{-3pt}
+\end{array}
+\]
+where $v\in V$, and $\set{v,\dots,v}$ stands for a finite subset of variables from $V$.
+Quantifiers in DQBF $\exists x: \set{y_1,\dots,y_n}$ specify a single \emph{existential variable} $x$ and also a finite set of \emph{universal variables} $y_1,\dots,y_n$ that $x$ may depend on. 
+We call $y_1,\dots,y_n$ also the \emph{dependency set} of $x$, denoted $\dep(x)$. 
+%The variables that occur in dependency sets are the \emph{universal variables}. 
+%All variables that are not universal are called \emph{existential variables}.
+We say that a quantifier $\exists\, x \colon Y \ldot \varphi$ \emph{binds} the existential variable $x$ in its subformula $\varphi$. 
+To simplify the exposition, we assume that existential variables are bound at most once and that universal variables are never bound. 
+%Existential variables that are not bound by a quantifier are called \emph{free}.
+In this work we assume all DQBFs to be \emph{closed}, i.e. they only contain universal variables and bound existential variables.
+
+We assume that the reader is familiar with the semantics of propositional Boolean formulas and define the semantics of DQBF in the following.
+%We abbreviate multiple quantifications $Q x_1.Q x_2.\dots Q x_n.\varphi$ to the quantification over  a set of variables $Q X.\varphi$, where $x_i\in X$ and $Q\in\{\forall,\exists\}$. % and denote $\forall x_1.\forall x_2.\dots\forall x_n.\varphi$ with $\forall X.\varphi$ and $\exists x_1.\exists x_2.\dots\exists x_n.\varphi$ with $\exists X.\varphi$ for $X=\{x_1,\dots,x_n\}$. 
+An \emph{assignment} $\ass y$ to a set of variables $Y$ is a function $\ass y : Y \rightarrow \mathbb B$ that maps each variable $y \in Y$ to either 1 or 0. 
+Given a set of variables $Y$, we denote the set of assignments to $Y$ with $2^Y$.
+%An \emph{assignment} $\assignment:V\to\mathbb{B}$ of a set of variables $V$ is a function from the variables to the domain $\mathbb{B}$.
+%For simplicity we describe an assignment by the subset $\ass x \subseteq X$ of variables that are assigned true and we will make sure the set $X$ is clear from the context. 
+%Whenever the set $X$ is clear from the context, we define the \emph{complement} $\overline{\ass x}$ to be $\{x\mid x\notin X\}$.
+%We denote \emph{the set of assignments} of a set of variables $X$ by $\Assignment(X)$.
+Given a propositional formula $\varphi$ over variables $X$ and an assignment $\ass x'$ for $X'\subseteq X$, we define $\varphi(\ass x')$ to be the formula obtained by replacing the variables $X'$ by their truth value in $\ass x'$.
+By $\varphi(\ass x',\ass x'')$ we denote the replacement by multiple assignments for disjoint sets $X',X''\subseteq X$. 
+
+A \emph{Skolem function} $f_x$ maps assignments to $\dep(x)$ to assignments to $x$. 
+We define the truth of a DQBF $\varphi$ with existential variables $X=\{x_1,\dots,x_n\}$ and universal variables $Y$ as the existence of Skolem functions $f_X=\{f_{x_1},\dots,f_{x_n}\}$, such that $\varphi(\ass y, f_X(\ass y))$ is satisfiable for every assignment $\ass y$ to $Y$. 
+
+A \emph{literal} $l$ is either a variable $v \in V$, or its negation $\neg v$. 
+We use $\overline{l}$ to denote the \emph{complement} operation that gives the literal with the negated value of $l$ and we define $\var(l)$ to be the variable that the literal contains.
+Given a set of literals $\set{l_1,\dots,l_n}$, their disjunction $(l_1 \lor \ldots \lor l_n)$ is called a \emph{clause}. % and their conjunction $(l_1 \land \ldots \land l_n)$ is called a \emph{cube}. 
+As usual, we use set notation for the manipulation of clauses.
+A clause $C$ is called \emph{tautological} if it contains a literal $l$ and its complement $\overline{l}$.
+\newcommand{\vars}{\mathit{vars}}
+We use $\vars(C)$ to denote the variables occurring in $C$.
+
+A propositional formula is in conjunctive normal form (CNF), if it is a conjunction of clauses. 
+A closed DQBF is in CNF if its propositional subformula is in CNF.
+%W.l.o.g. we assume for all PCNF formulas that none of the clauses contains two opposite literals, which would trivially satisfy the clause, and that all clauses contain at least one literal from an existentially quantified variable. 
+%To simplify the notation, we treat the propositional formulas $\psi$ as sets of clauses $\psi = \set{C_1,\dots,C_n}$, clauses $C$ as sets of literals $C = \set{l_1,\dots,l_m}$, and use set operations like intersection and union for their manipulation.
+Every DQBF $\varphi$ can be transformed into a closed DQBF in CNF with size $O(|\varphi|)$, preserving satisfiability. 
+In the rest of this work we assume DQBFs to be in CNF.
+
+We extend the notation of dependency sets to negated variables (and thus literals), $\dep(\neg v)=\dep(v)$. 
+Applied to clauses, $\dep(C)$ denotes the union of the universal variables and the dependencies of the existential variables in $C$.
+
+
+%============================================================
+\section{Quantification over Functions}
+%============================================================
+\label{sect:functions}
+
+Our interest in DQBF comes from its ability to express existential quantification over functions.
+In the following, we present a simple encoding.
+This encoding is different from Ackermannization for the (first-order) theory of equality and uninterpreted functions~\cite{BruttomessoCimattiFranzenGriggioSantuariSebastiani/2006/Ackermannization}. 
+In particular, the transformation below is linear in the size of the formula. 
+
+To formally define this reduction, consider a logic DQBF+F that includes DQBF and admits the existential quantification over Boolean functions:
+\[
+\begin{array}{l}
+  \psi ~\coloneqq~ \exists\, v :  \set{ v,\dots,v }\ldot \psi ~\mid~ \varphi ~\mid~ \exists\, f:\mathbb{B}^N\to\mathbb{B}.\psi \\
+  \varphi ~\coloneqq~ 0 ~\mid~ 1 ~\mid~ v ~\mid~ \neg \varphi ~\mid~ \varphi \lor \varphi ~\mid~ \varphi \land \varphi ~\mid~ f(\varphi,\dots,\varphi)  \enspace,
+%  \vspace{-3pt}
+\end{array}
+\]
+where $f$ is from a set of function names that is disjoint from variabe names $v$, and $N$ is a natural number.
+We only consider formulas that contain applications with the correct number of arguments.
+% We assume the reader is familiar with the semantics of functions and omit the definition of the semantics of DQBF+F.
+
+ % = \exists f:\mathbb{B}^N\to\mathbb{B}.~\psi
+Consider a formula $\psi$ in DQBF+F with quantifier prefix $Q$ and quantifier-free part $\varphi$.
+We consider a single function $f$ in $\psi$.
+In the following we construct an equivalent formula $\psi'$ that does not contain $f$.
+In essence, every function application of $f$ will be replaced by a new variable bound by a Henkin quantifier.
+Through repeated applications of this transformation, we can eliminate all functions from $\psi$ and obtain a DQBF.
+
+%
+%W.l.o.g. we can assume that arguments in function call are always variables: if an argument in a function call consists of an expression $e$, we can replace it by a fresh variable $x$ with $\dep(x)\supseteq\dep(e)$ and define $x=e$. 
+%This causes only a linear increase in size.
+%
+Let $f$ have $k$ function applications $f(e_{1,1},\dots,e_{1,n})$, \dots, $f(e_{k,1},\dots,e_{k,n})$, where $e_{i,j}$ are quantifier-free formulas.
+We introduce fresh variables $f_1,\dots,f_k$ and dependency sets $X_1,\dots,X_k$, where each $X_i$ consists of $n$ fresh universal variables $x_{i,1},\dots,x_{i,n}$.
+Each of the variables $f_i$ will stand for the one of the function applications.
+
+% Let $\varphi$ be the quantifier-free part of $\psi$ and let $Q$ be its quantifier prefix.
+We define the quantifier prefix of $\psi'$ as $Q$ without the quantifier for $f$ but with the Henkin quantifiers $\exists f_1\colon X_1.~\cdots~\exists f_k \colon X_k$.
+The quantifier-free part $\psi'$ is then defined as follows:
+%\[
+%\begin{array}{ll}
+%	  \exists f_1:Y_1.~\dots~\exists f_k:Y_k.~
+%	  	\bigwedge_{i,i'=1}^k\left(\left(\bigwedge_{j=1}^N x_{i,j} \!=\! x_{i',j}\right)\implies f_i = f_{i'} \right) \wedge \qquad\qquad \\
+%	  \hfill \psi[f(x_{1,1},\dots,x_{1,N})/f_1,~\dots,~f(x_{k,1},\dots,x_{k,N})/f_k]
+%\end{array}
+%\]
+% \[
+% \begin{array}{ll}
+% 	  \bigwedge_{i=2}^k\left(\left(\bigwedge_{j=1}^n x_{1,j} \!=\! x_{i,j}\right)\implies f_1 = f_{i} \right)\wedge
+% 	   \\\qquad\quad
+% 		\left[\left(\bigwedge_{i=1}^k\bigwedge_{j=1}^n e_{i,j} \!=\! x_{i,j}\right) \implies
+% 	  	\varphi[\{f(e_{i,1},\dots,e_{i,n})/f_i\mid 1\leq i\leq k \}]\right]\ldot
+% \end{array}
+% \]
+% \[
+% \begin{array}{ll}
+% 	  \left(\bigwedge_{i=2}^k\left(\bigwedge_{j=1}^n x_{1,j} \!=\! x_{i,j}\right)\implies f_1 = f_{i} \right)\wedge \left(\bigwedge_{i=1}^k\bigwedge_{j=1}^n e_{i,j} \!=\! x_{i,j}\right) ~\implies ~\varphi \qquad\quad
+% 	   \\[14pt]
+% 	  	\mbox{ }\hfill\varphi[\{f(e_{i,1},\dots,e_{i,n})/f_i\mid 1\leq i\leq k \}]\ldot
+% \end{array}
+% \]
+\[\left(\bigwedge_{i=2}^k\left(\bigwedge_{j=1}^n x_{1,j} \!=\! x_{i,j}\right)\implies f_1 = f_{i} \right)\wedge \left(\bigwedge_{i=1}^k\bigwedge_{j=1}^n \sigma(e_{i,j}) \!=\! x_{i,j}\right) ~\implies ~\sigma(\varphi)~,\]
+%
+where $\sigma$ is the substitution of $f(e_{i,1},\dots,e_{i,n})$ by $f_i$ for all function applications $i$.
+
+The first conjunct of the antecedent, $\bigwedge_{i=2}^k\left(\bigwedge_{j=1}^n x_{1,j} \!=\! x_{i,j}\right)\implies f_1 = f_{i}$, requires that variables $f_1,\dots, f_k$ represent the same function.
+(Function applications with the same input result in the same output.)
+% If $f_1$ and $f_i$ have different values for some ``input'' $x^*$, we set $x_1=x_i=x^*$ and see that $f_1=f_i$ is violated. 
+Transitivity of equality allows us to avoid encoding the pairwise equality explicitly and the constraint is only linear in $n\cdot k$.
+The second conjunct of the antecedent, $\bigwedge_{i=1}^k\bigwedge_{j=1}^n \sigma(e_{i,j}) \!=\! x_{i,j}$, requires that the ``inputs'' $x_{i,j}$ need to be the (outcome of the) function arguments.
+Finally, we replace the function applications of $f$ by the new variables $f_i$.
+
+To prove that the construction also works for nested function applications, consider that the function applications with the highest nesting depth do not depend on other function applications and thus their function arguments $x_{i,j}$ are well defined by the second conjunct of the antecedent.
+The rest follows by induction over the nesting depth.
+
+The transformation increases the size only by $O(n\cdot k)$ and in particular does not change the number of function applications of other functions.
+Hence, eliminating multiple functions from a formula does not lead to an explosion of the resulting formula.
+Hence the overall increase in size is linear.
+% The constraints can be transformed into a CNF of linear size with the Tseitin transformation~\cite{Tseitin/1968/OnTheComplexityOfDerivationInPropositionalCalculus}. 
+
+% If $\varphi$ contains multiple functions they can be replaced independently, by first introducing new variables such that no argument of a function contains a function application. 
+% Then replacing one function does not affect the function applications of other functions. 
+% So, the linear increase in size does not multiply over multiple applications of the function elimination and we only get a linear increase in the size of the formula overall. 
+
+For practical considerations we likely want to replace all functions simultaneously, flattening the antecedents with the tautology $A\Rightarrow (B\Rightarrow C)=A\wedge B\Rightarrow C$.
+
+% We can share the variables $f_i$ between function applications if their arguments are the same.
+
+% We can also move the function constraints out so that we get a conjunction at the top level.
+
+
+%This raises the question why DQBF does not include functions as first-class citizens. 
+%
+%
+%We argue that the theoretical study of DQBF 
+%
+%While for practically solving DQBF, special treatment of functions will likely be beneficial, the theoretical study 
+%The advantage of 
+%
+%The advantage of encoding functions as Henkin quantifiers is that it unifies reasoning about (quantified) variables and functions. 
+%As we will see in Section~\ref{sec:proofsystem} this enables an elegant proof system. 
+%Nevertheless, for practically solving DQBF, special treatment of functions will likely be beneficial. 
+
+%Note that DQBF does not allow for \emph{universal} quantification over functions. 
+%The lack of duality of DQBF has been observed already by Balabanov et al.~\cite{BalabanovChiangJiang/2014/ACertificationPerspectiveOfDQBF}. 
+
+%\newcommand{\UP}{\mathit{UP}}
+%We assume that the reader is familiar with unit propagation and define $\UP(\varphi)$ as the partial assignment to the variables in a propositional  $\varphi$ resulting from applying the unit propagation rule until a fixpoint is reached. 
+%We define $\UP(\varphi)=\bot$ if unit propagation results in a conflicting assignment for a variable. 
+
+
+
+%============================================================
+\subsection{Applications of Existential Quantification over Functions}
+%============================================================
+\label{ssect:applications}
+
+DQBF has already been used to encode intriguing applications from verification and synthesis, such as bounded reactive synthesis~\cite{FaymonvilleFinkbeinerRabeTentrup/2017/EncodingsOfBoundedSynthesis} and partial equivalence checking of circuits~\cite{GitinaReimerSauerWimmerSchollBecker/2012/PECusingDQBF}.
+In this section, we sketch additional applications of DQBF to demonstrate how succinct and versatile the logic is.
+To keep the presentation simple, we will continue to use DQBF+F, which can be transformed into DQBF with linear increase in size, as we have shown in Section~\ref{sect:functions}.
+
+\subsubsection{Bounded Model Checking}
+
+Bounded model checking is a practically significant verification algorithm suited for finding bugs that can occur within a fixed number of steps~\cite{BiereCCZ/1999/SymbolicModelCheckingWithoutBDDs}.
+The technique is one of the big success stories of formal verification and powerful tools are available~\cite{KroeningAbrahamHavelund/2014/CBMC}.
+The idea is to encode the transition relation of a given circuit or program as a Boolean formula $T(s,s')$ describing which successors $s'$ can be reached from current state $s$ in one step.
+We then encode paths of length $n$ by the conjunction $\bigwedge_{i<n}T(s_i,s_{i+1})$ and use a SAT solver to check there is a path of up to length $n$ that leads to an error state.
+The states $s$ have to be described as a list of $k$ Boolean variables, and the size of the formula is thus $O(n\cdot k)$.
+
+Even though SAT solvers scale to formulas with millions of variables, it seems unrealistic that they will ever catch up to check large chunks of a system.
+Each bit of memory needs to be encoded as a separate Boolean variable, and thus the exponential growth of memory in modern systems means that SAT solvers would need to scale faster and faster.
+
+With DQBF, we can additionally use functions in the description of the transition relation.
+This allows us describe states with an exponential amount of memory.
+\newcommand{\mem}{\mathit{mem}}
+We can simply introduce a function $\mem:\mathbb{B}^{64}\to\mathbb{B}^8$ representing the memory for a 64 bit address space as found in modern computers.
+Program statements can then be encoded in a straight-forward way by relating the entire memory of the system before and after the execution of the statement.
+Further, we can avoid the big conjunction over the number of steps by considering a function $\mem_n:\mathbb{B}^{64}\times\mathbb{B}^{\log n}\to\mathbb{B}^8$, which encodes the memory for up to $n$ steps.
+This means that bounded model checking for systems with realistic memory for exponentially many steps can be encoded in DQBF of size $O(m\log n)$, where $m$ is the size of the program (and program semantics).
+
+\subsubsection{Synthesis}
+
+In the previous subsection we have used the ability of DQBF to express functions to succinctly encode exponentially large states of a system.
+However, if we stay with encoding states as a finite list of Boolean variables, we can use the existential quantification over functions to encode standard synthesis tasks.
+This has already been demonstrated by the encoding of bounded synthesis for specifications in linear temporal logic~\cite{FaymonvilleFinkbeinerRabeTentrup/2017/EncodingsOfBoundedSynthesis}.
+But we can also easily encode the existence of a ranking function, an invariant, or a winning strategy in safety games.
+
+
+%============================================================
+\section{The Fork Resolution Proof System}
+%============================================================
+\label{sect:proofsystem}
+
+The Fork Resolution proof system consists of the following three rules:
+
+\paragraph{Resolution~\cite{DavisPutnam/1960/AComputingProcedureForQuantificationTheory}:}
+\[
+\frac{C_1\vee l\qquad C_2\vee \overline{l}}{C_1 \vee C_2}\quad(\sf{Res})
+\]
+% preconditions not needed: 
+% - \qquad l\notin C_2
+% - \qquad \overline{l}\notin C_1
+
+We call the clause $C_1 \vee C_2$ that is obtained by the resolution rule the \emph{resolvent} of $C_1$ and $C_2$ and we call $\var(l)$ the \emph{pivot} of this resolution operation.
+% The resolution rule is only applied when the resolvent is not a tautology, i.e. does not contain two complementary literals.
+
+%\footnote{Unlike other works we consider a simplified resolution rule that can be applied to tautological clauses and that can produce tautological resolvents.}
+%Of course, adding or removing tautological clauses does not change the truth of the formula. 
+
+\paragraph{Universal Reduction~\cite{BuningKarpinskiFlogel/1995/ResolutionforQBF}:}
+\[
+\frac{C\vee l \quad 
+	\var(l) \notin \dep(C) \quad
+	\overline{l}\notin C \quad 
+	\var(l)\text{ is universal} % C\cup\{l\}\text{ is not tautological}
+}{C}\quad(\forall \sf{Red})
+\]
+
+\paragraph{Fork Extension:}
+\[
+\frac{C_1 \vee C_2 \qquad x\text{ is fresh}}{\exists x: \dep(C_1)\cap \dep(C_2).~\, (C_1\vee x)\,\wedge\,(C_2\vee\neg x)}(\sf{FEx})
+\] % \qquad \dep(C_1)\not\subseteq\dep(C_2) \qquad \dep(C_1)\not\supseteq\dep(C_2)
+
+The Fork Extension rule introduces a new quantified variable $x$ to split a clause into two parts. 
+The dependency set of $x$ is defined as the intersection of $\dep(C_1)$ and $\dep(C_2)$. 
+The intuition behind Fork Extension is that for each assignment to the universal variables one of the two parts $C_1$ and $C_2$ is ``responsible'' for satisfying the original clause $C_1 \cup C_2$. 
+The variables in $C_1$ and $C_2$ may have different dependency sets, and so they must coordinate their responsibility only based on the information that is common to them. 
+Hence there must be a function defining the responsibilities based only on the intersection of their dependency sets $\dep(C_1)\cap\dep(C_2)$.
+
+
+In the following we recall the soundness of resolution and universal reduction and we prove the soundness of the Fork Extension rule. 
+But first, we introduce two definitions that allow us to zoom in on the neighborhood of a variable.
+
+\begin{definition}[Projection of assignments]
+	Given two sets of variables $X$ and $X'$ with $X'\subseteq X$ and an assignment $\ass x$ to $X$. 
+	We call an assignment $\ass x'$ to $X'$ the \emph{projection} of $\ass x$ to $X'$, if $\ass x'(x)=\ass x(x)$ for all $x\in X'$.
+	We denote the projection of $\ass x$ to $X'$ with $\ass x|_{X'}$.
+\end{definition}
+
+\begin{definition}[Projection of Skolem functions]
+	Let $\varphi$ be a true DQBF in PCNF, let $C$ be a clause in $\varphi$, and let $f:2^Y\to 2^X$ be a Skolem function. 
+	We call a function $f_C:2^{\dep(C)}\to 2^{\vars(C)}$ 
+%	mapping assignments to the dependencies of $C$ to assignments to the variables in $C$ 
+	the \emph{projection} of $f$ to $C$, 
+	if for all assignments $\ass y$ to $Y$ and variables $x$ in $C$ it holds $f(\ass y)(x)=f_C(\ass d)(x)$, 
+	where $\ass d$ is the projection $\ass d$ of $\ass y$ to $\dep(C)$. 
+	We denote the projection of $f$ to $C$ with $f|_C$.
+\end{definition}
+
+\begin{lemma}
+\label{lem:soundness}
+	The fork-resolution proof system for DQBF is sound. 
+\end{lemma}
+
+\begin{proof}
+	We show soundness for each proof rule individually. 
+
+\paragraph{\sf Res. }
+The resolution rule is as usual, with the exception that it is possible to apply resolution to tautological clauses, in which case the resolvent is subsumed by of $C_1\vee l$ or $C_2\vee \overline{l}$. 
+For all other clauses soundness follows from the soundness of QU-resolution for DQBF~\cite{Gelder/2012/QUResolution,BeyersdorffChewSchmidtSuda/2016/LiftingQBFResolutionCalculitoDQBF}.
+%(W.l.o.g. assume $C_1\cup\{l\}$ is a tautology because $C_1$ contains $\overline{l}$. Then $C_1\cup C_2$ contains $C_2\cup\{\overline{l}\}$.)
+%Applying the resolution rule to a clause $C$ that does not contain $l$ or $\overline{l}$ also does no harm, as in this case the resolvent is a superset of $C$. 
+
+\paragraph{\sf $\forall$Red. } (Similarly in~\cite{BalabanovChiangJiang/2014/ACertificationPerspectiveOfDQBF})
+%We consider a DQBF. 
+Let $l$ be a literal of a universal variable $x$ and let $C$ be a clause with $l\in C$ and $\overline{l}\notin C$ and let $x\notin \dep(C)$. 
+If the DQBF is true, there is a function $f_C$ mapping assignments $\vec d$ to $\dep(C)$ to values $f_C(\vec d)$ for the existential variables in $C$, such that clause $C$ is satisfied. 
+%(The function $f_C$ can be obtained by merging the Skolem functions for the individual variables occurring in $C$.)
+In particular, $C$ is satisfied for each assignment to the universals setting $l$ to 0 because $\overline{l}\notin C$. 
+Since $f_C$ is independent of $x$, we know that after removing $l$ from $C$, the clause is still satisfied. % does thus not change the truth of the formula. 
+
+
+%The reduction rule removes at most a single literal $l$ from $C$. 
+%As the complement of $l$ must not be part of $C$, the pair of literals that makes $C$ a tautological clause must still be contained in the produced clause. 
+
+\paragraph{\sf FEx. } 
+%By way of contradiction. 
+Let $\mathcal Q\ldot\varphi$ be a true DQBF in PCNF with quantifier prefix $\mathcal Q$, universal variables $Y$, and existential variables $X$, let $C_1\cup C_2$ be a clause in $\varphi$, and let $x$ be a fresh variable. 
+We show that $\mathcal Q\ldot \exists x: \dep(C_1)\cap\dep(C_2) \ldot\, \varphi \,\wedge\, (C_1\vee x)\,\wedge\, (C_2\vee \neg x)$ is true by constructing a Skolem function $f_x: \dep(C_1)\cap\dep(C_2)\to 2^{\{x\}}$ for $x$ that together with $f_C$, satisfies the (new) constraints.
+
+Consider an arbitrary Skolem function $f$ for $\mathcal Q\ldot\varphi$ and let $\ass y$ be an assignment to $Y$.
+% and let $f_{C_1\cup C_2}$ be its projection to $C_1\cup C_2$,
+%let $\ass y$ be an assignment to $Y$, let $\ass d_C$ its projection to $\dep(C_1)\cup\dep(C_2)$, and let $\ass d_x$ be its projection to $\dep(C_1)\cap\dep(C_2)$. 
+We fix $f_x(\ass y|_{\dep(x)})$ to be 1, if $C_1$ is not satisfied by $\ass y$ or $f(\ass y)$, and we fix $f_x(\ass y|_{\dep(x)})$ to be 0, if $C_2$ is not satisfied by $\ass y$ or $f(\ass y)$. 
+In case both $C_1$ and $C_2$ are satisfied, we (arbitrarily) fix $x$ to be 1. 
+The case that neither $C_1$ and $C_2$ are satisfied contradicts the fact that $f$ is a Skolem function. % truth of the original DQBF. 
+%Intuitively, $f_x$ indicates whether $C_1$ or $C_2$ is responsible for satisfying the original clause. 
+%Next we show, by way of contradiction, that $f_x$   % after applying the {\sf FEx} rule. 
+
+Let us assume that for the given $\ass y$ and Skolem function $f$ one part of the clause is violated, which we assume w.l.o.g. to be $C_1$. 
+%That is, the assignments of neither $\ass y$ nor $f_C(\ass y)$ satisfy $C_1$. 
+To prove the correctness of $f_x$ we have to show that there cannot exist a second assignment $\ass y'$ to $Y$ that agrees with $\ass y$ on the variables $\dep(C_1)\cap\dep(C_2)$ but violates $C_2$ instead. 
+Assuming that there is such an assignment $\ass y'$, we can construct an assignment $\ass y''$ to $Y$ that agrees with $\ass y$ on \emph{all but} the variables of $\dep(C_2)$, and agrees with $\ass y'$ on the variables of $\dep(C_2)$. 
+Since $\ass y$ and $\ass y''$ agree on $\dep(C_1)\cap\dep(C_2)$, assignment $\ass y''$ violates both $C_1$ and $C_2$, which contradicts the satisfaction of $C_1 \vee C_2$. 
+%
+%Let $\ass y_1$ and $\ass y_2$ be assignments to the universals $X$, such that for $\ass y_i$ the clause $C_i$ is {\bf not} satisfied by the assignment $\ass y_i$ and the assignments obtained from the Skolem functions $f_C$ for $\ass y_i$. 
+%It is easily verified that if no such pair of assignments $\ass y_1$ and $\ass y_2$ exists, $f_y$ is correct, i.e. $C_1\cup\{y\}\wedge C_2\cup\{\neg y\}$ is always satisfied. 
+%
+%In order for $\mathcal Q\ldot \exists y: \dep(C_1)\cap\dep(C_2) \ldot \varphi \wedge C_1\cup\{y\}\wedge C_2\cup\{\neg y\}$ to be false, we would need an assignment $\ass y$ where both $C_1$ and $C_2$ are not satisfied by $f_C(\ass y)$. 
+%That implies, however, that $C_1\cup C_2$ is not satisfied, also falsifying the original DQBF. 
+The soundness of the {\sf FEx} rule follows by way of contradiction.
+%\footnote{The attentive reader might notice that the proof of soundness of {\sf FEx} does not refer to the requirement that the dependency sets are incomparable. This requirement is indeed only needed to ensure that the rule cannot be applied ``too often'' and the proof system terminates naturally.}
+\qed
+\end{proof}
+
+
+%============================================================
+\section{Completeness of Fork Resolution for DQBF in a Normal Form}
+\label{sect:completeness}
+%============================================================
+
+The completeness proof presented in this section relies on variable elimination by resolution.
+Variable elimination is a well known technique for SAT and QBF~\cite{BuningKarpinskiFlogel/1995/ResolutionforQBF,Biere/2004/ResolveAndExpand}.
+Given a propositional formula $\varphi$ in CNF over variables $X$ we can eliminate a variable $x\in X$ by adding all resolvents for pivot $x$ and removing all clauses with literals of $x$. 
+We denote the formula obtained through variable elimination $\mathsf{elim}(x, \varphi)$.
+Even though the proof system does not allow us to remove clauses, we will use this as a conceptual tool to indicate which clauses we do not have to worry about any more.
+
+% Lemmas~\ref{lem:elimforks} and \ref{lem:elimleafs} show that after Fork Extension and variable elimination the clauses to which they were applied become obsolete and can be removed. 
+
+\begin{proposition}[Variable elimination~\cite{BuningKarpinskiFlogel/1995/ResolutionforQBF,Biere/2004/ResolveAndExpand}]
+	\label{prop:variableelimination}
+	Let $\varphi$ be a propositional formula in CNF over variables $X$ and a variable $x\in X$.
+	Then for all assignments $\ass x$ to $X\setminus\{x\}$ we have that $\mathsf{elim}(x,\varphi)(\ass x)$ if, and only if, $\exists x\ldot \varphi(\ass x)$. 
+\end{proposition}
+
+Variable elimination thus guarantees the existence of a function (the Skolem function of the newly introduced quantifier) assigning the value of $x$ depending on the values of all other variables.
+To lift variable elimination to DQBF we need a stronger property: the existence of a function that depends only on the variables that $x$ shares variables with.
+We call the set of variables that share a clause with variable $x$ (but without the variable $x$) the \emph{co-occurrence set} of $x$.
+
+% with fewer dependencies
+% Instead of expressing the notion of equivalence between $\varphi$ and $\mathsf{elim}(x,\varphi)$ via existential quantification, we provide a function with minimal dependencies resolving the quantification. 
+
+\begin{lemma}[Variable elimination with dependencies]\label{lem:variableeliminationwithdependencies}
+	Let $\varphi$ be a propositional formula in CNF over variables $X$, let $x$ be a variable in $X$, and let $X'$ be the co-occurrence set $x$.
+	Then there is a function $f_x$ mapping assignments to $X'$ to assignments to $x$ such that for all assignments $\ass x$ to $X\setminus\{x\}$ we have that $\mathsf{elim}(x,\varphi)(\ass x)$ if, and only if, $\varphi(\ass x, f_x(\ass x|_{X'}))$.
+\end{lemma}
+
+\begin{proof}
+	Let $\varphi'$ be the clauses that contain a literal of $x$. 
+	For every assignment $\ass x'$ to $X'$, we define $f_x(\ass x')$ as the value that satisfies $\varphi'$, if one exists. 
+	If there is no such value, we arbitrarily fix $f_x(\ass x')$ to be 1. 
+	
+	\paragraph{\quad``$\Longleftarrow\!$'':~}
+%	Let $\ass x$ be an assignment to $X\setminus\{x\}$ and let $\ass x'$ be the assignment to $X'$ that is extended by $\ass x$ such that $\varphi(\ass x',f_x(\ass x'))$ is true. 
+	Whenever $\varphi$ is true, also $\mathsf{elim}(x,\varphi)$ must be true, because of the soundness of the elimination rule and because removing clauses only makes it easier to satisfy the formula. 
+
+	\paragraph{\quad``$\Longrightarrow \!$'':~}
+	Let $\ass x$ be an assignment to $X\setminus\{x\}$ 
+	such that $\varphi(\ass x, f_x(\ass x|_{X'}))$ is false. 
+	If a clause that does not contain $x$ is violated, then also $\mathsf{elim}(x,\varphi)(\ass x)$ is false, as it contains the same clause. 
+	Otherwise, a clause $C$ containing $x$ is violated. 
+	By choice of $f_x$ we know that $x$ is chosen to be 1, but also for value 0 not all constraints could be satisfied. 
+	Thus there must be a clause $C'$ that is violated if we changed the assignment of $x$.
+	The resolvent of $C$ and $C'$ is violated for $\ass x$. 
+	\qed
+\end{proof}
+
+In DQBF, variable elimination is not always applicable, as the function that we would need to introduce may have to depend on fewer variables than the variables in the co-occurrence set.
+If, however, the variable to eliminate may depend on its co-occurrence set (i.e. the variable's dependency set include the dependencies of its co-occurrence set), it is easy to show that variable elimination works:
+% However, we now show that for a class of variabels that we call \emph{leaf existentials}, variable elimination does work.
+
+\begin{definition}
+We call an existential variable $x$ in a DQBF $\varphi$ a \emph{leaf-existential}, if all variables $x'$ in its co-occurrence set satisfy $\dep(x')\subseteq\dep(x)$.
+\end{definition}
+
+\begin{lemma}[Elimination of leaf existentials, similar to Thm.~4 in~\cite{Wimmer2015preprocessing}]
+\label{lem:elimleafs}
+	Let $\psi = \exists x_1 : Y_1. \dots \exists x_n : Y_n\ldot \varphi$ be a DQBF and let $x_1$ be a leaf-existential.
+	Then  $\psi' = \exists x_2 : Y_2. \dots \exists x_{n} : Y_n\ldot \mathsf{elim}(x_1,\varphi)$ is equivalent to $\psi$. % $ \varphi \wedge \varphi''$ where $\varphi''$ is the conjunction of all resolvents for variable $x_1$. 
+\end{lemma}
+
+\begin{proof}
+	The soundness of resolution immediately gives us $\psi \implies \psi'$. 
+	We prove $\psi'\implies \psi$ in the following: 
+	
+	Let $\varphi''$ be the conjunction of all resolvents with pivot $x_1$. 
+	Let $\psi'$ be true and let $f_{x_2},\dots,f_{x_k}$ be the Skolem functions proving $\psi'$ to be true.
+	Further, let $X'$ be the co-occurrence set of $x_1$. 
+	By Lemma~\ref{lem:variableeliminationwithdependencies} we obtain a function $f_{x_1}$ for $x_1$ mapping the assignments to $X'$ to $\mathbb{B}$ such that $\varphi'[x_1/f_{x_1}(Y')]$ and $\varphi''$ are equivalent. 
+	We can transform $f_{x_1}$ to a Skolem function for $x_1$ with domain $Y_1$ by inlining the definitions for the other Skolem functions, as $\dep(X') \subseteq \dep(x_1)$ due to $x_1$ being a leaf-existential. 
+	\qed
+\end{proof}
+
+As long as a DQBF has leaf existentials, we can apply variable elimination to make progress towards refuting the formula.
+Next we examine what to do when a formula has no leaf existentials.
+This may be because there is no existential variable left to eliminate, and thus we either have an empty formula (which is true), or the formula must have a clause containing only universal variables, from which we can deduce the empty clause using universal reduction.
+
+Otherwise, there must be a clause that contains existentials, but no leaf existential.
+The remainder of this section will show how Fork Extension can be used to split these clauses such that we have leaf existentials in the formula again.
+However, when three or more dependency sets occur in the same clause and are mutually incomparable, but have non-empty intersections Fork Extension cannot split the clause into parts with smaller dependencies, which has caused problems in an earlier version of this work~\cite{Rabe/2017/ResolutionStyleProofSystemForDQBF}.
+To address this problem, we need to introduce a normal form of DQBF.
+
+% %============================================================
+% \subsection{Cycle-free Normal Form}
+% \label{ssect:CFNF}
+% %============================================================
+
+% Let $\psi$ be a DQBF and let ${D}$ be the set of dependencies occurring in $\psi$.
+% Let $D^\cap$ be the closure of $D$ under intersection.
+% We say that $\psi$ is in , if for each $D\in\mathcal{D}^\cap$ there is at most one $D'\in\mathcal{D}$ that is incomparable but has a non-empty intersection.
+
+%============================================================
+\subsection{Multi-linear Normal Form}
+\label{ssect:MNF}
+%============================================================
+
+% The dependency sets of a DQBF are arbitrary sets of universal variables and do not have to be ordered with respect to subset inclusion.
+For the remainder of this section, we will restrict our attention to a normal form of DQBF that we call \emph{Multi-linear Normal Form~(MNF)}.
+% MNF restricts the dependency sets to the empty set $\emptyset$, the set of all universal variables, and multiple sets of linearly ordered dependency sets.
+
+% Given a DQBF $\Phi$, the dependency poset is $\tuple{\mathcal{H}, \subseteq}$, where $\mathcal{H} = \set{\dep(v) \mid v \text{ existential}}$ is the set of all dependency sets.
+\begin{definition}
+A DQBF is in MNF iff for all its dependency sets $H$ and $H'$ it holds that either $H \subseteq H'$, $H \supseteq H'$, or $H \cap H' = \emptyset$.
+\end{definition}
+
+DQBFs from applications often are already in MNF.
+In particular, the encoding of functions presented in Section~\ref{sect:functions}, and all the applications listed in that section result naturally in this normal form.
+DQBF that are not aready in MNF can be transformed to MNF with a linear increase of the formula size:
+Assume there is some $H,H' \in \mathcal{H}$ with $H \nsubseteq H'$, $H \nsupseteq H'$, and $X = H \cap H'$ with $X \neq \emptyset$.
+To remove the shared dependencies $X$, we introduce a copy of the variables, called $X'$, and modify the dependency sets to $H' = (H' \setminus X) \cup X'$.
+Further, we add the formula $\bigwedge_{x \in X}(x \leftrightarrow x')$ as an antecedent to the propositional part of the DQBF.
+A repeated application of this transformation leads to a formula in MNF.
+
+%We identified information forks as the core problem for resolution-based proof systems for DQBF. 
+%In the following we show that we can eliminate existential variables through resolution, if we first eliminate information forks using {\sf FEx}.
+
+
+
+%============================================================
+\subsection{Information Forks}
+\label{ssect:informationforks}
+%============================================================
+
+We are now ready to deal with formulas that have existentials, but no leaf existentials.
+% Consider a clause $C$ that has an existential but no leaf existential.
+We now prove that these formulas must have a clause that consists of two parts $C_1\dot\cup C_2$ with \emph{incomparable dependency sets}: $\dep(C_1)\not\subseteq\dep(C_2)$ and $\dep(C_1)\not\supseteq\dep(C_2)$.
+We call such clauses \emph{information forks}.
+
+\begin{lemma}
+\label{lem:informationforks}
+Consider a DQBF $\psi$ in MNF that has existentials, but no leaf existentials.
+Then $\psi$ must contain a clause $C$ that is an information fork.
+\end{lemma}
+
+\begin{proof}
+Let $x$ be an existential with a dependency set of maximal size.
+Since $x$ is not a leaf existential, there must be a clause $C$ containing a variable $x'$ with $\dep(x')\not\subseteq\dep(x)$.
+We also know that $\dep(x')\not\supseteq\dep(x)$ since they are not equal and $\dep(x)$ has maximal size.
+
+Sicne $\psi$ is in MNF and their dependency sets are not comparable, $\dep(x')$ must be disjoint with $\dep(x)$.
+% Also all other variables in the $C$ must either be a subset of $\dep(x)$ or be disjoint.
+We define $C_1$ to contain all literals of $C$ that belong to variables $x''$ with $\dep(x'')\subseteq\dep(x)$ or $\dep(x'')\supseteq\dep(x)$ and define $C_2$ to contain the remaining literals of $C$.
+We know that $\dep(C_2)$ is non-empty, too, as $x'$ has a disjoint dependency set from $x$.
+Further, $\dep(C_1)$ and $\dep(C_2)$ are incomparable (and in particular have an empty intersection) because the formula is in MNF.
+Hence, $C$ is an information fork.
+\qed
+\end{proof}
+
+The clauses that result from Fork Extension are as strong as the original information forks, allowing us to effectively drop the information forks, as the following lemma shows.
+
+\begin{lemma}
+\label{lem:elimforks}
+Let $\mathcal Q\ldot\varphi \wedge (C_1\vee C_2)$ be a DQBF with quantifier prefix $\mathcal Q$ and let $x$ be a fresh variable. 
+Then $\mathcal Q\ldot \varphi \wedge (C_1\vee C_2)$ and $\mathcal Q\ldot \exists y: \dep(C_1)\cap\dep(C_2) \ldot \varphi \wedge (C_1\vee x) \wedge (C_2\vee \neg x)$ are equivalent.
+\end{lemma}
+
+\begin{proof}
+	Soundness of the {\sf FEx} rule was proven in Lemma~\ref{lem:soundness}. 
+	The other direction follows from the soundness of resolution and the soundness of removing constraints and quantifiers of variables that never occur.
+\qed
+\end{proof}
+
+\begin{corollary}
+\label{cor:leafexists}
+A nontirival DQBF in MNF must have leaf existentials after splitting all information forks.
+\end{corollary}
+
+As a final remark of this subsection, MNF is not the weakest normal form that allows for a lemma like Lemma~\ref{lem:informationforks}.
+We just chose to present our results for MNF for the sake of simplicity.
+In principle, a normal form would only need to avoid that three or more dependency sets, that have pairwise non-empty intersection but are mutually incomparable, occur in the same clause~\cite{Tentrup/2019/SymbolicReactiveSynthesis}.
+
+
+%============================================================
+\subsection{Completeness}
+\label{ssect:completeness}
+%============================================================
+
+To prove Theorem~\ref{thm:soundandcomplete} we provide an algorithm that applies the proof rules of Fork Resolution until we either find a refutation proof (i.e. can derive an empty clause) or determine that there is no refutation.
+Like algorithms for SAT and QBF that only apply variable elimination, this algorithm is only a theoretical possibility and will likely not scale to interesting applications.
+Yet, more efficient algorithms may be possible using the same proof rules, just as CDCL is based on the resolution proof system. 
+
+\begin{theorem}
+\label{thm:soundandcomplete}
+	A DQBF in MNF is false if, and only if, we can derive an empty clause in the Fork Resolution proof system.
+\end{theorem}
+
+\begin{proof}
+We provide an round-based algorithm based on the proof rules. 
+Each round consists of two steps. 
+The first step is to eliminate all information forks using Lemma~\ref{lem:elimforks}. 
+The second step is to eliminate a leaf-existential (which must exist due to Corollary~\ref{cor:leafexists}) with a dependency set of maximal size using Lemma~\ref{lem:elimleafs}.
+% The proof system does not allow us to remove clauses as suggested in Lemmas~\ref{lem:elimforks} and~\ref{lem:elimleafs}, but additional clauses can do not interfere with the application of proof rules. 
+
+To see that this algorithm terminates, consider that each round reduces either the number of existentials with a maximally sized dependency set.
+Since we only apply the Fork Extension rule to information forks, the variables introduced fewer dependencies than the maximal set (for MNF they have, in fact, an empty dependency set).
+\qed
+\end{proof}
+
+
+
+
+\section{Example}
+\label{sect:example}
+We demonstrate the proof system along an example. 
+We use a shortened version of the example used to show incompleteness of Q-resolution for DQBF~\cite{BalabanovChiangJiang/2014/ACertificationPerspectiveOfDQBF}. 
+The formula states $\exists y_1: \set{x_1}.~\exists y_2: \set{x_2}.~(x_1\wedge x_2) \leftrightarrow (y_1=y_2)$.
+The formula states that the existential variables $y_1$ and $y_2$ have to be equal iff $x_1$ and $x_2$ are true.
+But $y_1$ and $y_2$ can each only see one of $x_1$ and $x_2$ and thus cannot coordinate to satisfy the constraint. 
+That is, the formula is false.
+The propositional part of the formula can be represented in CNF as follows:
+\begin{eqnarray}
+&& y_1 \vee y_2\vee x_1 \\ % clause 1
+&& \neg y_1\vee \neg y_2\vee x_1 \\ % clause 2
+&& y_1\vee y_2\vee x_2 \\ % clause 3
+&& \neg y_1\vee \neg y_2\vee x_2 \\ % clause 4
+&& y_1\vee \neg y_2\vee \neg x_1\vee \neg x_2 \\ % clause 5
+&& \neg y_1\vee y_2\vee \neg x_1\vee \neg x_2 % clause 6
+\end{eqnarray}
+
+
+Despite the formula being false, we can see with a little effort that all resolvents of the clauses above are tautologies.
+This demonstrates that Q-resolution for DQBF is incomplete~\cite{BalabanovChiangJiang/2014/ACertificationPerspectiveOfDQBF}. 
+
+The Fork Resolution proof system can disprove the formula as we show in the following. 
+Variables $y_1$ and $y_2$ are leaf-existentials, and all six clauses are information forks.
+Applying $\mathsf{FEx}$ to clauses (1) to (6) introduces variables $t_1$ to $t_6$ with empty dependencies ($\exists t_1 (\emptyset).\,\dots\exists t_6(\emptyset).$) and yields the following clauses:
+
+\vspace{-2mm}
+\begin{minipage}{.33\textwidth}
+\setcounter{equation}{0}
+\renewcommand{\theequation}{\arabic{equation}a} 
+\begin{eqnarray}
+%\exists y_1 :\{x_1\}.~\exists y_2:\{x_2\}.~~
+&& t_1 \vee y_1 \vee x_1 \\ % clause 1a
+&& t_2 \vee \neg y_1 \vee x_1 \\ % clause 2a
+&& t_3 \vee y_1 \\ % clause 3a
+&& t_4 \vee \neg y_1 \\ % clause 4a
+&& t_5 \vee y_1 \vee \neg x_1 \\ % clause 5a
+&& t_6 \vee \neg y_1 \vee \neg x_1 % clause 6a
+\end{eqnarray}
+\end{minipage}
+\qquad\qquad
+\begin{minipage}{.4\textwidth}
+\setcounter{equation}{0}
+\renewcommand{\theequation}{\arabic{equation}b}
+\begin{eqnarray}
+&& \neg t_1 \vee y_2 \\ % clause 1b
+&& \neg t_2 \vee \neg y_2 \\ % clause 2b
+&& \neg t_3 \vee y_2 \vee x_2 \\ % clause 3b
+&& \neg t_4 \vee \neg y_2 \vee x_2 \\ % clause 4b
+&& \neg t_5 \vee \neg y_2 \vee \neg x_2 \\ % clause 5b
+&& \neg t_6 \vee y_2 \vee \neg x_2  % clause 6b
+\end{eqnarray}	
+\end{minipage}
+
+\vspace{2mm}
+Next, we derive six resolvents as listed below.
+Their names indicate the pair of clauses they originate from.
+(We drop universal variables by universal reduction.)
+
+\vspace{2mm}
+\qquad\quad
+\begin{minipage}{.33\textwidth}
+\setcounter{equation}{0} 
+$
+\begin{array}{ll}
+% t_1 \vee t_2\qquad & (1a2a) \\ 
+ t_1 \vee t_4\qquad~~ & (1a4a) \\ 
+% t_2 \vee t_3 & (2a3a) \\ 
+% t_3 \vee t_4 & (3a4a) \\
+ t_3 \vee t_6 & (3a6a) \\
+ t_4 \vee t_5 & (4a5a) \\
+% t_5 \vee t_6 & (5a6a) \\
+\end{array}
+$
+\end{minipage}
+\qquad\qquad~
+\begin{minipage}{.4\textwidth}
+$
+\begin{array}{ll}
+% \neg t_1 \vee \neg t_2\qquad & (1b2b) \\ 
+% \neg t_1 \vee \neg t_4 & (1b4b) \\ 
+ \neg t_1 \vee \neg t_5\qquad\quad~ & (1b5b) \\ 
+% \neg t_2 \vee \neg t_3 & (2b3b) \\ 
+ \neg t_2 \vee \neg t_6 & (2b6b) \\
+ \neg t_3 \vee \neg t_4 & (3b4b) \\
+% \neg t_5 \vee \neg t_6 & (5b6b) \\
+\end{array}
+$
+\end{minipage}
+
+\vspace{2mm}
+Resolving clauses $(4a5a)$ and $(1b5b)$ gives us $(\neg t_1 \vee t_4)$, which we resolve with $(1a4a)$ to get $t_4$. 
+Similarly, we resolve clauses $(3a6a)$ and $(2b6b)$ to get $(\neg t_2 \vee t_3)$, which we resolve with $(t_2 \vee t_3)$ to get $t_3$. 
+Resolving $t_3$ and $t_4$ with $(3b4b)$ derives the empty clause, which shows that the formula is false. 
+
+
+
+%============================================================
+\section{Strong Fork Resolution}
+\label{sect:strong-fork-res}
+%============================================================
+
+The Fork Resolution proof system as presented in Section~\ref{sect:proofsystem} is sound and refutational complete for DQBF in MNF.
+In this section, we present a proof system for general DQBF, which relies on a stronger version of the Fork Extension rule.
+
+In this section, we provide a full example demonstrating the incompleteness of Fork Resolution for DQBF.
+We then introduce a new proof rule, called Strong Fork Extension and prove that the resulting proof system, Strong Fork Extension, is complete for DQBF.
+
+% First, we characterize the situations when the Fork Extension rule is not applicable, namely in the presence of \emph{dependency cycles}.
+% First, consider an example where Fork Resolution is not sufficient to derive a refutation:
+% \begin{equation*}
+%   \exists y_1(x_1,x_2) \ldot \exists y_2(x_2,x_3) \ldot \exists y_3(x_1,x_3) \ldot C \enspace,
+% \end{equation*}
+% where $C$ is the clause $(y_1 \lor y_2 \lor y_3)$.
+% Formally, $C$ is an \emph{information fork} (see Section~\ref{sect:proofsystem}), i.e., it contains variables with incomparable dependencies. 
+% The problematic part is that we cannot apply Fork Extension because any split of the clause into two parts $C=C_1\vee C_2$ satisfies either $\dep(C_1) \subseteq \dep(C_2)$ or $\dep(C_1) \supseteq \dep(C_2)$.
+% We say that information forks to which Fork Extension is not applicable have a \emph{dependency cycle} and it is easy to extend this example to a formula for which Fork Resolution is not applicable.
+
+\begin{example}
+We give an example DQBF that is not in multi-linear normal form and for which the Fork Resolution proof system is not able to derive a refutation.
+The example formula is an extension of the example that showed that $Q$-Resolution is incomplete for DQBF~\cite{BalabanovChiangJiang/2014/ACertificationPerspectiveOfDQBF}. 
+The formula states that the sum of the three variables $y_1$, $y_2$, and $y_3$ needs to be odd, exactly when all three universal variables are true.
+However, each of the variables $y_1$, $y_2$, and $y_3$ can only depend on two of the three universal variables:
+\begin{equation*}
+  % \forall x_1, x_2, x_3 \ldot
+  \exists y_1: \set{x_1, x_2} \ldot
+  \exists y_2: \set{x_2, x_3} \ldot
+  \exists y_3: \set{x_1, x_3} \ldot
+  (y_1 \oplus y_2 \oplus y_3) \leftrightarrow (x_1 \land x_2 \land x_3) \enspace.
+\end{equation*}
+In CNF, the quantifier-free part is as follows:
+{%\small
+\begin{align*}
+&(y_1 \lor y_2 \lor y_3 \lor \overline x_1 \lor \overline x_2 \lor \overline x_3) \land\\
+&(\overline y_1 \lor \overline y_2 \lor y_3 \lor \overline x_1 \lor \overline x_2 \lor \overline x_3) \land\\
+&(\overline y_1 \lor y_2 \lor \overline y_3 \lor \overline x_1 \lor \overline x_2 \lor \overline x_3) \land\\
+&(y_1 \lor \overline y_2 \lor \overline y_3 \lor \overline x_1 \lor \overline x_2 \lor \overline x_3) \land\\
+&(\overline y_1 \lor \overline y_2 \lor \overline y_3 \lor x_1) \land\\
+&(\overline y_1 \lor \overline y_2 \lor \overline y_3 \lor x_2) \land\\
+&(\overline y_1 \lor \overline y_2 \lor \overline y_3 \lor x_3) \land\\
+&(y_1 \lor y_2 \lor \overline y_3 \lor x_1) \land\\
+&(y_1 \lor y_2 \lor \overline y_3 \lor x_2) \land\\
+&(y_1 \lor y_2 \lor \overline y_3 \lor x_3) \land\\
+&(y_1 \lor \overline y_2 \lor y_3 \lor x_1) \land\\
+&(y_1 \lor \overline y_2 \lor y_3 \lor x_2) \land\\
+&(y_1 \lor \overline y_2 \lor x_3 \lor x_3) \land\\
+&(\overline y_1 \lor y_2 \lor y_3 \lor x_1) \land\\
+&(\overline y_1 \lor y_2 \lor y_3 \lor x_2) \land\\
+&(\overline y_1 \lor y_2 \lor y_3 \lor x_3) \\
+\end{align*}
+}
+% {%\small
+% \begin{align*}
+% &(x_1 \lor x_1 \lor y_2 \lor \overline y_3) \land
+% (x_1 \lor x_1 \lor y_3 \lor \overline y_2) \land\\
+% &(x_1 \lor y_2 \lor y_3 \lor \overline x_1) \land
+% (x_2 \lor x_1 \lor y_2 \lor \overline y_3) \land\\
+% &(x_2 \lor x_1 \lor y_3 \lor \overline y_2) \land
+% (x_2 \lor y_2 \lor y_3 \lor \overline x_1) \land\\
+% &(x_3 \lor x_1 \lor y_2 \lor \overline y_3) \land
+% (x_3 \lor x_1 \lor y_3 \lor \overline y_2) \land\\
+% &(x_3 \lor y_2 \lor y_3 \lor \overline x_1) \land
+% (x_1 \lor \overline x_1 \lor \overline y_2 \lor \overline y_3) \land\\
+% &(x_2 \lor \overline x_1 \lor \overline y_2 \lor \overline y_3) \land
+% (x_3 \lor \overline x_1 \lor \overline y_2 \lor \overline y_3) \land\\
+% &(x_1 \lor y_2 \lor y_3 \lor \overline x_1 \lor \overline x_2 \lor \overline x_3) \land
+% (x_1 \lor \overline x_1 \lor \overline x_2 \lor \overline x_3 \lor \overline y_2 \lor \overline y_3) \land\\
+% %
+% &(y_2 \lor \overline x_1 \lor \overline x_2 \lor \overline x_3 \lor \overline x_1 \lor \overline y_3) \land
+% (y_3 \lor \overline x_1 \lor \overline x_2 \lor \overline x_3 \lor \overline x_1 \lor \overline y_2) \enspace.
+% \end{align*}
+% }
+It is easy to verify that (1) the formula is false, (2) universal reduction cannot be applied to any clause, (3) all resolvents are tautologies, and (4) the formula does not contain the empty clause.
+To see that Fork Extension does not make progress either, observe that all clauses include all of the existential variables.
+Applying Fork Extension to any of them results in two clauses, one of which again contains three existential variables with mutually incomparable dependency sets.
+The other clause is w.l.o.g. a binary clause $t\lor y$ containing the arbiter variable $t$ introduced by Fork Extension and one of the existential variables.
+Both variables have the same dependency sets $\dep(t)=\dep(y)$.
+Applying resolution to the clauses introduced by Fork Extension allows us to eliminate the original existential variables, only to end up with a formula that is equivalent up to renaming.
+Hence, the Fork Resolution proof system cannot derive the empty clause.
+\end{example}
+
+
+\paragraph{Dependency Cycles.}
+
+Similar to the proof of refutational completeness of Fork Resolution for DQBF in MNF, we want to use Strong Fork Resolution to uncover new leaf existentials.
+In general DQBF, however, we not only have information forks, but a second type of clauses, which we call \emph{dependency cycles}.
+A clause is a dependency cycle if it contains variables with incomparable dependencies, but any partition $C_1\dot\cup C_2$ satisfies either $\dep(C_1) \subseteq \dep(C_2)$ or $\dep(C_1) \supseteq \dep(C_2)$.
+
+Next, we lift Lemma~\ref{lem:informationforks} to general DQBF.
+
+\begin{lemma}
+\label{lem:dependencycycles}
+Consider a DQBF $\psi$ that has existentials, but no leaf existentials.
+Then $\psi$ must contain a clause $C$ that is an information fork or a dependency cycle.
+\end{lemma}
+
+\begin{proof}
+Let $x$ be an existential with a dependency set of maximal size.
+Since $x$ is not a leaf existential, there must be a clause $C$ containing a variable $x'$ with $\dep(x')\not\subseteq\dep(x)$.
+We also know that $\dep(x')\not\supseteq\dep(x)$ since they are not equal and $\dep(x)$ has maximal size.
+Hence their dependency sets are incomparable.
+If there is a partition of the clause with incomparable dependency sets, the clause is an information fork, otherwise it is a dependency cycle.
+\qed
+\end{proof}
+
+
+\paragraph{Strong Fork Resolution.}
+
+To address the issue of dependency cycles, we introduce the \emph{Strong Fork Extension} rule.
+The new rule Strong Fork Extension extends Fork Extension by the ability to introduce new universal literals $C_3$ to the two clauses that it produces. 
+This allows us to remove $\dep(C_3)$ from the dependency set of the freshly introduced variable $x$.
+\begin{equation*}
+  \infer[(\textsf{SFEx})]
+  {
+      \exists x : (\dep(C_1) \cap \dep(C_2)) \setminus \dep(C_3) \ldot~
+      (C_3 \vee C_1 \vee x) ~\wedge~ (C_3 \vee C_2 \vee \neg x)
+  }
+  {
+      C_1 \vee C_2 \qquad x \text{ is fresh} \qquad C_3 \text{ is a set of universal literals}
+  }
+\end{equation*}
+
+\begin{lemma}
+\label{lem:SFESoundness}
+    Strong Fork Extension is sound.
+\end{lemma}
+\begin{proof}
+We start from the soundness of the Fork Extension rule, given in Section~\ref{sect:proofsystem}. 
+Adding more literals $C_3$ to the two produced clauses cannot make the rule less sound. 
+We only need to understand why we can reduce the dependencies of the freshly introduced variable $x$. 
+If a literal of $C_3$ is true, both produced clauses are true and the rule is trivially sound. 
+This means that all relevant assignments in the Skolem function for $x$ happen only when all literals in $C_3$ are false---and $x$ does not need to explicitly depend on $\dep(C_3)$.
+\qed
+\end{proof}
+
+
+Similarly to Lemma~\ref{lem:elimforks} we can effectively drop the clauses after Strong Fork Extension through resolution.
+However, we need to apply Strong Fork Extension twice with complementary sets of universal literals.
+
+\begin{lemma}
+\label{lem:elimstrongforks}
+Let $\psi=\mathcal Q\ldot\varphi\wedge (C_1 \lor C_2)$ be a DQBF with quantifier prefix $\mathcal Q$, let $x_1$ and $x_2$ be fresh variables, and let $C_3$ be a disjunction of universal literals.
+The following DQBF is equivalent to $\psi$.
+The new quantifier prefix is $\mathcal Q$ extended by $\exists x_1 : (\dep(C_1)\cap\dep(C_2))\setminus\dep(C_3)$ and $\exists x_2 : (\dep(C_1)\cap\dep(C_2))\setminus\dep(C_3)$. 
+The propositional part of the new DQBF contains $\varphi$ and is extended by four clauses: $(C_1\lor C_3\lor x_1) \wedge (C_2\lor C_3\lor \neg x_1) \wedge (C_1\lor \overline C_3\lor x_2) \wedge (C_2\lor \overline C_3\lor \neg x_2)$.
+\end{lemma}
+
+\begin{proof}
+	The proof is essentially equivalent to the proof of Lemma~\ref{lem:elimforks}.
+	First, we elininate variables $x_1$ and $x_2$ through resolution giving us clauses $C_1 \lor C_2 \lor C_3$, and $C_1 \lor C_2 \lor \overline C_3$.
+	Resolution also allows us to remove $C_3$ and $\overline C_3$ and obtain the original clause.
+\qed
+\end{proof}
+
+
+\begin{lemma}
+\label{lem:strongleafexists}
+A nontirival DQBF must have leaf existentials after splitting all information forks and dependency cycles with Strong Fork Extension.
+\end{lemma}
+
+\begin{proof}
+We can split information forks into clauses with fewer dependencies using a single application of Fork Extension (and Strong Fork Extension can trivially simulate Fork Extension).
+Lemma~\ref{lem:elimforks} then allows us to drop the information forks.
+To split dependency cycles, we apply Strong Fork Extension twice, with complementary literals of a single universal variable from the intersection of $C_1$ and $C_2$.
+This guarantees that the dependency set of the fresh variables introduced by Strong Fork Extension are smaller, and we can invoke Lemma~\ref{lem:elimstrongforks} to eliminate the dependency cycle.
+
+The clauses resulting from splitting information forks and dependency cycles may again be information forks or dependency cycles, but have fewer dependencies.
+Hence, repeatedly split operations will eventually result in a formula without information forks and dependency cycles.
+By the contraposition of Lemma~\ref{lem:dependencycycles} that formula must have leaf existentials or is trivial.
+\qed
+\end{proof}
+
+Finally, we can derive completeness for Strong Fork Resolution.
+
+% In contrast to regular Fork Extension, Strong Fork Extension can split arbitrary information forks:
+% Given an information fork clause $C$ with dependency cycle, we know that $C$ must have at least three existential variables with each at least two variables in their dependency set.
+% Consider an arbitrary partitioning of $C$ into $C_1$ and $C_2$ with w.l.o.g. $\dep(C_1)\subseteq \dep(C_2)$ and $C_1$ and $C_2$ containing at least one existential variable each.
+% We apply $\textsf{FEx}$ twice, once with $C_3=\{y\}$ and once with $C_X=\{\overline y\}$, for some universal variable $y$ in $\dep(C_1)$. 
+% This results in four new clauses that together imply the original clause, which means that the original clause can effectively be removed.
+% The two fresh variables introduced by Strong Fork Extension have smaller dependency sets than $C_1$ (and $C_2$).
+
+
+% This means that Strong Fork Extension can be used to eliminate any information fork while reducing the size of dependency sets, which closes the missing case in the proof of completeness of Fork Extension for general DQBF.
+
+\begin{theorem}  \label{thm:strongsoundandcomplete}
+  Strong Fork Resolution is sound and complete for DQBF.
+\end{theorem}
+
+\begin{proof}
+Along the lines of the proof of Theorem~\ref{thm:soundandcomplete}, we alternatingly eliminate leaf existentials, information forks, and dependency cycles.
+Lemma~\ref{lem:strongleafexists} and Lemma~\ref{lem:dependencycycles} guarantee that progress is always possible until a trivial formula is reached.
+\qed
+\end{proof}
+
+
+%============================================================
+\section{Separation from other Proof Systems}
+\label{sect:separation}
+%============================================================
+
+The only other known sound and complete proof systems for DQBF are $\forall${\sf{Exp-Res}} and its extension {\sf{D-IR-calc}}. 
+$\forall${\sf{Exp-Res}} for DQBF is identical to $\forall${\sf{Exp-Res}} for QBF and consists of the proof rules universal expansion and the resolution rule~\cite{BeyersdorffChewSchmidtSuda/2016/LiftingQBFResolutionCalculitoDQBF}. 
+Already for QBF, Q-resolution and $\forall${\sf{Exp-Res}} are incomparable, which means that there are formulas for which Q-resolution offers proofs of polynomial length but $\forall${\sf{Exp-Res}} has only exponentially long proofs, and vice versa~\cite{Janota2015expansion}. 
+This directly carries over to the comparison of $\forall${\sf{Exp-Res}} for DQBF and Fork Resolution, since QBF is a subset of DQBF and Fork Resolution subsumes Q-resolution.
+
+\begin{theorem}
+$\forall${\sf{Exp-Res}} does not polynomially simulate Fork Resolution or Strong Fork Resolution.
+\end{theorem}
+
+{\sf{IR-calc}} extends resolution by the possibility to annotate clauses with partial instantiations of universal variables, which allows it to polynomially simulate both {\sf{Exp-Res}} and Q-resolution. 
+The comparison between (Strong) Fork Resolution and {\sf{IR-calc}} is open. 
+
+
+%Our definition of resolution admits universal variables as pivots and thus includes QU-resolution~\cite{Gelder/2012/QUResolution}. 
+%This already gives us the result that Fork Resolution has exponentially smaller proofs for some formulas than {\sf{D-IR-calc}} and $\forall${\sf{Exp-Res}}~\cite{BeyersdorffChewSchmidtSuda/2016/LiftingQBFResolutionCalculitoDQBF}. 
+%For the other direction consider a QBF, where the {\sf FEx} rule cannot be applied and Fork Resolution coincides with QU-resolution. 
+%{\sf{IR-calc}} and $\forall${\sf{Exp-Res}} are exponentially more succinct on some formulas than QU-resolution~\cite{BeyersdorffChewSchmidtSuda/2016/LiftingQBFResolutionCalculitoDQBF}.
+%
+%The question whether without resolution on universal variables Fork-Resolut\-ion proofs can be exponentially more succinct than proofs by {\sf{D-IR-calc}} is open. 
+
+
+%============================================================
+\section{Conclusion}
+\label{sect:conclusion}
+%============================================================
+
+This work presents a new proof system for DQBF, which offers an alternative to universal expansion.
+This is practically significant, as universal expansion generally corresponds to case distinctions, which has proven to be an inefficient reasoning technique for many practical benchmarks.
+We have already used Fork Resolution to build a novel algorithm for DQBF that has set a new state of the art in synthesis-related benchmarks~\cite{TentrupRabe/2019/ClausalAbstractionForDQBF}.
+We believe that this is only the beginning and that Fork Resolution will open new pathways in the development of reasoning algorithms for DQBF and other succinct logics.
+
+%\begin{acknowledgements}
+%If you'd like to thank anyone, place your comments here
+%and remove the percent signs.
+%\end{acknowledgements}
+
+
+
+\bibliographystyle{spmpsci}
+\bibliography{main}
+
+\end{document}
