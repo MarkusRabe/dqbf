@@ -1,47 +1,53 @@
-# tools/verify/ — certificate checker
+# tools/verify/ — independent solution checkers
 
-Independently check that a claimed solution actually satisfies the DQBF.
+**Design principle:** simple and reusable across provers. These files
+are the trusted base for the improvement loop — they import only from
+`core/` (data formats), never from `provers/`. A prover may be rewritten
+for speed without touching anything here.
 
-## Purpose
+## SAT certificates
 
-Given a DQDIMACS formula Φ and an AIGER circuit bundle that maps each
-existential variable *y* to a combinational circuit over exactly its
-declared dependency set *D(y)*:
+`dqbf-verify sat FORMULA.dqdimacs CERT.aag -o verify.cnf --map verify.map.json`
 
-1. **Dependency check** — every Skolem circuit's inputs ⊆ *D(y)*.
-2. **Validity check** — substitute the circuits into the matrix, leaving a
-   purely universal formula; assert it is a tautology by SAT-solving its
-   negation.
+Reads the original DQBF and an AIGER bundle (one combinational AIG;
+inputs named `u<id>` for universals, outputs named `e<id>` for
+existentials). Emits:
 
-On UNSAT instances, separately replay a fork-resolution refutation trace
-line by line and confirm it derives the empty clause.
+- `verify.cnf` — a DIMACS CNF over fresh variables. **UNSAT ⇒
+  certificate valid.** Hand it to any SAT solver.
+- `verify.map.json` — `{universals, existentials, aiger_gates,
+  violated_clause}` mapping source-level names to DIMACS IDs, so a
+  satisfying assignment (= a counterexample to the cert) can be read
+  back as "universal assignment ū makes clause i false".
 
-## Interface
+Before encoding, a **structural dependency check** confirms each
+`e<y>`'s cone of influence touches only `u<x>` with `x ∈ deps(y)`; any
+violation is reported and exits 2.
 
-```
-dqbf-verify sat   FORMULA.dqdimacs CERT.aag   → exit 0 iff valid
-dqbf-verify unsat FORMULA.dqdimacs PROOF.frp  → exit 0 iff valid
-```
+This is prover-agnostic: any solver that emits AIGER Skolem functions
+(HQS, Pedant, our forkres) plugs in.
+
+## UNSAT certificates
+
+`dqbf-verify unsat FORMULA.dqdimacs PROOF.frp`
+
+Replays a fork-resolution trace step by step. The rule checks
+(resolution, ∀-reduction, FEx, SFEx) are **re-implemented here** —
+nothing is imported from `provers/forkres/`. Exit 0 = valid, 1 =
+invalid.
+
+The trace format is `core/proof_trace.py` (JSON list of `Step`s). Any
+prover that searches in the fork-resolution calculus can emit it.
+
+## Trusted base
+
+`core/{formula,dqdimacs,aiger,proof_trace}.py` (data) +
+`tools/verify/{sat,unsat}.py` (~250 lines total). Audited once; not
+touched by the improvement loop.
 
 ## References
 
 - AIGER spec: https://fmv.jku.at/aiger/FORMAT
-- py-aiger / py-aiger-cnf: https://github.com/mvcisback/py-aiger
-- Prior art: Pedant's `certifyModel.py`
-  (https://github.com/fslivovsky/pedant-solver) does exactly the
-  substitute-and-SAT-check flow; mirror its semantics so certificates are
-  interchangeable.
+- Prior art for the substitute-then-SAT approach: Pedant
+  `certifyModel.py` (https://github.com/fslivovsky/pedant-solver).
 - Wimmer et al., *Skolem Functions for DQBF*, ATVA 2016.
-
-## Plan
-
-- [ ] AIGER bundle format: one `.aag` with symbol table mapping output
-      names ↔ existential var IDs; document in
-      `docs/references/certificate_format.md`.
-- [ ] `verify/sat.py`: load AIG (py-aiger) → substitute → Tseitin →
-      hand to a SAT solver (PySAT).
-- [ ] `verify/unsat.py`: `.frp` trace replayer reusing
-      `provers/forkres/rules.py` so the rule semantics are defined
-      in exactly one place.
-- [ ] Hook both into `tests/integration/` so every prover SAT/UNSAT
-      result is independently re-checked.

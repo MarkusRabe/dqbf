@@ -1,17 +1,104 @@
-"""Minimal AIGER ASCII (.aag) writer for combinational Skolem circuits.
+"""Minimal AIGER ASCII (.aag) reader/writer for combinational circuits.
 
-Just enough to emit one circuit per existential variable as a multi-
-output AIG: inputs are the dependency-set bits, outputs are the
-existential bits, gates are 2-input ANDs with optional inversion encoded
-in the LSB. See https://fmv.jku.at/aiger/FORMAT.
+Skolem-function bundles are encoded as one multi-output AIG: inputs
+named `u<id>` for each universal, outputs named `e<id>` for each
+existential. See https://fmv.jku.at/aiger/FORMAT.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from core.formula import Formula
 from core.semantics import Skolem
+
+
+@dataclass(frozen=True)
+class Aag:
+    """Parsed combinational AIGER (no latches)."""
+
+    max_var: int
+    inputs: list[int]  # literals (even)
+    outputs: list[int]  # literals
+    gates: list[tuple[int, int, int]]  # (lhs, rhs0, rhs1), lhs even
+    in_names: dict[int, str]  # input index -> name
+    out_names: dict[int, str]  # output index -> name
+
+    def input_by_name(self, name: str) -> int | None:
+        for i, n in self.in_names.items():
+            if n == name:
+                return self.inputs[i]
+        return None
+
+    def output_by_name(self, name: str) -> int | None:
+        for i, n in self.out_names.items():
+            if n == name:
+                return self.outputs[i]
+        return None
+
+    def cone_inputs(self, out_lit: int) -> set[int]:
+        """Input literals reachable from `out_lit` through AND gates."""
+        gate_map = {g: (a, b) for (g, a, b) in self.gates}
+        in_set = set(self.inputs)
+        seen: set[int] = set()
+        result: set[int] = set()
+        stack = [out_lit]
+        while stack:
+            lit = stack.pop()
+            v = lit & ~1
+            if v in seen or v == 0:
+                continue
+            seen.add(v)
+            if v in in_set:
+                result.add(v)
+            elif v in gate_map:
+                a, b = gate_map[v]
+                stack += [a, b]
+        return result
+
+
+def parse_aag(text: str) -> Aag:
+    lines = [ln for ln in text.splitlines() if ln.strip()]
+    hdr = lines[0].split()
+    if hdr[0] != "aag" or len(hdr) != 6:
+        raise ValueError(f"bad AIGER header: {lines[0]!r}")
+    m, i, ll, o, a = (int(x) for x in hdr[1:])
+    if ll != 0:
+        raise ValueError("latches not supported")
+    pos = 1
+    inputs = [int(lines[pos + k]) for k in range(i)]
+    pos += i
+    outputs = [int(lines[pos + k]) for k in range(o)]
+    pos += o
+    gates: list[tuple[int, int, int]] = []
+    for k in range(a):
+        g, r0, r1 = (int(t) for t in lines[pos + k].split())
+        gates.append((g, r0, r1))
+    pos += a
+    in_names: dict[int, str] = {}
+    out_names: dict[int, str] = {}
+    for ln in lines[pos:]:
+        if ln.startswith("i"):
+            idx, name = ln[1:].split(" ", 1)
+            in_names[int(idx)] = name
+        elif ln.startswith("o"):
+            idx, name = ln[1:].split(" ", 1)
+            out_names[int(idx)] = name
+        elif ln.startswith("c"):
+            break
+    return Aag(
+        max_var=m,
+        inputs=inputs,
+        outputs=outputs,
+        gates=gates,
+        in_names=in_names,
+        out_names=out_names,
+    )
+
+
+def load_aag(path: str | Path) -> Aag:
+    return parse_aag(Path(path).read_text())
 
 
 @dataclass

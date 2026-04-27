@@ -5,9 +5,9 @@ import sys
 import click
 
 from core import dqdimacs
-from core.certificate import load_skolem
-from provers.forkres.proof import load as load_proof
-from tools.verify.sat import verify_skolem
+from core.aiger import load_aag
+from core.proof_trace import load as load_proof
+from tools.verify.sat import encode_verification
 from tools.verify.unsat import verify_proof
 
 
@@ -18,13 +18,23 @@ def main() -> None:
 
 @main.command("sat")
 @click.argument("formula", type=click.Path(exists=True))
-@click.argument("cert", type=click.Path(exists=True))
-def sat_cmd(formula: str, cert: str) -> None:
+@click.argument("cert_aag", type=click.Path(exists=True))
+@click.option("-o", "--out", "cnf_out", type=click.Path(), required=True)
+@click.option("--map", "map_out", type=click.Path(), default=None)
+def sat_cmd(formula: str, cert_aag: str, cnf_out: str, map_out: str | None) -> None:
+    """Emit a DIMACS CNF whose UNSAT proves the AIGER Skolem cert valid."""
     f = dqdimacs.load(formula)
-    sk = load_skolem(cert)
-    ok = verify_skolem(f, sk)
-    print("VALID" if ok else "INVALID")
-    sys.exit(0 if ok else 1)
+    aig = load_aag(cert_aag)
+    enc = encode_verification(f, aig)
+    enc.write_dimacs(cnf_out)
+    if map_out:
+        enc.write_map(map_out)
+    if enc.dep_violations:
+        for v in enc.dep_violations:
+            print(f"DEP-VIOLATION {v}", file=sys.stderr)
+        sys.exit(2)
+    print(f"wrote {cnf_out}: {enc.n_vars} vars, {len(enc.clauses)} clauses")
+    print("run a SAT solver on it; UNSAT => certificate VALID")
 
 
 @main.command("unsat")
