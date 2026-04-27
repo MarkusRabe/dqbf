@@ -15,8 +15,8 @@ def summarize(results: list[dict], group_by: str = "family") -> str:
     groups: dict[str, list[dict]] = defaultdict(list)
     for r in results:
         groups[r.get(group_by, "")].append(r)
-    cols = ["group", "n", "ok", "wrong", "unknown", "timeout", "error", "med_wall_s"]
-    rows = []
+    cols: list[object] = ["group", "n", "ok", "wrong", "unknown", "timeout", "error", "med_wall_s"]
+    rows: list[list[object]] = []
     for g, rs in sorted(groups.items()):
         n = len(rs)
         by: dict[str, int] = defaultdict(int)
