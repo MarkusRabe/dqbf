@@ -176,7 +176,7 @@ def section_perf(jsonl: Path) -> str:
         cells = []
         for w in ws:
             st, t = by_op[op].get(w, ("-", 0))
-            cells.append(f"<td class={st}>{esc(st)}<br><small>{t:.2f}s</small></td>")
+            cells.append(f'<td class="{esc(st)}">{esc(st)}<br><small>{t:.2f}s</small></td>')
         rows.append(f"<tr><td><code>{esc(op)}</code></td>{''.join(cells)}</tr>")
     n_ok = sum(1 for r in rs if r["status"] == "ok")
     return f"""
