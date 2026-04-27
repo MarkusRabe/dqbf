@@ -1,7 +1,7 @@
 from core.aiger import parse_aag, skolem_to_aag
 from core.formula import make_formula
 from core.semantics import find_skolem
-from tools.verify.sat import encode_verification
+from tools.verify.sat import decode_model, encode_verification, solve_cnf
 
 
 def _solve_cnf(n_vars: int, clauses: list[list[int]]) -> bool:
@@ -49,6 +49,32 @@ def test_dependency_violation_detected() -> None:
     aag = "aag 2 2 0 1 0\n2\n4\n4\ni0 u1\ni1 u2\no0 e3\n"
     enc = encode_verification(f, parse_aag(aag))
     assert any("e3" in v and "2" in v for v in enc.dep_violations)
+
+
+def test_solve_cnf_backend_or_fallback() -> None:
+    is_sat, _ = solve_cnf(2, [[1, 2], [-1], [-2]])
+    if is_sat is None:
+        assert _solve_cnf(2, [[1, 2], [-1], [-2]]) is False
+    else:
+        assert is_sat is False
+    is_sat2, model2 = solve_cnf(2, [[1], [2]])
+    if is_sat2 is None:
+        assert _solve_cnf(2, [[1], [2]]) is True
+    else:
+        assert is_sat2 is True and model2 is not None and 1 in model2 and 2 in model2
+
+
+def test_decode_model() -> None:
+    varmap = {
+        "universals": {"1": 1, "2": 2},
+        "violated_clause": {"0": 3, "1": 4},
+        "existentials": {},
+        "aiger_gates": {},
+        "TRUE": {"const": 5},
+    }
+    cex = decode_model([1, -2, 3, -4, 5], varmap)
+    assert cex["universals"] == {"1": True, "2": False}
+    assert cex["violated_clauses"] == ["0"]
 
 
 def test_varmap_contents() -> None:
