@@ -33,17 +33,16 @@ fetch() {
 
 safe_extract() {
   local archive="$1" dest="$2"; shift 2
-  local listing bad
-  listing=$(tar -tvf "$archive" "$@")
-  bad=$(grep -E '^[lh]' <<<"$listing" || true)
+  local bad
+  bad=$(tar -tf "$archive" "$@" | grep -E '(^/|(^|/)\.\.(/|$))' || true)
   if [[ -n "$bad" ]]; then
-    echo "error: archive $archive contains symlink/hardlink entries (refusing):" >&2
+    echo "error: archive $archive contains unsafe paths:" >&2
     printf '  %s\n' "$bad" >&2
     exit 1
   fi
-  bad=$(awk '{print $NF}' <<<"$listing" | grep -E '(^/|(^|/)\.\.(/|$))' || true)
+  bad=$(tar -tvf "$archive" "$@" | grep -E '^[lh]' || true)
   if [[ -n "$bad" ]]; then
-    echo "error: archive $archive contains unsafe paths:" >&2
+    echo "error: archive $archive contains symlink/hardlink entries (refusing):" >&2
     printf '  %s\n' "$bad" >&2
     exit 1
   fi
