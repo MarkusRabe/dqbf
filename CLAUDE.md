@@ -20,7 +20,8 @@ touching the provers.
 ## Layout
 
 ```
-provers/      fork-resolution provers — python (reference) and rust (fast)
+provers/      one dir per prover (python and/or rust inside each)
+  forkres/    fork-resolution prover — python reference + rust/
 tools/
   eqfob/      EQFOB: a typed BV language with ∃-quantified functions → DQBF
   verify/     check AIGER Skolem functions against a (DQ)DIMACS formula
@@ -38,14 +39,14 @@ build-out plan. **Read the local one before editing.**
 ## Conventions
 
 - **Primary language: Python 3.11+.** Modern typing (`list[str]`,
-  `int | None`). Rust only under `provers/rust/`.
+  `int | None`). Rust lives under each prover's `rust/` subdirectory.
 - **Formats.** DQBF in DQDIMACS; QBF in QDIMACS; certificates as AIGER
   (ASCII `.aag` for tests, binary `.aig` for large outputs); EQFOB as
   `.eqfob`.
 - **Determinism.** Provers and translators must be deterministic for a
   given input + seed; the integration suite diffs outputs.
-- **Correctness over speed** in `provers/python/` — it is the reference
-  oracle for the Rust prover and for `tools/verify/`.
+- **Correctness over speed** in each prover's Python source — it is the
+  reference oracle for its `rust/` crate and for `tools/verify/`.
 - **Top-level absolute imports**, no `from .foo import bar`.
 - **Separate logic from CLI/jit/dispatch wrappers** so core functions are
   unit-testable without process setup.
@@ -64,7 +65,7 @@ pytest tests/integration  # e2e (slow)
 Run a single benchmark family:
 
 ```bash
-dqbf-bench run --family eqfob/bitwidth_scaling --prover python -j 8
+dqbf-bench run --family eqfob/bitwidth_scaling --prover forkres -j 8
 ```
 
 ## When adding a feature
@@ -72,8 +73,9 @@ dqbf-bench run --family eqfob/bitwidth_scaling --prover python -j 8
 1. If it's a new **encoding** (X → DQBF): add under `tools/`, emit
    DQDIMACS, add at least one `.eqfob` or `.dqdimacs` golden test under
    `tests/integration/`.
-2. If it's a new **proof rule / solver heuristic**: implement in
-   `provers/python/` first, cover with unit tests, then port to Rust.
+2. If it's a new **proof rule / solver heuristic**: implement in the
+   prover's Python source first, cover with colocated `*_test.py`, then
+   port to its `rust/` crate.
 3. If it's a new **benchmark family**: add a generator under
    `benchmarks/eqfob/<family>/generate.py` and register it with the
    runner; do **not** commit generated instances >1 MB — commit the

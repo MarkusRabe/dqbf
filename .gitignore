@@ -17,7 +17,7 @@ venv/
 htmlcov/
 
 # Rust
-provers/rust/**/target/
+**/rust/**/target/
 Cargo.lock
 
 # Editors / OS

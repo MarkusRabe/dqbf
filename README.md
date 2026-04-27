@@ -14,7 +14,7 @@ circuits.
 
 | Directory | Purpose |
 |---|---|
-| `provers/` | Fork-resolution provers (reference Python, performance Rust) |
+| `provers/` | One directory per prover; `forkres/` is the fork-resolution prover (Python reference + Rust) |
 | `tools/eqfob/` | **EQFOB** — a bit-vector modeling language that compiles to DQBF |
 | `tools/verify/` | Certificate checker: validates AIGER Skolem functions against a DQBF |
 | `tools/{qbvf,bmc,ltlsynth}2dqbf/` | Front-ends that encode other problems as DQBF |

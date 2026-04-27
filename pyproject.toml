@@ -31,9 +31,9 @@ dqbf-verify = "tools.verify.cli:main"
 dqbf-bench = "benchmarks.runner.cli:main"
 
 [tool.hatch.build.targets.wheel]
-exclude = ["**/*_test.py"]
+exclude = ["**/*_test.py", "**/rust"]
 packages = [
-  "provers/python/forkres",
+  "provers/forkres",
   "tools/eqfob/eqfob",
   "tools/verify",
   "tools/qbvf2dqbf",

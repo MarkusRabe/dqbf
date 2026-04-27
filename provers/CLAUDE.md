@@ -1,23 +1,24 @@
 # provers/
 
-Fork-resolution-based DQBF provers.
+DQBF provers. **One directory per prover**, named for the
+algorithm/approach — not for the implementation language. A prover
+directory may contain Python, Rust, or both (e.g. a Python reference
+with a Rust core bound via PyO3, or two independent implementations
+sharing test fixtures).
 
-## Purpose
+```
+provers/
+  forkres/      Fork-resolution prover (this repo's primary)
+    *.py        Python reference implementation — package `provers.forkres`
+    *_test.py   colocated unit tests
+    rust/       optional Rust implementation / acceleration crate
+    CLAUDE.md
+  <future provers go here as siblings>
+```
 
-Decide truth of a DQBF and, on **true** instances, emit Skolem functions
-for every existential variable as an AIGER circuit. The proof system is
-*fork resolution* — see `../OVERVIEW.md` for the inference rules and the
-literature behind them.
+## Shared CLI contract
 
-Two implementations share one specification:
-
-- `python/` — **reference**. Correctness is the only goal. Every proof
-  rule is a small, individually unit-tested function. Used as the oracle
-  for the Rust prover and for `tools/verify/`.
-- `rust/` — **performance**. Same algorithm, optimized data structures,
-  intended for the benchmark runner.
-
-## Shared contract
+Every prover exposes a CLI honoring:
 
 ```
 stdin / file : DQDIMACS
@@ -27,29 +28,16 @@ stdout       : "SAT" | "UNSAT" | "UNKNOWN"
 exit code    : 10 = SAT, 20 = UNSAT, 0 = UNKNOWN  (QBFEVAL convention)
 ```
 
-Both provers must be byte-deterministic for a given input + `--seed`.
+and is byte-deterministic for a given input + `--seed`.
 
 ## References
 
-- Rabe, *A resolution-style proof system for DQBF* — original + the
-  unpublished journal revision at
-  https://github.com/MarkusRabe/dqbf_fork_resolution_journal (fixes a
-  soundness gap in the original proof; the revised rules are
-  authoritative).
-- `../OVERVIEW.md` — rule list and relationship to ∀Exp+Res / IR-calc.
-- `../docs/references/` — cached PDFs / .tex of the above.
+- `../OVERVIEW.md` — proof system and literature.
+- `../docs/references/fork_resolution_journal/main.tex` — authoritative
+  rule definitions.
 
-## Plan
+## Adding a new prover
 
-1. **`python/forkres/` core** — clause DB, dependency map, the four proof
-   rules (axiom, resolution, fork / universal-expansion, merge), proof
-   search loop. Golden tests on hand-sized DQDIMACS.
-2. **Certificate extraction** — track per-clause provenance during search;
-   on SAT, synthesize Skolem AIGs via py-aiger; round-trip through
-   `tools/verify/`.
-3. **Refutation trace** — line-based proof format checkable by a tiny
-   independent script in `tools/verify/`.
-4. **Rust port** — once (1)–(3) are stable, port with the Python prover as
-   a differential-testing oracle (`tests/integration/diff_provers.py`).
-5. **Heuristics** — variable/clause selection, dependency-aware ordering;
-   gated behind flags, off by default in the reference prover.
+1. `mkdir provers/<name>/` with `__init__.py`, `cli.py`, `CLAUDE.md`.
+2. Register the CLI in `pyproject.toml` `[project.scripts]`.
+3. Add it to `benchmarks/runner/` and `tests/integration/diff_provers.py`.

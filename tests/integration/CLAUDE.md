@@ -34,7 +34,7 @@ diff_provers.py   python vs rust prover differential test
 ## Plan
 
 - [ ] `tiny/` seed set: 10 SAT + 10 UNSAT + 3 crash-regression.
-- [ ] `test_e2e.py` driving `provers/python` over `tiny/`.
+- [ ] `test_e2e.py` driving `provers/forkres` over `tiny/`.
 - [ ] Wire `tools/verify/` into the SAT branch.
 - [ ] `diff_provers.py` once Rust prover exists.
 - [ ] Nightly CI job over `from_competition/`.

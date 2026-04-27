@@ -41,7 +41,7 @@ dqbf-verify unsat FORMULA.dqdimacs PROOF.frp  → exit 0 iff valid
 - [ ] `verify/sat.py`: load AIG (py-aiger) → substitute → Tseitin →
       hand to a SAT solver (PySAT).
 - [ ] `verify/unsat.py`: `.frp` trace replayer reusing
-      `provers/python/forkres/rules.py` so the rule semantics are defined
+      `provers/forkres/rules.py` so the rule semantics are defined
       in exactly one place.
 - [ ] Hook both into `tests/integration/` so every prover SAT/UNSAT
       result is independently re-checked.
