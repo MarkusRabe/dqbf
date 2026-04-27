@@ -1,0 +1,12 @@
+-- ∃f,g : bv[A]→bv[B]. ∃z:bv[B]. ∀x:bv[A]. f(x) + z > g(x)
+-- Satisfiable: pick g ≡ 0, z = 1, f arbitrary.
+param A = 4
+param B = 4
+
+fun f : bv[A] -> bv[B]
+fun g : bv[A] -> bv[B]
+
+exists z : bv[B]
+forall x : bv[A]
+
+f(x) + z > g(x)

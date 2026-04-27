@@ -1,0 +1,42 @@
+# Internal-only instructions (not for public repo)
+INTERNAL.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Rust
+provers/rust/**/target/
+Cargo.lock
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Benchmark archives & large downloads (keep download scripts, not payloads)
+benchmarks/**/*.tar.gz
+benchmarks/**/*.tar.bz2
+benchmarks/**/*.zip
+benchmarks/_downloads/
+
+# Solver outputs / certificates
+*.aag.out
+*.cert
+results/
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
