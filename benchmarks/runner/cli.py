@@ -21,7 +21,7 @@ def main() -> None:
 
 
 @main.command("run")
-@click.option("--family", required=True, help="path under benchmarks/, e.g. dqbf/qbfeval")
+@click.option("--family", required=True, help="path under benchmarks/, e.g. holdout/dqbf/qbfeval")
 @click.option("--prover", default="forkres", type=click.Choice(sorted(PROVERS)))
 @click.option("-j", "--jobs", default=os.cpu_count() or 1, type=int)
 @click.option("--timeout", "timeout_s", default=10.0, type=float)

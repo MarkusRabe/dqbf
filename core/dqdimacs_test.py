@@ -50,7 +50,7 @@ def test_dump_canonical() -> None:
     assert "-3 4 0\n" in s
 
 
-BENCH = Path(__file__).parent.parent / "benchmarks" / "dqbf" / "qbfeval" / "dqbf"
+BENCH = Path(__file__).parent.parent / "benchmarks" / "holdout" / "dqbf" / "qbfeval" / "dqbf"
 
 
 @pytest.mark.skipif(not BENCH.exists(), reason="qbfeval benchmarks not present")

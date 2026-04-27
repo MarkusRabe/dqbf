@@ -29,4 +29,4 @@ already non-linear. So this tool's value is:
       `tools/eqfob/ast.py` (reuse the bit-blaster).
 - [ ] Linear-prefix path: emit QDIMACS (a DQDIMACS subset).
 - [ ] `UFBV` path: Ackermannize or dependency-encode UF symbols → DQDIMACS.
-- [ ] Golden tests against `benchmarks/qbvf/` (SMT-LIB UFBV/ABV sets).
+- [ ] Golden tests against `benchmarks/holdout/qbvf/` (SMT-LIB UFBV/ABV sets).

@@ -16,7 +16,7 @@ def test_classify() -> None:
 
 
 def test_load_family_infers_from_filename() -> None:
-    insts = load_family("dqbf/qbfeval")
+    insts = load_family("holdout/dqbf/qbfeval")
     if not insts:
         return
     assert any(i.expected == "unsat" for i in insts)

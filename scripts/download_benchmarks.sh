@@ -55,12 +55,12 @@ safe_extract() {
 GALLERY="https://qbf23.pages.sai.jku.at/gallery"
 fetch "$GALLERY/qdimacs.tar.xz"    qbfeval23_qdimacs.tar.xz  ""
 fetch "$GALLERY/qdimacs20.tar.zst" qbfeval20_qdimacs.tar.zst ""
-safe_extract "$DL/qbfeval23_qdimacs.tar.xz"  "$ROOT/benchmarks/qbf/qbfeval23"
-safe_extract "$DL/qbfeval20_qdimacs.tar.zst" "$ROOT/benchmarks/qbf/qbfeval20" --zstd
+safe_extract "$DL/qbfeval23_qdimacs.tar.xz"  "$ROOT/benchmarks/holdout/qbf/qbfeval23"
+safe_extract "$DL/qbfeval20_qdimacs.tar.zst" "$ROOT/benchmarks/holdout/qbf/qbfeval20" --zstd
 
 # --- SMT-LIB BV (quantified) -------------------------------------------
 ZENODO="https://zenodo.org/records/15493090/files"
 fetch "$ZENODO/BV.tar.zst" smtlib_BV.tar.zst ""
-safe_extract "$DL/smtlib_BV.tar.zst" "$ROOT/benchmarks/qbvf/bv" --zstd
+safe_extract "$DL/smtlib_BV.tar.zst" "$ROOT/benchmarks/holdout/qbvf/bv" --zstd
 
 echo "done. Large sets unpacked under benchmarks/{qbf,qbvf}/."

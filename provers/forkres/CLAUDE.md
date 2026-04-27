@@ -69,7 +69,7 @@ Phased; each phase is green before the next starts.
    - [ ] Search loop with watched-literal clause DB.
    - [ ] Wire into `benchmarks/runner/`;
          `tests/integration/diff_provers.py` enforces parity.
-   - [ ] Profile on `benchmarks/dqbf/qbfeval/`; optimize hot paths
+   - [ ] Profile on `benchmarks/holdout/holdout/dqbf/qbfeval/`; optimize hot paths
          (lift `forbid(unsafe_code)` only where profiling justifies it).
 5. **Heuristics.** Variable / clause selection, dependency-aware
    ordering, restart schedule. Gated behind flags; **off by default** in

@@ -9,7 +9,7 @@ and every SAT result must survive `tools/verify/`.
 ```
 tiny/             hand-written DQDIMACS, ≤20 vars; the §6 cycle example etc.
 from_eqfob/       compiled from tools/eqfob/examples/
-from_competition/ a small slice of benchmarks/dqbf/ with published results
+from_competition/ a small slice of benchmarks/holdout/dqbf/ with published results
 manifest.json     [{"path", "expected", "source"}]
 test_e2e.py       parametrized pytest: run prover → check exit code →
                   if SAT, run dqbf-verify on the certificate

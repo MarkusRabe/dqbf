@@ -22,7 +22,7 @@ NEXPTIME-complete).
 - Scholl, Wimmer et al. *Analysis of Incomplete Circuits Using Dependency
   Quantified Boolean Formulas.* 2018.
   https://link.springer.com/chapter/10.1007/978-3-319-67295-3_7
-- Benchmark source: HQS PEC instances (see `../../benchmarks/dqbf/`).
+- Benchmark source: HQS PEC instances (see `../../benchmarks/holdout/dqbf/`).
 
 ## Plan
 

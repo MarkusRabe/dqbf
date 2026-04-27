@@ -82,7 +82,7 @@ dq.write_dqdimacs("out.dqdimacs")
 
 The AST is the single source of truth; the `.eqfob` parser builds it, the
 DQDIMACS backend consumes it, and the benchmark generators in
-`benchmarks/eqfob/*/generate.py` construct it directly.
+`benchmarks/train/*/generate.py` construct it directly.
 
 ## Module layout (planned)
 

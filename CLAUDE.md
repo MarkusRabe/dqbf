@@ -66,7 +66,7 @@ pytest tests/integration  # e2e (slow)
 Run a single benchmark family:
 
 ```bash
-dqbf-bench run --family eqfob/bitwidth_scaling --prover forkres -j 8
+dqbf-bench run --family train/bitwidth_scaling --prover forkres -j 8
 ```
 
 ## When adding a feature
@@ -78,6 +78,17 @@ dqbf-bench run --family eqfob/bitwidth_scaling --prover forkres -j 8
    prover's Python source first, cover with colocated `*_test.py`, then
    port to its `rust/` crate.
 3. If it's a new **benchmark family**: add a generator under
-   `benchmarks/eqfob/<family>/generate.py` and register it with the
-   runner; do **not** commit generated instances >1 MB — commit the
-   generator and a small sample.
+   `benchmarks/train/<family>/generate.py` and register it with the
+   runner; do **not** commit generated instances — commit the
+   generator + manifest only.
+
+## Benchmark split (read before touching benchmarks/)
+
+- `benchmarks/holdout/` — competition sets (QBFEVAL, SMT-LIB, …). Used
+  **only** for milestone evaluation; never inside the improvement loop.
+- `benchmarks/train/` — scalable generated families (parameterized by
+  bit-width / BMC bound / …). This is what the prover-improvement loop
+  iterates against.
+
+Do not optimize prover heuristics against `holdout/`. See
+`docs/IMPROVEMENT_LOOP.md` for the loop mechanics and acceptance gate.
