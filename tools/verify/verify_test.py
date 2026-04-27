@@ -23,6 +23,12 @@ def test_verify_skolem_roundtrip() -> None:
     assert verify_skolem(f, sk2)
 
 
+def test_verify_skolem_rejects_incomplete() -> None:
+    f = make_formula(universals=[1], dependencies={2: [1]}, clauses=[[2]])
+    incomplete: dict[int, dict[tuple[bool, ...], bool]] = {2: {(False,): True}}
+    assert verify_skolem(f, incomplete) is False
+
+
 def test_verify_skolem_rejects_wrong() -> None:
     f = make_formula(
         universals=[1, 2],

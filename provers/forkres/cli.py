@@ -28,8 +28,7 @@ def main(
     proof_path: str | None,
     trace: bool,
 ) -> None:
-    text = open(path).read() if path else sys.stdin.read()
-    f = dqdimacs.parse(text)
+    f = dqdimacs.load(path) if path else dqdimacs.parse(sys.stdin.read())
     cfg = SearchConfig(
         max_clauses=max_clauses,
         max_forks=max_forks,

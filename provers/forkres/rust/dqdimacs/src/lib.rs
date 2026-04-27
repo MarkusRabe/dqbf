@@ -19,10 +19,28 @@ pub enum ParseError {
     BadLine(usize, String),
 }
 
+fn parse_nums<T: std::str::FromStr>(toks: &[&str], lineno: usize) -> Result<Vec<T>, ParseError> {
+    toks.iter()
+        .map(|t| {
+            t.parse()
+                .map_err(|_| ParseError::BadLine(lineno, format!("bad token {t:?}")))
+        })
+        .collect()
+}
+
+fn body_u32(toks: &[&str], lineno: usize) -> Result<Vec<u32>, ParseError> {
+    let nums: Vec<i32> = parse_nums(toks, lineno)?;
+    if nums.last() != Some(&0) {
+        return Err(ParseError::BadLine(lineno, "not 0-terminated".into()));
+    }
+    Ok(nums[..nums.len() - 1].iter().map(|&x| x as u32).collect())
+}
+
 pub fn parse(text: &str) -> Result<Formula, ParseError> {
     let mut f = Formula::default();
     let mut seen_header = false;
-    for (lineno, raw) in text.lines().enumerate() {
+    for (i, raw) in text.lines().enumerate() {
+        let lineno = i + 1;
         let line = raw.trim();
         if line.is_empty() || line.starts_with('c') {
             continue;
@@ -30,6 +48,9 @@ pub fn parse(text: &str) -> Result<Formula, ParseError> {
         let toks: Vec<&str> = line.split_whitespace().collect();
         match toks[0] {
             "p" => {
+                if seen_header {
+                    return Err(ParseError::BadHeader("duplicate header".into()));
+                }
                 if toks.len() != 4 || toks[1] != "cnf" {
                     return Err(ParseError::BadHeader(line.into()));
                 }
@@ -40,10 +61,9 @@ pub fn parse(text: &str) -> Result<Formula, ParseError> {
             }
             "a" | "e" | "d" => {
                 if !seen_header {
-                    return Err(ParseError::BadLine(lineno + 1, "before header".into()));
+                    return Err(ParseError::BadLine(lineno, "before header".into()));
                 }
-                let nums: Vec<i32> = toks[1..].iter().map(|t| t.parse().unwrap_or(0)).collect();
-                let body: Vec<u32> = nums[..nums.len() - 1].iter().map(|&x| x as u32).collect();
+                let body = body_u32(&toks[1..], lineno)?;
                 match toks[0] {
                     "a" => f.universals.extend(body),
                     "e" => {
@@ -55,14 +75,20 @@ pub fn parse(text: &str) -> Result<Formula, ParseError> {
                     "d" => {
                         let (y, ds) = body
                             .split_first()
-                            .ok_or_else(|| ParseError::BadLine(lineno + 1, "empty d".into()))?;
+                            .ok_or_else(|| ParseError::BadLine(lineno, "empty d".into()))?;
                         f.dependencies.insert(*y, ds.to_vec());
                     }
                     _ => unreachable!(),
                 }
             }
             _ => {
-                let nums: Vec<i32> = toks.iter().map(|t| t.parse().unwrap_or(0)).collect();
+                if !seen_header {
+                    return Err(ParseError::BadLine(lineno, "before header".into()));
+                }
+                let nums: Vec<i32> = parse_nums(&toks, lineno)?;
+                if nums.last() != Some(&0) {
+                    return Err(ParseError::BadLine(lineno, "not 0-terminated".into()));
+                }
                 f.clauses.push(nums[..nums.len() - 1].to_vec());
             }
         }
@@ -81,5 +107,28 @@ mod tests {
         assert_eq!(f.universals, vec![1, 2]);
         assert_eq!(f.dependencies.get(&3), Some(&vec![1]));
         assert_eq!(f.clauses, vec![vec![3, 4]]);
+    }
+
+    #[test]
+    fn rejects_bad_token() {
+        assert!(parse("p cnf 2 1\na 1 abc 0\n").is_err());
+        assert!(parse("p cnf 2 1\na 1 0\n1a 2 0\n").is_err());
+    }
+
+    #[test]
+    fn rejects_missing_terminator() {
+        assert!(parse("p cnf 2 0\na 1 2\n").is_err());
+        assert!(parse("p cnf 2 0\na\n").is_err());
+        assert!(parse("p cnf 2 1\na 1 0\n1 2\n").is_err());
+    }
+
+    #[test]
+    fn rejects_data_before_header() {
+        assert!(parse("3 4 0\np cnf 4 0\n").is_err());
+    }
+
+    #[test]
+    fn rejects_duplicate_header() {
+        assert!(parse("p cnf 2 1\np cnf 5 1\n").is_err());
     }
 }

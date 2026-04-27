@@ -12,12 +12,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from core.formula import Clause, Formula
-from provers.forkres.rules import (
-    fork_extend,
-    resolve,
-    strong_fork_extend,
-    universal_reduce,
-)
+from provers.forkres.rules import resolve, universal_reduce
 
 
 @dataclass(frozen=True)
@@ -90,15 +85,23 @@ def replay(f: Formula, proof: Proof) -> bool:
             if len(s.premises) != 1 or s.part is None or s.fresh is None:
                 return False
             src = derived[s.premises[0]]
-            if s.rule == "fex":
-                fr = fork_extend(g, src, frozenset(s.part))
-            else:
-                fr = strong_fork_extend(g, src, frozenset(s.part), frozenset(s.c3 or ()))
-            if fr.fresh != s.fresh:
+            part = frozenset(s.part)
+            if not part <= src:
                 return False
-            if c not in (fr.left, fr.right):
+            c3 = frozenset(s.c3 or ())
+            c1, c2 = part, src - part
+            left = c3 | c1 | {s.fresh}
+            right = c3 | c2 | {-s.fresh}
+            if c not in (left, right):
                 return False
-            g = fr.formula
+            if s.fresh > g.n_vars:
+                d1, d2 = g.clause_dep(c1), g.clause_dep(c2)
+                drop = frozenset(abs(lit) for lit in c3) if s.rule == "sfex" else frozenset()
+                if s.rule == "sfex" and any(not g.is_universal(abs(lit)) for lit in c3):
+                    return False
+                g = g.add_existential(s.fresh, (d1 & d2) - drop)
+            elif not g.is_existential(s.fresh):
+                return False
         else:
             return False
         derived.append(c)
