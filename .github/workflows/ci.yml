@@ -32,7 +32,7 @@ jobs:
           ruff check .
           ruff format --check .
       - name: Type check (mypy)
-        run: mypy provers tools benchmarks/runner
+        run: mypy core provers tools benchmarks/runner
       - name: Unit tests
         run: pytest -m "not integration"
 

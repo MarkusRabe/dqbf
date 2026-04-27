@@ -1,0 +1,9 @@
+[package]
+name = "forkres-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+dqdimacs = { path = "../dqdimacs" }
+forkres-core = { path = "../forkres-core" }
