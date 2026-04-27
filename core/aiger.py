@@ -49,7 +49,7 @@ class _Aig:
         lines = [f"aag {m} {i} 0 {o} {a}"]
         lines += [str(self.lit_input(k)) for k in range(i)]
         lines += [str(x) for x in self.outputs]
-        lines += [f"{g} {l} {r}" for (g, l, r) in self.gates]
+        lines += [f"{g} {a0} {a1}" for (g, a0, a1) in self.gates]
         for k, name in sorted(self.in_names.items()):
             lines.append(f"i{k} {name}")
         for k, name in sorted(self.out_names.items()):
