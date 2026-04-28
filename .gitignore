@@ -5,7 +5,7 @@ INTERNAL.md
 # Local-only reference PDFs (copyright)
 docs/references/local/*.pdf
 
-# Generated report
+# Generated scratch report (timestamped reports under docs/dev_reports/ ARE committed)
 docs/site/
 
 # Python

@@ -1,11 +1,13 @@
-"""Generate a self-contained HTML status report under docs/site/.
+"""Generate a self-contained HTML status report under docs/dev_reports/.
 
-Runs a small slice of the pipeline live (EQFOB compile, forkres,
-verify-CNF emit, bitwidth_scaling bench) and renders the results.
+Each run writes docs/dev_reports/<YYYY-MM-DD_HHMM>.html and refreshes
+docs/dev_reports/index.html. Reports are committed so they accumulate
+as a history of the project's state.
 """
 
 from __future__ import annotations
 
+import datetime
 import html
 import json
 import subprocess
@@ -13,7 +15,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SITE = ROOT / "docs" / "site"
+REPORTS = ROOT / "docs" / "dev_reports"
 
 CSS = """
 body{font-family:system-ui,sans-serif;max-width:960px;margin:2em auto;padding:0 1em;color:#222}
@@ -189,8 +191,27 @@ only width-1 of the simple bitwise ops is solved.</p>
 """
 
 
+def _git_head() -> str:
+    return subprocess.run(
+        ["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"],
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+def write_index() -> None:
+    items = sorted(REPORTS.glob("20*.html"), reverse=True)
+    rows = "".join(f'<li><a href="{esc(p.name)}">{esc(p.stem)}</a></li>' for p in items)
+    (REPORTS / "index.html").write_text(
+        f"<!doctype html><meta charset=utf-8><title>dqbf dev reports</title>"
+        f"<style>{CSS}</style><h1>dqbf — dev reports</h1><ul>{rows}</ul>"
+    )
+
+
 def main() -> None:
-    SITE.mkdir(parents=True, exist_ok=True)
+    REPORTS.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M")
+    head = _git_head()
     perf = Path("/tmp/bw.jsonl")
     body = (
         section_overview()
@@ -199,17 +220,20 @@ def main() -> None:
         + section_perf(perf)
         + "<h2>References</h2><ul>"
         + "<li><a href='../../OVERVIEW.md'>OVERVIEW.md</a> — proof system &amp; literature</li>"
-        + "<li><a href='../IMPROVEMENT_LOOP.md'>IMPROVEMENT_LOOP.md</a> — the plan</li></ul>"
+        + "<li><a href='../IMPROVEMENT_LOOP.md'>IMPROVEMENT_LOOP.md</a> — the plan</li>"
+        + "<li><a href='index.html'>all reports</a></li></ul>"
     )
-    page = f"""<!doctype html><meta charset=utf-8><title>dqbf — status</title>
+    page = f"""<!doctype html><meta charset=utf-8><title>dqbf — {stamp}</title>
 <style>{CSS}</style>
-<h1>dqbf — fork-resolution provers &amp; tooling</h1>
+<h1>dqbf — status {esc(stamp)} <small>@ {esc(head)}</small></h1>
 <nav><a href=#overview>overview</a><a href=#tools>tools</a>
 <a href=#workflow>workflow</a><a href=#perf>performance</a></nav>
 {body}
 """
-    (SITE / "index.html").write_text(page)
-    print(f"wrote {SITE / 'index.html'} ({len(page) // 1024} KB)")
+    out = REPORTS / f"{stamp}.html"
+    out.write_text(page)
+    write_index()
+    print(f"wrote {out} ({len(page) // 1024} KB)")
 
 
 if __name__ == "__main__":
