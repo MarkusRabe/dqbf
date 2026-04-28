@@ -208,7 +208,15 @@ def write_index() -> None:
     )
 
 
+def _slug(s: str) -> str:
+    return "".join(c if c.isalnum() else "-" for c in s.lower()).strip("-")[:48]
+
+
 def main() -> None:
+    if len(sys.argv) < 2:
+        print("usage: make_report.py <name>  (short label, e.g. 'baseline-v0')")
+        sys.exit(2)
+    label = _slug(sys.argv[1])
     REPORTS.mkdir(parents=True, exist_ok=True)
     stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M")
     head = _git_head()
@@ -225,12 +233,12 @@ def main() -> None:
     )
     page = f"""<!doctype html><meta charset=utf-8><title>dqbf — {stamp}</title>
 <style>{CSS}</style>
-<h1>dqbf — status {esc(stamp)} <small>@ {esc(head)}</small></h1>
+<h1>dqbf — {esc(label)} <small>{esc(stamp)} @ {esc(head)}</small></h1>
 <nav><a href=#overview>overview</a><a href=#tools>tools</a>
 <a href=#workflow>workflow</a><a href=#perf>performance</a></nav>
 {body}
 """
-    out = REPORTS / f"{stamp}.html"
+    out = REPORTS / f"{stamp}_{label}.html"
     out.write_text(page)
     write_index()
     print(f"wrote {out} ({len(page) // 1024} KB)")
