@@ -1,0 +1,5 @@
+-- ∃f. ∀x. f(x) ≠ f(x).  UNSAT — Ackermann congruence forces the two
+-- call sites to agree, so the inequality is unsatisfiable.
+fun f : bv[1] -> bv[1]
+forall x : bv[1]
+f(x) != f(x)

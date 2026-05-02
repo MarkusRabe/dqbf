@@ -1,0 +1,5 @@
+-- ∃low. ∀x. low(x) = bit 0 of x.  SAT (low is the projection).
+param N = 2
+fun low : bv[N] -> bv[1]
+forall x : bv[N]
+low(x) == extract[0:0](x)

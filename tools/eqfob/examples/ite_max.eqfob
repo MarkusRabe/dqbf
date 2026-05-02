@@ -1,0 +1,6 @@
+-- ∃max. ∀x,y. max(x,y) = ite(x ≥ y, x, y).  SAT (max is the function).
+param N = 1
+fun max : bv[N], bv[N] -> bv[N]
+forall x : bv[N]
+forall y : bv[N]
+max(x, y) == ite(x >= y, x, y)

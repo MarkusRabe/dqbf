@@ -1,0 +1,4 @@
+-- ∀x:bv[1]. zext[1](x) < 2.  SAT — a tautology (no functions to find;
+-- exercises zext + unsigned comparison against a literal).
+forall x : bv[1]
+zext[1](x) < 2
