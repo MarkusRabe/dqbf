@@ -147,13 +147,18 @@ def parse_aag(text: str) -> Aag:
             break
 
     in_set = set(inputs)
-    defined = in_set | {g for g, _, _ in gates} | {0}
+    if len(in_set) != ni:
+        raise ValueError("duplicate input literals")
     for lit in inputs:
         if lit <= 0 or lit & 1 or lit > max_lit:
             raise ValueError(f"bad input literal {lit}")
+    gate_lhs: set[int] = set()
+    for g, _, _ in gates:
+        if g <= 0 or g & 1 or g > max_lit or g in in_set or g in gate_lhs:
+            raise ValueError(f"bad/duplicate gate lhs {g}")
+        gate_lhs.add(g)
+    defined = in_set | gate_lhs | {0}
     for g, a, b in gates:
-        if g <= 0 or g & 1 or g > max_lit or g in in_set:
-            raise ValueError(f"bad gate lhs {g}")
         if (a & ~1) not in defined or (b & ~1) not in defined:
             raise ValueError(f"gate {g}: operand references undefined literal")
     for lit in outputs:

@@ -61,7 +61,7 @@ def encode_verification(f: Formula, aig: Aag) -> VerifyCNF:
     aig_in_u: dict[int, int] = {}
     for i, lit in enumerate(aig.inputs):
         name = aig.in_names.get(i, "")
-        if name.startswith("u"):
+        if name.startswith("u") and name[1:].isdigit():
             uid = int(name[1:])
             if uid in u_dimacs:
                 aig_in_u[lit] = u_dimacs[uid]

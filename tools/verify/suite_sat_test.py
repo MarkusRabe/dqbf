@@ -132,6 +132,51 @@ VALID = [
         "p cnf 2 2\na 1 0\nd 2 1 0\n1 2 0\n-1 -2 0\n",
         aag(2, [2], [4], [(4, 3, 1)], "i0 u1\no0 e2\n"),
     ),
+    (
+        "S-V15-double-neg-existential",
+        # y2=x1; clause is {-2, 1} i.e. y2→x1. Cert e2=x1 (lit 2).
+        # subst(-2) with e_dimacs[2]=u1_var → -u1_var. Clause {-u1,u1} taut.
+        "p cnf 2 2\na 1 0\nd 2 1 0\n-2 1 0\n2 -1 0\n",
+        aag(1, [2], [2], [], "i0 u1\no0 e2\n"),
+    ),
+    (
+        "S-V16-existential-is-neg-const",
+        # y2 must be 0; cert e2=0 (lit 0).
+        "p cnf 2 1\na 1 0\nd 2 1 0\n-2 0\n",
+        aag(1, [2], [0], [], "i0 u1\no0 e2\n"),
+    ),
+    (
+        "S-V17-neg-existential-mapped-to-neg-input",
+        # y2↔x1; e2 = ¬¬x1 via gate g=¬(¬x1&¬x1)=x1? g=¬x1&¬x1=¬x1, out=¬g=x1.
+        "p cnf 2 2\na 1 0\nd 2 1 0\n-1 2 0\n1 -2 0\n",
+        aag(2, [2], [5], [(4, 3, 3)], "i0 u1\no0 e2\n"),
+    ),
+    (
+        "S-V18-three-existentials-correct",
+        "p cnf 5 3\na 1 2 0\nd 3 1 0\nd 4 2 0\nd 5 1 2 0\n-1 3 0\n-2 4 0\n5 -1 -2 0\n",
+        aag(3, [2, 4], [2, 4, 6], [(6, 2, 4)], "i0 u1\ni1 u2\no0 e3\no1 e4\no2 e5\n"),
+    ),
+    (
+        "S-V19-unused-input",
+        # AIG declares u2 input but no output uses it; that's fine.
+        F_TRUE2,
+        aag(2, [2, 4], [1], [], "i0 u1\ni1 u2\no0 e2\n"),
+    ),
+    (
+        "S-V20-qbf-e-line-formula",
+        "p cnf 3 2\na 1 2 0\ne 3 0\n-1 3 0\n1 -3 0\n",
+        aag(2, [2, 4], [2], [], "i0 u1\ni1 u2\no0 e3\n"),
+    ),
+    (
+        "S-V21-comments-in-dqdimacs",
+        "c top\np cnf 2 1\nc mid\na 1 0\nd 2 1 0\nc before clause\n2 0\n",
+        aag(1, [2], [1], [], "i0 u1\no0 e2\n"),
+    ),
+    (
+        "S-V22-aiger-comment-section",
+        F_TRUE2,
+        aag(1, [2], [1], [], "i0 u1\no0 e2\nc\nthis is a comment\nignored\n"),
+    ),
 ]
 
 # --- dep violations (must populate dep_violations; never "valid") --------
@@ -189,6 +234,36 @@ DEP = [
         "S-D10-empty-deps-uses-input",
         F_NODEP,
         aag(1, [2], [2], [], "i0 u1\no0 e2\n"),
+    ),
+    (
+        "S-D12-forbidden-via-shared-gate",
+        # gate g=u1&u2; e3 uses g (forbidden u2), e4 uses g (allowed both).
+        # Only e3 should be flagged.
+        "p cnf 4 1\na 1 2 0\nd 3 1 0\nd 4 1 2 0\n3 4 0\n",
+        aag(3, [2, 4], [6, 6], [(6, 2, 4)], "i0 u1\ni1 u2\no0 e3\no1 e4\n"),
+    ),
+    (
+        "S-D13-forbidden-anded-with-true",
+        F_COPY,
+        # e3 = u2 & 1 = u2 (forbidden, not masked).
+        aag(3, [2, 4], [6, 4], [(6, 4, 1)], "i0 u1\ni1 u2\no0 e3\no1 e4\n"),
+    ),
+    (
+        "S-D14-multiple-violations",
+        F_COPY,
+        # e3 uses u2 (forbidden) AND e4 missing.
+        aag(2, [2, 4], [4], [], "i0 u1\ni1 u2\no0 e3\n"),
+    ),
+    (
+        "S-D15-input-named-u-nonint",
+        F_COPY,
+        aag(2, [2, 4], [4, 2], [], "i0 u1\ni1 ufoo\no0 e3\no1 e4\n"),
+    ),
+    (
+        "S-D16-deep-gate-chain-forbidden",
+        F_COPY,
+        # e3 reaches u2 through 3 gates.
+        aag(5, [2, 4], [10, 4], [(6, 4, 1), (8, 6, 1), (10, 8, 2)], "i0 u1\ni1 u2\no0 e3\no1 e4\n"),
     ),
     (
         "S-O1-missing-output",
@@ -273,6 +348,25 @@ INVALID = [
         aag(3, [2, 4], [2, 4, 7], [(6, 2, 4)], "i0 u1\ni1 u2\no0 e3\no1 e4\no2 e5\n"),
     ),
     (
+        "S-E17-existential-pair-swapped-within-deps",
+        # y3 deps={1}, y4 deps={1}; cert swaps: e3=x1 ok, e4=¬x1 — formula says both =x1.
+        "p cnf 4 4\na 1 0\nd 3 1 0\nd 4 1 0\n-1 3 0\n1 -3 0\n-1 4 0\n1 -4 0\n",
+        aag(1, [2], [2, 3], [], "i0 u1\no0 e3\no1 e4\n"),
+    ),
+    (
+        "S-E18-and-but-gate-is-or",
+        F_AND3,
+        # e3 = ¬(¬u1 & ¬u2) = OR — wrong.
+        aag(3, [2, 4], [7], [(6, 3, 5)], "i0 u1\ni1 u2\no0 e3\n"),
+    ),
+    (
+        "S-E19-correct-except-one-row",
+        # y2 should be x1; cert is x1 EXCEPT inverted somewhere via gate that's
+        # actually just x1 again. Use: e2=1 (const), fails when x1=0.
+        "p cnf 2 2\na 1 0\nd 2 1 0\n-1 2 0\n1 -2 0\n",
+        aag(1, [2], [1], [], "i0 u1\no0 e2\n"),
+    ),
+    (
         "S-E16-double-negation-wrong",
         F_TRUE2,
         # output is ¬1 = 0 via two inversions? No: lit 1 IS true. ¬¬true=true. Use gate.
@@ -310,6 +404,31 @@ ERROR = [
         "S-O4-output-symbol-oob",
         F_COPY,
         aag(2, [2, 4], [2, 4], [], "i0 u1\ni1 u2\no5 e3\no1 e4\n"),
+    ),
+    (
+        "S-A9-duplicate-gate-lhs",
+        F_AND3,
+        aag(4, [2, 4], [6], [(6, 2, 4), (6, 2, 1)], "i0 u1\ni1 u2\no0 e3\n"),
+    ),
+    (
+        "S-A10-input-lit-odd",
+        F_TRUE2,
+        "aag 1 1 0 1 0\n3\n3\ni0 u1\no0 e2\n",
+    ),
+    (
+        "S-A11-input-lit-zero",
+        F_TRUE2,
+        "aag 1 1 0 1 0\n0\n0\ni0 u1\no0 e2\n",
+    ),
+    (
+        "S-A12-gate-lhs-too-large",
+        F_AND3,
+        aag(2, [2, 4], [6], [(6, 2, 4)], "i0 u1\ni1 u2\no0 e3\n"),  # m=2 but gate at 6
+    ),
+    (
+        "S-A13-neg-symbol-index",
+        F_TRUE2,
+        aag(1, [2], [1], [], "i-1 u1\no0 e2\n"),
     ),
     (
         "S-P1-undeclared-var-in-clause",

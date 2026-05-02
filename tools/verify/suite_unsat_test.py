@@ -226,6 +226,110 @@ VALID = [
         ),
     ),
     (
+        "U-V16-long-resolution-chain",
+        "p cnf 4 5\ne 1 2 3 4 0\n1 0\n-1 2 0\n-2 3 0\n-3 4 0\n-4 0\n",
+        frp(
+            {"clause": [1], "rule": "axiom"},
+            {"clause": [-1, 2], "rule": "axiom"},
+            {"clause": [-2, 3], "rule": "axiom"},
+            {"clause": [-3, 4], "rule": "axiom"},
+            {"clause": [-4], "rule": "axiom"},
+            {"clause": [2], "rule": "res", "premises": [0, 1], "pivot": 1},
+            {"clause": [3], "rule": "res", "premises": [5, 2], "pivot": 2},
+            {"clause": [4], "rule": "res", "premises": [6, 3], "pivot": 3},
+            {"clause": [], "rule": "res", "premises": [7, 4], "pivot": 4},
+        ),
+    ),
+    (
+        "U-V17-axiom-reused",
+        F_PROP,
+        frp(
+            {"clause": [1], "rule": "axiom"},
+            {"clause": [1], "rule": "axiom"},
+            {"clause": [-1], "rule": "axiom"},
+            {"clause": [], "rule": "res", "premises": [1, 2], "pivot": 1},
+        ),
+    ),
+    (
+        "U-V18-fex-then-ured-uses-fresh-deps",
+        # After FEx, fresh 5 has dep ∅; ∀-reducing {1,5} should drop 1.
+        F_FORK,
+        frp(
+            {"clause": [3, 4], "rule": "axiom"},
+            {"clause": [-3], "rule": "axiom"},
+            {"clause": [-4], "rule": "axiom"},
+            {"clause": [3, 5], "rule": "fex", "premises": [0], "part": [3], "fresh": 5},
+            {"clause": [-5, 4], "rule": "fex", "premises": [0], "part": [3], "fresh": 5},
+            {
+                "clause": [5],
+                "rule": "res",
+                "premises": [3, 1],
+                "pivot": 3,
+            },  # raw {5}; 1 not present
+            {"clause": [4], "rule": "res", "premises": [4, 5], "pivot": 5},
+            {"clause": [], "rule": "res", "premises": [6, 2], "pivot": 4},
+        ),
+    ),
+    (
+        "U-V19-sibling-far-apart",
+        # Left half at step 3, right half at step 7 (after unrelated work).
+        F_FORK,
+        frp(
+            {"clause": [3, 4], "rule": "axiom"},
+            {"clause": [-3], "rule": "axiom"},
+            {"clause": [-4], "rule": "axiom"},
+            {"clause": [3, 5], "rule": "fex", "premises": [0], "part": [3], "fresh": 5},
+            {"clause": [5], "rule": "res", "premises": [3, 1], "pivot": 3},
+            {"clause": [3, 4], "rule": "axiom"},  # redundant axiom in between
+            {"clause": [-3], "rule": "axiom"},
+            {"clause": [-5, 4], "rule": "fex", "premises": [0], "part": [3], "fresh": 5},
+            {"clause": [-5], "rule": "res", "premises": [7, 2], "pivot": 4},
+            {"clause": [], "rule": "res", "premises": [4, 8], "pivot": 5},
+        ),
+    ),
+    (
+        "U-V20-nonconsecutive-fresh",
+        # fresh=100 then fresh=200 (large gaps are fine).
+        F_FORK,
+        frp(
+            {"clause": [3, 4], "rule": "axiom"},
+            {"clause": [-3], "rule": "axiom"},
+            {"clause": [-4], "rule": "axiom"},
+            {"clause": [3, 100], "rule": "fex", "premises": [0], "part": [3], "fresh": 100},
+            {"clause": [-100, 4], "rule": "fex", "premises": [0], "part": [3], "fresh": 100},
+            {"clause": [100], "rule": "res", "premises": [3, 1], "pivot": 3},
+            {"clause": [-100], "rule": "res", "premises": [4, 2], "pivot": 4},
+            {"clause": [], "rule": "res", "premises": [5, 6], "pivot": 100},
+        ),
+    ),
+    (
+        "U-V21-ured-on-empty",
+        "p cnf 1 1\ne 1 0\n0\n",
+        frp(
+            {"clause": [], "rule": "axiom"},
+            {"clause": [], "rule": "ured", "premises": [0]},
+        ),
+    ),
+    (
+        "U-V22-large-var-ids",
+        "p cnf 1000000 2\ne 1000000 0\n1000000 0\n-1000000 0\n",
+        frp(
+            {"clause": [1000000], "rule": "axiom"},
+            {"clause": [-1000000], "rule": "axiom"},
+            {"clause": [], "rule": "res", "premises": [0, 1], "pivot": 1000000},
+        ),
+    ),
+    (
+        "U-V23-qbf-style-prefix",
+        # 'e' line (QBF-style) instead of 'd' lines.
+        "p cnf 3 2\na 1 2 0\ne 3 0\n3 0\n-3 0\n",
+        frp(
+            {"clause": [3], "rule": "axiom"},
+            {"clause": [-3], "rule": "axiom"},
+            {"clause": [], "rule": "res", "premises": [0, 1], "pivot": 3},
+        ),
+    ),
+    (
         "U-V12-fresh-ids-monotone",
         # Two distinct FEx applications with fresh=5 then fresh=6.
         F_FORK,
@@ -550,6 +654,122 @@ INVALID = [
         ),
     ),
     ("U-S4-unknown-rule", F_PROP, frp({"clause": [1], "rule": "magic"})),
+    ("U-S4b-empty-rule", F_PROP, frp({"clause": [1], "rule": ""})),
+    (
+        "U-R9-pivot-zero",
+        F_PROP,
+        frp(
+            {"clause": [1], "rule": "axiom"},
+            {"clause": [-1], "rule": "axiom"},
+            {"clause": [], "rule": "res", "premises": [0, 1], "pivot": 0},
+        ),
+    ),
+    (
+        "U-R10-resolve-with-empty-premise",
+        "p cnf 1 2\ne 1 0\n1 0\n0\n",
+        frp(
+            {"clause": [1], "rule": "axiom"},
+            {"clause": [], "rule": "axiom"},
+            {"clause": [], "rule": "res", "premises": [0, 1], "pivot": 1},
+        ),
+    ),
+    (
+        "U-F18-fresh-in-part",
+        # part contains the fresh literal itself (nonsensical).
+        F_FORK,
+        frp(
+            {"clause": [3, 4], "rule": "axiom"},
+            {"clause": [3, 5], "rule": "fex", "premises": [0], "part": [3, 5], "fresh": 5},
+        ),
+    ),
+    (
+        "U-F19-c3-overlaps-part",
+        # c3={1} where 1 also appears (as universal) — but 1 isn't in the clause.
+        # Allowed in principle; test that the resulting clause shape is enforced.
+        F_CYCLE,
+        frp(
+            {"clause": [4, 5, 6], "rule": "axiom"},
+            # left = c3 ∪ part ∪ {fresh} = {1,4,7}; recorded {4,7} doesn't match
+            {"clause": [4, 7], "rule": "sfex", "premises": [0], "part": [4], "c3": [1], "fresh": 7},
+        ),
+    ),
+    (
+        "U-F20-sibling-different-c3",
+        F_CYCLE,
+        frp(
+            {"clause": [4, 5, 6], "rule": "axiom"},
+            {
+                "clause": [2, 4, 7],
+                "rule": "sfex",
+                "premises": [0],
+                "part": [4],
+                "c3": [2],
+                "fresh": 7,
+            },
+            {
+                "clause": [-7, 1, 5, 6],
+                "rule": "sfex",
+                "premises": [0],
+                "part": [4],
+                "c3": [1],
+                "fresh": 7,
+            },
+        ),
+    ),
+    (
+        "U-F21-fresh-negative",
+        F_FORK,
+        frp(
+            {"clause": [3, 4], "rule": "axiom"},
+            {"clause": [3, -5], "rule": "fex", "premises": [0], "part": [3], "fresh": -5},
+        ),
+    ),
+    (
+        "U-F22-ured-after-fex-wrong-dep",
+        # After FEx, dep(5)=∅. {1,3,5}: ex_deps={1}∪∅={1}. Can drop 2 but NOT 1.
+        # But this clause doesn't arise from the proof; test via a constructed res.
+        # Actually: derive {3,5}, then claim ured drops 3 (existential) → reject.
+        F_FORK,
+        frp(
+            {"clause": [3, 4], "rule": "axiom"},
+            {"clause": [3, 5], "rule": "fex", "premises": [0], "part": [3], "fresh": 5},
+            {"clause": [5], "rule": "ured", "premises": [1]},  # 3 is existential, can't drop
+        ),
+    ),
+    (
+        "U-X4-axiom-from-derived",
+        # 'axiom' must be in the ORIGINAL clauses, not in derived.
+        F_FORK,
+        frp(
+            {"clause": [3, 4], "rule": "axiom"},
+            {"clause": [3, 5], "rule": "fex", "premises": [0], "part": [3], "fresh": 5},
+            {"clause": [3, 5], "rule": "axiom"},  # not in original input
+        ),
+    ),
+    (
+        "U-I6-forward-reference",
+        # premise index = current step index (refers to clause being derived).
+        F_PROP,
+        frp(
+            {"clause": [1], "rule": "axiom"},
+            {"clause": [-1], "rule": "axiom"},
+            {"clause": [], "rule": "res", "premises": [0, 2], "pivot": 1},
+        ),
+    ),
+    (
+        "U-U10-drop-universal-in-exdep-after-fex",
+        # FEx gives dep(5)={1}∩{2}=∅. Clause {1,5}: ex_deps({5})=∅.
+        # Drop 1 → {5}. Valid! But test the WRONG direction: claim {1,5} → {1}.
+        F_FORK,
+        frp(
+            {"clause": [3, 4], "rule": "axiom"},
+            {"clause": [3, 5], "rule": "fex", "premises": [0], "part": [3], "fresh": 5},
+            {"clause": [-5, 4], "rule": "fex", "premises": [0], "part": [3], "fresh": 5},
+            # resolve {3,5} with axiom? need {1,5} somehow. Skip; use simpler:
+            # ured on {3,5} claiming to drop 5 (existential).
+            {"clause": [3], "rule": "ured", "premises": [1]},
+        ),
+    ),
     (
         "U-S5-res-three-premises",
         F_PROP,
