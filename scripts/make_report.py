@@ -57,7 +57,7 @@ circuits), not just decide SAT/UNSAT.</p>
 provers/       one dir per prover; forkres/ = Python ref + rust/
 tools/eqfob/   EQFOB language: BV + ∃-quantified functions → DQBF
 tools/verify/  independent checkers (trusted base; imports only core/)
-benchmarks/    holdout/ (eval-only) | train/ (scalable, generated)
+benchmarks/    test/ (eval-only) | train/ (scalable, generated)
                runner/ (parallel harness, compare)''')
     }
 """

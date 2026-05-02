@@ -33,7 +33,7 @@ The loop must not optimize against the instances it will be evaluated on.
 
 ```
 benchmarks/
-  holdout/    Competition sets (QBFEVAL, SMT-LIB, future SYNTCOMP).
+  test/       Competition sets (QBFLIB DQBF, SMT-LIB, future SYNTCOMP).
               NEVER used inside the improvement loop. Touched only for
               milestone evaluation runs that are reported, not iterated on.
   train/      Scalable generated families. Each family is a generator
@@ -136,12 +136,12 @@ family.
 6. **Commit or revert.** On accept, fast-forward the working branch and
    the new `candidate.jsonl` becomes the next baseline. On reject, note
    the attempt in `docs/loop_log.md` and revert.
-7. Periodically (not every iteration) run against `benchmarks/holdout/`
-   and record — **never** feed holdout results back into step 3.
+7. Periodically (not every iteration) run against `benchmarks/test/`
+   and record — **never** feed test-set results back into step 3.
 
 ## Next concrete steps
 
-- [x] `benchmarks/{holdout,train}/` split; policy in top-level
+- [x] `benchmarks/{test,train}/` split; policy in top-level
       `CLAUDE.md`.
 - [x] P0: verifiers decoupled from `provers/`. `tools/verify/unsat.py`
       is self-contained; `tools/verify/sat.py` emits DIMACS CNF + var

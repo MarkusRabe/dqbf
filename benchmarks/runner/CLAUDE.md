@@ -22,7 +22,7 @@ Modeled on cadet's `scripts/tester.py`:
 ## CLI
 
 ```
-dqbf-bench run   --family holdout/dqbf/qbfeval --prover forkres -j 64 --timeout 300
+dqbf-bench run   --family test/dqbf_qbflib --prover forkres -j 64 --timeout 300
 dqbf-bench run   --family train/bitwidth_scaling --prover forkres --impl rust -j 64 -D N=2,4,8,16
 dqbf-bench table results.jsonl --group-by family --metric solved,median_time
 ```

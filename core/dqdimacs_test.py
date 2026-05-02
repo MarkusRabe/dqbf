@@ -50,11 +50,11 @@ def test_dump_canonical() -> None:
     assert "-3 4 0\n" in s
 
 
-BENCH = Path(__file__).parent.parent / "benchmarks" / "holdout" / "dqbf" / "qbfeval" / "dqbf"
+BENCH = Path(__file__).parent.parent / "benchmarks" / "test" / "dqbf_qbflib" / "bloem"
 
 
-@pytest.mark.skipif(not BENCH.exists(), reason="qbfeval benchmarks not present")
-def test_load_qbfeval_sample() -> None:
+@pytest.mark.skipif(not BENCH.exists(), reason="qbflib benchmarks not present")
+def test_load_qbflib_sample() -> None:
     paths = sorted(BENCH.glob("*.dqdimacs"))[:5] + sorted(BENCH.glob("*.dqdimacs.gz"))[:2]
     assert paths, "no benchmark files found"
     for p in paths:

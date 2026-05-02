@@ -84,11 +84,11 @@ dqbf-bench run --family train/bitwidth_scaling --prover forkres -j 8
 
 ## Benchmark split (read before touching benchmarks/)
 
-- `benchmarks/holdout/` — competition sets (QBFEVAL, SMT-LIB, …). Used
+- `benchmarks/test/` — competition sets (QBFEVAL, SMT-LIB, …). Used
   **only** for milestone evaluation; never inside the improvement loop.
 - `benchmarks/train/` — scalable generated families (parameterized by
   bit-width / BMC bound / …). This is what the prover-improvement loop
   iterates against.
 
-Do not optimize prover heuristics against `holdout/`. See
+Do not optimize prover heuristics against `test/`. See
 `docs/IMPROVEMENT_LOOP.md` for the loop mechanics and acceptance gate.
