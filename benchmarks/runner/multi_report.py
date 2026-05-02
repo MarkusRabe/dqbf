@@ -68,7 +68,7 @@ def _cactus_svg(rows: list[dict], solvers: list[str], w: int = 520, h: int = 320
         if not ts:
             continue
         pts = " ".join(
-            f"{40 + (t / t_max) * (w - 60):.1f},{h - 30 - (k + 1) / n_max * (h - 50):.1f}"
+            f"{40 + (k + 1) / n_max * (w - 60):.1f},{h - 30 - (t / t_max) * (h - 50):.1f}"
             for k, t in enumerate(ts)
         )
         c = colors[i % len(colors)]
@@ -79,8 +79,8 @@ def _cactus_svg(rows: list[dict], solvers: list[str], w: int = 520, h: int = 320
     axes = (
         f'<line x1="40" y1="{h - 30}" x2="{w - 20}" y2="{h - 30}" stroke="#000"/>'
         f'<line x1="40" y1="20" x2="40" y2="{h - 30}" stroke="#000"/>'
-        f'<text x="{w // 2}" y="{h - 8}" font-size="11" text-anchor="middle">wall time (s, max={t_max:.2f})</text>'
-        f'<text x="12" y="{h // 2}" font-size="11" transform="rotate(-90 12 {h // 2})"># solved</text>'
+        f'<text x="{w // 2}" y="{h - 8}" font-size="11" text-anchor="middle"># solved</text>'
+        f'<text x="12" y="{h // 2}" font-size="11" transform="rotate(-90 12 {h // 2})">wall time (s, max={t_max:.2f})</text>'
     )
     return f'<svg width="{w}" height="{h}">{axes}{"".join(paths)}</svg>'
 
