@@ -7,13 +7,10 @@ and every SAT result must survive `tools/verify/`.
 ## Layout
 
 ```
-tiny/             hand-written DQDIMACS, ≤20 vars; the §6 cycle example etc.
-from_eqfob/       compiled from tools/eqfob/examples/
-from_competition/ a small slice of benchmarks/test/dqbf_qbflib/ with published results
-manifest.json     [{"path", "expected", "source"}]
-test_e2e.py       parametrized pytest: run prover → check exit code →
-                  if SAT, run dqbf-verify on the certificate
-diff_provers.py   python vs rust prover differential test
+tiny/             hand-written DQDIMACS, ≤20 vars
+manifest.json     [{"path", "expected"}]
+test_e2e.py       parametrized pytest: run prover → check result →
+                  verify the .aag / .frp via tools/verify (file interface)
 ```
 
 ## Conventions (mirrors cadet's `integration-tests/`)
@@ -33,8 +30,8 @@ diff_provers.py   python vs rust prover differential test
 
 ## Plan
 
-- [ ] `tiny/` seed set: 10 SAT + 10 UNSAT + 3 crash-regression.
-- [ ] `test_e2e.py` driving `provers/forkres` over `tiny/`.
-- [ ] Wire `tools/verify/` into the SAT branch.
-- [ ] `diff_provers.py` once Rust prover exists.
-- [ ] Nightly CI job over `from_competition/`.
+- [x] `tiny/` seed set.
+- [x] `test_e2e.py` driving `provers/forkres` over `tiny/`.
+- [x] Wire `tools/verify/` into both branches via the file interface.
+- [ ] Differential test once the Rust prover exists.
+- [ ] Nightly CI job over a slice of `benchmarks/test/dqbf_qbflib/`.

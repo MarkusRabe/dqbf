@@ -26,7 +26,7 @@ already non-linear. So this tool's value is:
 ## Plan
 
 - [ ] PySMT-based SMT-LIB2 parser → internal BV AST shared with
-      `tools/eqfob/ast.py` (reuse the bit-blaster).
+      `tools/eqfob/eqfob/ast.py` (reuse the bit-blaster).
 - [ ] Linear-prefix path: emit QDIMACS (a DQDIMACS subset).
 - [ ] `UFBV` path: Ackermannize or dependency-encode UF symbols → DQDIMACS.
 - [ ] Golden tests against `benchmarks/test/qbvf/` (SMT-LIB UFBV/ABV sets).

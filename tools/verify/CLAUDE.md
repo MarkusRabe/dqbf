@@ -36,9 +36,11 @@ stdlib, `tools.verify.*`, or in the whitelist.
 Reads the DQBF and an AIGER bundle (inputs `u<id>`, outputs `e<id>`).
 Performs a structural dependency check (each `e<y>`'s input cone ⊆
 `deps(y)`), then emits a DIMACS CNF whose **UNSAT ⇒ certificate valid**
-plus a JSON variable map. With `--solve`, runs PySAT or
-CaDiCaL/Kissat (whichever is installed) and prints `VALID`/`INVALID`,
-decoding any counterexample model via the var-map.
+plus a JSON variable map. With `--solve`, runs the first available SAT
+backend — PySAT if importable, otherwise `cadical`/`kissat`/`satch` on
+PATH, otherwise `third_party/{kissat/build/kissat,satch/satch}` directly
+— and prints `VALID`/`INVALID`, decoding any counterexample model via
+the var-map.
 
 ## UNSAT certificates
 

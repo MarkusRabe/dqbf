@@ -68,31 +68,27 @@ Function application: `f(e1, ..., ek)` with arity/width checking.
 programmatically.
 
 ```python
-from eqfob import Param, Sort, Fun, forall, exists, bv, Problem
+from tools.eqfob.eqfob.builder import Problem
 
-A = Param("A", 8)
-Addr = Sort("Addr", A)
 p = Problem()
-f = p.fun("f", [Addr], Addr)
-x = p.forall("x", Addr)
-p.add(f(x) + bv(1, A) != f(x))
-dq = p.to_dqbf()           # dqbf.Formula
-dq.write_dqdimacs("out.dqdimacs")
+f = p.fun("f", ["bv[8]"], "bv[8]")
+x = p.forall("x", "bv[8]")
+p.add(f(x) + 1 != f(x))
+formula = p.to_dqbf()      # core.Formula
 ```
 
 The AST is the single source of truth; the `.eqfob` parser builds it, the
 DQDIMACS backend consumes it, and the benchmark generators in
 `benchmarks/train/*/generate.py` construct it directly.
 
-## Module layout (planned)
+## Module layout
 
 ```
 eqfob/
-  ast.py        Param, Sort, Fun, Var, Expr nodes (frozen dataclasses)
+  ast.py        Param, Sort, Fun, Var, Expr nodes
   parse.py      lark grammar → ast
   typecheck.py  width/arity inference and checking
-  bitblast.py   Expr → AIG (py-aiger-bv) → CNF (Tseitin)
-  todqbf.py     assemble prefix + matrix → dqbf.Formula
+  bitblast.py   Expr → Tseitin CNF; assembles prefix + matrix → core.Formula
   builder.py    the programmatic API above
   cli.py        `eqfob compile FILE.eqfob -o FILE.dqdimacs -D A=16`
 examples/       small .eqfob files used as golden tests
@@ -111,11 +107,11 @@ examples/       small .eqfob files used as golden tests
 
 ## Plan
 
-- [ ] Concrete grammar (`grammar.lark`) + AST + round-trip tests on
-      `examples/*.eqfob`.
-- [ ] Type checker with helpful width-mismatch errors.
-- [ ] Programmatic builder API; every parser test has a builder twin.
-- [ ] Bit-blast via py-aiger-bv → CNF; symbol map in DQDIMACS comments.
-- [ ] CLI with `-D NAME=INT` param overrides for the scaling benchmarks.
-- [ ] `examples/`: adder, comparator, the `f(x)+z>g(x)` instance, the
-      3-var dependency-cycle counterexample from the journal paper.
+- [x] Concrete grammar + AST + round-trip tests on `examples/*.eqfob`.
+- [x] Type checker with width-mismatch errors.
+- [x] Programmatic builder API.
+- [x] Bit-blast → CNF; symbol map in DQDIMACS comments.
+- [x] CLI with `-D NAME=INT` param overrides.
+- [x] `examples/`: `add_gt.eqfob`, `dep_cycle.eqfob`.
+- [ ] Missing ops: `udiv`/`urem`, signed comparisons, variable shift.
+- [ ] Tighten mypy (currently overridden in `pyproject.toml`).

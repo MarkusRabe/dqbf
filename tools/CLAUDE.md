@@ -14,7 +14,7 @@ and the certificate checker.
 ## Shared conventions
 
 - Every encoder is a Python package with a pure
-  `encode(problem, **opts) -> dqbf.Formula` function plus a thin `cli.py`.
+  `encode(problem, **opts) -> core.Formula` function plus a thin `cli.py`.
   The pure function is what tests import.
 - Every encoder writes a **comment header** into its DQDIMACS output
   recording the source file, encoder version, and options — so a

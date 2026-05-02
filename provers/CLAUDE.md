@@ -28,7 +28,7 @@ stdout       : "SAT" | "UNSAT" | "UNKNOWN"
 exit code    : 10 = SAT, 20 = UNSAT, 0 = UNKNOWN  (QBFEVAL convention)
 ```
 
-and is byte-deterministic for a given input + `--seed`.
+and is byte-deterministic for a given input.
 
 ## References
 
@@ -40,4 +40,4 @@ and is byte-deterministic for a given input + `--seed`.
 
 1. `mkdir provers/<name>/` with `__init__.py`, `cli.py`, `CLAUDE.md`.
 2. Register the CLI in `pyproject.toml` `[project.scripts]`.
-3. Add it to `benchmarks/runner/` and `tests/integration/diff_provers.py`.
+3. Add it to `benchmarks/runner/solvers.py`.

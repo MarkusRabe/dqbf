@@ -47,7 +47,8 @@ build-out plan. **Read the local one before editing.**
 - **Determinism.** Provers and translators must be deterministic for a
   given input + seed; the integration suite diffs outputs.
 - **Correctness over speed** in each prover's Python source — it is the
-  reference oracle for its `rust/` crate and for `tools/verify/`.
+  reference oracle for its `rust/` crate. (`tools/verify/` is fully
+  self-contained and shares no code with provers.)
 - **Top-level absolute imports**, no `from .foo import bar`.
 - **Separate logic from CLI/jit/dispatch wrappers** so core functions are
   unit-testable without process setup.
@@ -66,7 +67,7 @@ pytest tests/integration  # e2e (slow)
 Run a single benchmark family:
 
 ```bash
-dqbf-bench run --family train/bitwidth_scaling --prover forkres -j 8
+dqbf-bench run --family train/bitwidth_scaling/build --prover forkres -j 8
 ```
 
 ## When adding a feature
@@ -84,7 +85,7 @@ dqbf-bench run --family train/bitwidth_scaling --prover forkres -j 8
 
 ## Benchmark split (read before touching benchmarks/)
 
-- `benchmarks/test/` — competition sets (QBFEVAL, SMT-LIB, …). Used
+- `benchmarks/test/` — competition sets (QBFLIB, SMT-LIB, …). Used
   **only** for milestone evaluation; never inside the improvement loop.
 - `benchmarks/train/` — scalable generated families (parameterized by
   bit-width / BMC bound / …). This is what the prover-improvement loop
