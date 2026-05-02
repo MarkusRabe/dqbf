@@ -82,7 +82,7 @@ where the *initial* implementation was found to be incomplete.
 
 ### ∀-reduction
 - U-U1  recorded clause is the full reduction — accept
-- U-U2  recorded clause is a partial reduction — reject (must be fixpoint)
+- U-U2  recorded clause is a partial reduction — **accept** (∀-red is per-literal; any subset of soundly-droppable universals is fine)
 - U-U3  universal that IS in some existential's deps cannot be dropped — reject if recorded as dropped
 - U-U4  universal with both polarities in clause cannot be dropped
 - U-U5  clause with only universal literals reduces to ∅

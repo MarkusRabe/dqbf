@@ -38,18 +38,19 @@ def _ex_deps(f: Formula, c: Clause) -> set[int]:
     return out
 
 
-def _universal_reduce(f: Formula, c: Clause) -> Clause:
-    cur = set(c)
-    changed = True
-    while changed:
-        changed = False
-        ed = _ex_deps(f, frozenset(cur))
-        for lit in list(cur):
-            v = var(lit)
-            if f.is_universal(v) and v not in ed and -lit not in cur:
-                cur.discard(lit)
-                changed = True
-    return frozenset(cur)
+def _is_ureduction(f: Formula, src: Clause, dst: Clause) -> bool:
+    """`dst` is reachable from `src` by zero or more sound ∀-reduction
+    steps: every dropped literal is universal, its var is not in the
+    existential-dep set of what remains, and its negation is not in
+    `src`."""
+    if not dst <= src:
+        return False
+    ed = _ex_deps(f, dst)
+    for lit in src - dst:
+        v = var(lit)
+        if not f.is_universal(v) or v in ed or -lit in src:
+            return False
+    return True
 
 
 def _clause_dep(f: Formula, c: Clause) -> frozenset[int]:
@@ -81,13 +82,13 @@ def verify_proof(f: Formula, proof: Proof) -> bool:
             if a is None or b is None:
                 return False
             r = _resolve(a, b, s.pivot)
-            if r is None or _universal_reduce(g, r) != c:
+            if r is None or not _is_ureduction(g, r, c):
                 return False
         elif s.rule == "ured":
             if len(s.premises) != 1:
                 return False
             a = prem(s.premises[0])
-            if a is None or _universal_reduce(g, a) != c:
+            if a is None or not _is_ureduction(g, a, c):
                 return False
         elif s.rule in ("fex", "sfex"):
             if len(s.premises) != 1 or s.part is None or s.fresh is None:

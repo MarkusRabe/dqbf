@@ -190,6 +190,42 @@ VALID = [
         ),
     ),
     (
+        "U-V13-ured-partial",
+        # both 1 and 2 are droppable (dep(3)=∅); record dropping only 2.
+        "p cnf 3 2\na 1 2 0\nd 3 0\n1 2 3 0\n-3 0\n",
+        frp(
+            {"clause": [1, 2, 3], "rule": "axiom"},
+            {"clause": [-3], "rule": "axiom"},
+            {"clause": [1, 3], "rule": "ured", "premises": [0]},
+            {"clause": [3], "rule": "ured", "premises": [2]},
+            {"clause": [], "rule": "res", "premises": [3, 1], "pivot": 3},
+        ),
+    ),
+    (
+        "U-V14-ured-noop",
+        # ured with zero literals dropped (identity) is sound.
+        "p cnf 3 2\na 1 2 0\nd 3 1 2 0\n1 3 0\n-3 0\n",
+        frp(
+            {"clause": [1, 3], "rule": "axiom"},
+            {"clause": [-3], "rule": "axiom"},
+            {"clause": [1, 3], "rule": "ured", "premises": [0]},
+            {"clause": [1], "rule": "res", "premises": [2, 1], "pivot": 3},
+            {"clause": [], "rule": "ured", "premises": [3]},
+        ),
+    ),
+    (
+        "U-V15-res-raw-resolvent",
+        # res step records the RAW resolvent (no fused ∀-reduction).
+        F_12_3,
+        frp(
+            {"clause": [-2, 3], "rule": "axiom"},
+            {"clause": [2, -3], "rule": "axiom"},
+            {"clause": [3], "rule": "ured", "premises": [0]},
+            {"clause": [2], "rule": "res", "premises": [1, 2], "pivot": 3},
+            {"clause": [], "rule": "ured", "premises": [3]},
+        ),
+    ),
+    (
         "U-V12-fresh-ids-monotone",
         # Two distinct FEx applications with fresh=5 then fresh=6.
         F_FORK,
@@ -322,11 +358,31 @@ INVALID = [
     ),
     # ∀-reduction
     (
-        "U-U2-partial-reduction",
-        "p cnf 4 1\na 1 2 0\nd 3 0\nd 4 0\n1 2 3 0\n",
+        "U-U7-drop-existential",
+        # ured cannot drop an existential literal.
+        "p cnf 3 1\na 1 0\nd 2 1 0\nd 3 1 0\n2 3 0\n",
         frp(
-            {"clause": [1, 2, 3], "rule": "axiom"},
-            {"clause": [1, 3], "rule": "ured", "premises": [0]},  # full reduction is {3}
+            {"clause": [2, 3], "rule": "axiom"},
+            {"clause": [3], "rule": "ured", "premises": [0]},
+        ),
+    ),
+    (
+        "U-U8-superset-not-subset",
+        # recorded clause must be a subset of the premise.
+        "p cnf 2 1\na 1 0\nd 2 0\n2 0\n",
+        frp(
+            {"clause": [2], "rule": "axiom"},
+            {"clause": [1, 2], "rule": "ured", "premises": [0]},
+        ),
+    ),
+    (
+        "U-U9-res-records-superset",
+        # res step claims a clause that adds a literal to the resolvent.
+        "p cnf 2 2\ne 1 2 0\n1 2 0\n-1 0\n",
+        frp(
+            {"clause": [1, 2], "rule": "axiom"},
+            {"clause": [-1], "rule": "axiom"},
+            {"clause": [1, 2], "rule": "res", "premises": [0, 1], "pivot": 1},
         ),
     ),
     (
