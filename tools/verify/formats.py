@@ -113,10 +113,13 @@ def load_aag(path: str | Path) -> Aag:
 
 def parse_aag(text: str) -> Aag:
     lines = [ln for ln in text.splitlines() if ln.strip()]
+    if not lines:
+        raise ValueError("empty AIGER")
     hdr = lines[0].split()
     if hdr[0] != "aag" or len(hdr) != 6 or hdr[3] != "0":
         raise ValueError(f"bad/non-combinational AIGER header: {lines[0]!r}")
-    _m, ni, _nl, no, na = (int(x) for x in hdr[1:])
+    m, ni, _nl, no, na = (int(x) for x in hdr[1:])
+    max_lit = 2 * m + 1
     pos = 1
     inputs = [int(lines[pos + k]) for k in range(ni)]
     pos += ni
@@ -132,12 +135,30 @@ def parse_aag(text: str) -> Aag:
     for ln in lines[pos:]:
         if ln[0] == "i":
             idx, name = ln[1:].split(" ", 1)
+            if not (0 <= int(idx) < ni):
+                raise ValueError(f"input symbol index out of range: {ln!r}")
             in_names[int(idx)] = name
         elif ln[0] == "o":
             idx, name = ln[1:].split(" ", 1)
+            if not (0 <= int(idx) < no):
+                raise ValueError(f"output symbol index out of range: {ln!r}")
             out_names[int(idx)] = name
         elif ln[0] == "c":
             break
+
+    in_set = set(inputs)
+    defined = in_set | {g for g, _, _ in gates} | {0}
+    for lit in inputs:
+        if lit <= 0 or lit & 1 or lit > max_lit:
+            raise ValueError(f"bad input literal {lit}")
+    for g, a, b in gates:
+        if g <= 0 or g & 1 or g > max_lit or g in in_set:
+            raise ValueError(f"bad gate lhs {g}")
+        if (a & ~1) not in defined or (b & ~1) not in defined:
+            raise ValueError(f"gate {g}: operand references undefined literal")
+    for lit in outputs:
+        if (lit & ~1) not in defined:
+            raise ValueError(f"output literal {lit} undefined")
     return Aag(inputs, outputs, gates, in_names, out_names)
 
 

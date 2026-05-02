@@ -102,7 +102,7 @@ def encode_verification(f: Formula, aig: Aag) -> VerifyCNF:
     # 4. existential -> AIGER output lit -> dimacs lit; dependency check
     e_dimacs: dict[int, int] = {}
     dep_violations: list[str] = []
-    in_name_of = {aig.inputs[i]: n for i, n in aig.in_names.items()}
+    in_name_of = {aig.inputs[i]: aig.in_names.get(i) for i in range(len(aig.inputs))}
     for y in f.dependencies:
         out = aig.output_by_name(f"e{y}")
         if out is None:
@@ -110,10 +110,17 @@ def encode_verification(f: Formula, aig: Aag) -> VerifyCNF:
             e_dimacs[y] = -TRUE
             continue
         cone = aig.cone_inputs(out)
-        used = {int(in_name_of[c][1:]) for c in cone if in_name_of.get(c, "").startswith("u")}
-        extra = used - set(f.dependencies[y])
-        if extra:
-            dep_violations.append(f"e{y}: depends on universals {sorted(extra)} ∉ deps")
+        for c in cone:
+            nm = in_name_of.get(c)
+            if nm is None or not nm.startswith("u") or not nm[1:].isdigit():
+                dep_violations.append(f"e{y}: cone reaches input {c} with no valid 'u<k>' name")
+                continue
+            uid = int(nm[1:])
+            if uid not in f.dependencies[y]:
+                if not f.is_universal(uid):
+                    dep_violations.append(f"e{y}: input named u{uid} but {uid} is not a universal")
+                else:
+                    dep_violations.append(f"e{y}: depends on universal {uid} ∉ deps")
         e_dimacs[y] = lit_or_const(out)
 
     # 5. matrix substitution: each DQBF literal -> dimacs literal

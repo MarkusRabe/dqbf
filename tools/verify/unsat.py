@@ -64,6 +64,11 @@ def verify_proof(f: Formula, proof: Proof) -> bool:
     """Return True iff every step is a valid rule application and ⊥ is derived."""
     g = f
     derived: list[Clause] = []
+    forks: dict[int, tuple[int, frozenset[int], frozenset[int], str]] = {}
+
+    def prem(i: int) -> Clause | None:
+        return derived[i] if 0 <= i < len(derived) else None
+
     for s in proof.steps:
         c = frozenset(s.clause)
         if s.rule == "axiom":
@@ -72,18 +77,24 @@ def verify_proof(f: Formula, proof: Proof) -> bool:
         elif s.rule == "res":
             if len(s.premises) != 2 or s.pivot is None:
                 return False
-            r = _resolve(derived[s.premises[0]], derived[s.premises[1]], s.pivot)
+            a, b = prem(s.premises[0]), prem(s.premises[1])
+            if a is None or b is None:
+                return False
+            r = _resolve(a, b, s.pivot)
             if r is None or _universal_reduce(g, r) != c:
                 return False
         elif s.rule == "ured":
             if len(s.premises) != 1:
                 return False
-            if _universal_reduce(g, derived[s.premises[0]]) != c:
+            a = prem(s.premises[0])
+            if a is None or _universal_reduce(g, a) != c:
                 return False
         elif s.rule in ("fex", "sfex"):
             if len(s.premises) != 1 or s.part is None or s.fresh is None:
                 return False
-            src = derived[s.premises[0]]
+            src = prem(s.premises[0])
+            if src is None:
+                return False
             part = frozenset(s.part)
             if not part <= src:
                 return False
@@ -95,12 +106,17 @@ def verify_proof(f: Formula, proof: Proof) -> bool:
             right = c3 | c2 | {-s.fresh}
             if c not in (left, right):
                 return False
-            if s.fresh > g.n_vars:
+            sig = (s.premises[0], part, c3, s.rule)
+            if s.fresh in forks:
+                if forks[s.fresh] != sig:
+                    return False
+            else:
+                if s.fresh <= f.n_vars or s.fresh in g.dependencies or g.is_universal(s.fresh):
+                    return False
                 d1, d2 = _clause_dep(g, c1), _clause_dep(g, c2)
                 drop = frozenset(var(lit) for lit in c3) if s.rule == "sfex" else frozenset()
                 g = g.with_existential(s.fresh, (d1 & d2) - drop)
-            elif not g.is_existential(s.fresh):
-                return False
+                forks[s.fresh] = sig
         else:
             return False
         derived.append(c)
