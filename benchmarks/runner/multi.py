@@ -162,7 +162,7 @@ def _adapt_cadet_aag(path: str) -> str:
     return new_path
 
 
-CERT_ADAPTERS = {"cadet": _adapt_cadet_aag}
+CERT_ADAPTERS = {"cadet": _adapt_cadet_aag, "pedant": _adapt_cadet_aag}
 
 
 def verify_certs(rows: list[RunRow], timeout_s: float = 10.0) -> None:

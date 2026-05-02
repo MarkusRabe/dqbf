@@ -26,6 +26,9 @@ def registry() -> dict[str, Solver]:
     cadet = str(ROOT / "third_party/cadet/cadet")
     caqe = str(ROOT / "third_party/caqe/target/release/caqe")
     rareqs = str(ROOT / "third_party/rareqs/rareqs-1.1/rareqs")
+    dqbdd = str(ROOT / "third_party/dqbdd/Release/src/dqbdd")
+    pedant = str(ROOT / "third_party/pedant/build/src/pedant")
+    hqs = str(ROOT / "third_party/hqs/HQS/build/src/hqs/hqs2")
     return {
         "forkres": Solver(
             name="forkres",
@@ -64,5 +67,23 @@ def registry() -> dict[str, Solver]:
             cmd=[rareqs, "{file}"],
             certs={},
             available=_exists(rareqs),
+        ),
+        "dqbdd": Solver(
+            name="dqbdd",
+            cmd=[dqbdd, "{file}"],
+            certs={},
+            available=_exists(dqbdd),
+        ),
+        "pedant": Solver(
+            name="pedant",
+            cmd=[pedant, "{file}", "--aag", "{certdir}/{stem}.aag"],
+            certs={"sat": "{certdir}/{stem}.aag"},
+            available=_exists(pedant),
+        ),
+        "hqs": Solver(
+            name="hqs",
+            cmd=[hqs, "{file}"],
+            certs={},
+            available=_exists(hqs),
         ),
     }
