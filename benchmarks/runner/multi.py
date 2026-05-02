@@ -63,7 +63,14 @@ def _run_one(
     stem = Path(inst.stem.replace(".dqdimacs", "").replace(".qdimacs", "")).name
     sub = certdir / solver.name
     sub.mkdir(parents=True, exist_ok=True)
-    fmt = {"file": str(inst), "timeout": str(timeout_s), "certdir": str(sub), "stem": stem}
+    file_path = str(inst)
+    if inst.suffix == ".gz":
+        import gzip
+
+        plain = sub / f"{stem}.in"
+        plain.write_bytes(gzip.decompress(inst.read_bytes()))
+        file_path = str(plain)
+    fmt = {"file": file_path, "timeout": str(timeout_s), "certdir": str(sub), "stem": stem}
     cmd = [t.format(**fmt) for t in solver.cmd]
     t0 = time.monotonic()
     try:
