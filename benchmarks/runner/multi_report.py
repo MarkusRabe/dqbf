@@ -130,6 +130,7 @@ def _js_json(obj: object) -> str:
 
 # Only the fields the JS needs — keeps the embedded blob small.
 _JS_FIELDS = ("solver", "path", "family", "expected", "got", "wall_s", "cert_status", "cert_bytes")
+_CERT_HDR = ["solver", "#", "with cert", "valid", "invalid/dep/err", "skipped/timeout", "avg bytes"]
 
 
 def _opts(solvers: list[str], selected: str = "") -> str:
@@ -412,10 +413,10 @@ def render(rows: list[dict], out: Path, timeout_s: float) -> None:
             cells.append(f"{n_ok} ({100 * n_ok / n_inst:.0f}%)")
         su_rows.append(cells)
 
-    cert_rows: list[list] = []
+    cert_rows: dict[str, list[list]] = {"sat": [], "unsat": []}
     cert_warn: list[str] = []
-    for s in solvers:
-        for res in ("sat", "unsat"):
+    for res in ("sat", "unsat"):
+        for s in solvers:
             srows = [r for r in rows if r["solver"] == s and r["got"] == res]
             n = len(srows)
             if n == 0:
@@ -425,7 +426,7 @@ def render(rows: list[dict], out: Path, timeout_s: float) -> None:
             invalid = sum(1 for r in srows if r["cert_status"] in ("invalid", "dep", "error"))
             skipped = sum(1 for r in srows if r["cert_status"] in ("skipped", "timeout"))
             avg_bytes = sum(r["cert_bytes"] for r in srows) // max(with_cert, 1)
-            cert_rows.append([s, res, n, with_cert, valid, invalid, skipped, avg_bytes])
+            cert_rows[res].append([s, n, with_cert, valid, invalid, skipped, avg_bytes])
             if with_cert > 0 and (with_cert - valid - skipped) > 0:
                 cert_warn.append(f"{s}/{res}")
 
@@ -458,8 +459,10 @@ def render(rows: list[dict], out: Path, timeout_s: float) -> None:
 {_table(["expected", "n", *solvers], su_rows)}
 <h3>Scaling (cactus)</h3>
 {_cactus_svg(rows, solvers)}
-<h3>Certificate verification</h3>
-{_table(["solver", "result", "#", "with cert", "valid", "invalid/dep/err", "skipped/timeout", "avg bytes"], cert_rows)}
+<h3>SAT certificate verification</h3>
+{_table(_CERT_HDR, cert_rows["sat"])}
+<h3>UNSAT certificate verification</h3>
+{_table(_CERT_HDR, cert_rows["unsat"])}
 <h3>Disagreements</h3>
 {_table(["path", *solvers], [[d["path"], *(d.get(s, "-") for s in solvers)] for d in disagreements]) if disagreements else "<p>none</p>"}
 """
