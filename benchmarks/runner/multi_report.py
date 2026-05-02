@@ -7,6 +7,7 @@ per solver (flagging any solver that doesn't reach 100% verifiable).
 
 from __future__ import annotations
 
+import html as _html
 import json
 import math
 from collections import defaultdict
@@ -44,9 +45,13 @@ def _agree(rows: list[dict]) -> tuple[int, list[dict]]:
     return n, disagreements
 
 
+def _esc(x: object) -> str:
+    return _html.escape(str(x), quote=True)
+
+
 def _table(headers: list[str], rows: list[list]) -> str:
-    h = "".join(f"<th>{x}</th>" for x in headers)
-    body = "".join("<tr>" + "".join(f"<td>{c}</td>" for c in r) + "</tr>" for r in rows)
+    h = "".join(f"<th>{_esc(x)}</th>" for x in headers)
+    body = "".join("<tr>" + "".join(f"<td>{_esc(c)}</td>" for c in r) + "</tr>" for r in rows)
     return f"<table><tr>{h}</tr>{body}</table>"
 
 
@@ -159,7 +164,8 @@ def render(rows: list[dict], out: Path, timeout_s: float) -> None:
     warn_html = ""
     if cert_warn:
         warn_html = (
-            f'<p class="warn">⚠ Solvers with non-verifiable SAT outputs: {", ".join(cert_warn)}</p>'
+            '<p class="warn">⚠ Solvers with non-verifiable SAT outputs: '
+            f"{_esc(', '.join(cert_warn))}</p>"
         )
     if n_disagree:
         warn_html += (

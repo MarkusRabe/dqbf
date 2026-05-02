@@ -36,11 +36,15 @@ class RunRow:
 
 def discover(root: Path) -> list[tuple[Path, str, str]]:
     """Return (path, family, expected) for every *.qdimacs / *.dqdimacs[.gz]."""
+    root_r = root.resolve()
     out: list[tuple[Path, str, str]] = []
     for mf in root.rglob("manifest.json"):
         fam = str(mf.parent.relative_to(root))
         for e in json.loads(mf.read_text()):
-            out.append((mf.parent / e["path"], fam, e.get("expected", "unknown")))
+            p = (mf.parent / e["path"]).resolve()
+            if not p.is_relative_to(root_r):
+                continue
+            out.append((p, fam, e.get("expected", "unknown")))
     if not out:
         for p in sorted(root.rglob("*.qdimacs")) + sorted(root.rglob("*.dqdimacs")):
             out.append((p, str(p.parent.relative_to(root)), "unknown"))
@@ -56,7 +60,7 @@ def _run_one(
     certdir: Path,
     slot: int,
 ) -> RunRow:
-    stem = inst.stem.replace(".dqdimacs", "").replace(".qdimacs", "")
+    stem = Path(inst.stem.replace(".dqdimacs", "").replace(".qdimacs", "")).name
     sub = certdir / solver.name
     sub.mkdir(parents=True, exist_ok=True)
     fmt = {"file": str(inst), "timeout": str(timeout_s), "certdir": str(sub), "stem": stem}
