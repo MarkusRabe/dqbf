@@ -1,0 +1,15 @@
+-- random_bv seed=11007 mode=over width=6
+param N = 6
+
+fun f0 : bv[N] -> bv[N]
+fun f1 : bv[N] -> bv[N]
+
+forall x0 : bv[N]
+
+(f0(x0) < (f0(x0) + (x0 | f0(x0))))
+(((x0 ^ (x0 & 45)) == x0) || (x0 >= ~x0))
+((f0(x0) & 50) == ((f0(x0) & f0(x0)) + (f1(x0) ^ f1(x0))))
+((~x0 ^ 11) >= ((f0(x0) + x0) ^ (f0(x0) ^ x0)))
+(~f1(x0) == ((x0 & f1(x0)) + x0))
+(f0(x0) >= (x0 & 29))
+((x0 > ~x0) || ((f0(x0) & ~x0) > (~x0 & (f0(x0) | x0))))

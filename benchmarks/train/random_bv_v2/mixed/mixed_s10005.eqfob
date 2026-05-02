@@ -1,0 +1,12 @@
+-- random_bv seed=10005 mode=mixed width=6
+param N = 6
+
+fun f0 : bv[N] -> bv[N]
+fun f1 : bv[N] -> bv[N]
+
+forall x0 : bv[N]
+forall x1 : bv[N]
+
+((((f1(x0) ^ f0(x0)) ^ 40) == ~f0(x1)) && ((~x0 & ~x1) <= ~x0))
+((((f1(x1) & f1(x1)) + (f1(x1) + f1(x1))) == f1(x0)) || ((x0 | (f0(x0) | x1)) < (~x1 & (x1 | x1))))
+(x0 == f1(x0))
