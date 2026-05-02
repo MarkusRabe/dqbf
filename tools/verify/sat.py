@@ -18,8 +18,11 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from core.aiger import Aag
-from core.formula import Formula, var
+from tools.verify.formats import Aag, Formula
+
+
+def var(lit: int) -> int:
+    return abs(lit)
 
 
 @dataclass

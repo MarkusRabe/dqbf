@@ -1,14 +1,16 @@
 """Self-contained UNSAT-proof checker.
 
-Imports ONLY `core.formula` (data) and `core.proof_trace` (format).
-The inference-rule checks are re-implemented here so the trusted base
-does not include `provers/`.
+Imports ONLY from `tools.verify.formats` and stdlib. The inference-rule
+checks are implemented locally; nothing is shared with `provers/`.
 """
 
 from __future__ import annotations
 
-from core.formula import Clause, Formula, var
-from core.proof_trace import Proof
+from tools.verify.formats import Clause, Formula, Proof
+
+
+def var(lit: int) -> int:
+    return abs(lit)
 
 
 def _is_tautology(c: Clause) -> bool:
@@ -96,7 +98,7 @@ def verify_proof(f: Formula, proof: Proof) -> bool:
             if s.fresh > g.n_vars:
                 d1, d2 = _clause_dep(g, c1), _clause_dep(g, c2)
                 drop = frozenset(var(lit) for lit in c3) if s.rule == "sfex" else frozenset()
-                g = g.add_existential(s.fresh, (d1 & d2) - drop)
+                g = g.with_existential(s.fresh, (d1 & d2) - drop)
             elif not g.is_existential(s.fresh):
                 return False
         else:

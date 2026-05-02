@@ -5,9 +5,7 @@ import sys
 
 import click
 
-from core import dqdimacs
-from core.aiger import load_aag
-from core.proof_trace import load as load_proof
+from tools.verify.formats import load_aag, load_dqdimacs, load_proof
 from tools.verify.sat import decode_model, encode_verification, solve_cnf
 from tools.verify.unsat import verify_proof
 
@@ -25,7 +23,7 @@ def main() -> None:
 @click.option("--solve", "do_solve", is_flag=True, help="run a SAT solver and report VALID/INVALID")
 def sat_cmd(formula: str, cert_aag: str, cnf_out: str, map_out: str | None, do_solve: bool) -> None:
     """Emit a DIMACS CNF whose UNSAT proves the AIGER Skolem cert valid."""
-    f = dqdimacs.load(formula)
+    f = load_dqdimacs(formula)
     aig = load_aag(cert_aag)
     enc = encode_verification(f, aig)
     enc.write_dimacs(cnf_out)
@@ -56,7 +54,7 @@ def sat_cmd(formula: str, cert_aag: str, cnf_out: str, map_out: str | None, do_s
 @click.argument("formula", type=click.Path(exists=True))
 @click.argument("proof", type=click.Path(exists=True))
 def unsat_cmd(formula: str, proof: str) -> None:
-    f = dqdimacs.load(formula)
+    f = load_dqdimacs(formula)
     p = load_proof(proof)
     ok = verify_proof(f, p)
     print("VALID" if ok else "INVALID")
