@@ -72,11 +72,19 @@ def _table(headers: list[str], rows: list[list]) -> str:
 
 
 def _cactus_svg(rows: list[dict], solvers: list[str], w: int = 520, h: int = 320) -> str:
+    import math
+
     times: dict[str, list[float]] = {
         s: sorted(r["wall_s"] for r in rows if r["solver"] == s and _solved(r)) for s in solvers
     }
     n_max = max((len(v) for v in times.values()), default=1) or 1
     t_max = max((v[-1] for v in times.values() if v), default=1.0)
+    lo, hi = -3, math.ceil(math.log10(max(t_max, 1e-3)))
+    span = hi - lo or 1
+
+    def yof(t: float) -> float:
+        return h - 30 - (math.log10(max(t, 1e-3)) - lo) / span * (h - 50)
+
     colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b"]
     paths = []
     for i, s in enumerate(solvers):
@@ -84,8 +92,7 @@ def _cactus_svg(rows: list[dict], solvers: list[str], w: int = 520, h: int = 320
         if not ts:
             continue
         pts = " ".join(
-            f"{40 + (k + 1) / n_max * (w - 60):.1f},{h - 30 - (t / t_max) * (h - 50):.1f}"
-            for k, t in enumerate(ts)
+            f"{40 + (k + 1) / n_max * (w - 60):.1f},{yof(t):.1f}" for k, t in enumerate(ts)
         )
         c = colors[i % len(colors)]
         paths.append(
@@ -95,18 +102,22 @@ def _cactus_svg(rows: list[dict], solvers: list[str], w: int = 520, h: int = 320
     ticks = []
     for frac in (0, 0.25, 0.5, 0.75, 1.0):
         x = 40 + frac * (w - 60)
-        y = h - 30 - frac * (h - 50)
         ticks.append(
             f'<line x1="{x:.0f}" y1="{h - 30}" x2="{x:.0f}" y2="{h - 26}" stroke="#000"/>'
             f'<text x="{x:.0f}" y="{h - 16}" font-size="9" text-anchor="middle">{int(frac * n_max)}</text>'
+        )
+    for e in range(lo, hi + 1):
+        y = yof(10**e)
+        lbl = f"{10**e:g}" if e >= 0 else f"1e{e}"
+        ticks.append(
             f'<line x1="36" y1="{y:.0f}" x2="40" y2="{y:.0f}" stroke="#000"/>'
-            f'<text x="33" y="{y + 3:.0f}" font-size="9" text-anchor="end">{frac * t_max:.2g}</text>'
+            f'<text x="33" y="{y + 3:.0f}" font-size="9" text-anchor="end">{lbl}</text>'
         )
     axes = (
         f'<line x1="40" y1="{h - 30}" x2="{w - 20}" y2="{h - 30}" stroke="#000"/>'
         f'<line x1="40" y1="20" x2="40" y2="{h - 30}" stroke="#000"/>'
         f'<text x="{w // 2}" y="{h - 4}" font-size="11" text-anchor="middle"># instances solved</text>'
-        f'<text x="10" y="{h // 2}" font-size="11" transform="rotate(-90 10 {h // 2})">wall time (s)</text>'
+        f'<text x="10" y="{h // 2}" font-size="11" transform="rotate(-90 10 {h // 2})">wall time (s, log)</text>'
         + "".join(ticks)
     )
     return f'<svg width="{w}" height="{h}">{axes}{"".join(paths)}</svg>'
@@ -477,7 +488,7 @@ def render(rows: list[dict], out: Path, timeout_s: float) -> None:
 
     html = f"""<!doctype html><meta charset=utf-8><title>multi-solver report</title>
 <style>{CSS}</style>
-<h1>Multi-solver benchmark</h1>
+<h1>Multi-solver report</h1>
 {warn_html}
 {data_block}
 {tabs_nav}
