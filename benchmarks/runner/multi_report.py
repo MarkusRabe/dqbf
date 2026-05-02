@@ -74,7 +74,7 @@ def _cactus_svg(rows: list[dict], solvers: list[str], w: int = 520, h: int = 320
         c = colors[i % len(colors)]
         paths.append(
             f'<polyline fill="none" stroke="{c}" stroke-width="2" points="{pts}"/>'
-            f'<text x="{w - 100}" y="{20 + i * 16}" fill="{c}" font-size="12">{s} ({len(ts)})</text>'  # noqa: E501
+            f'<text x="{w - 100}" y="{20 + i * 16}" fill="{c}" font-size="12">{_esc(s)} ({len(ts)})</text>'  # noqa: E501
         )
     axes = (
         f'<line x1="40" y1="{h - 30}" x2="{w - 20}" y2="{h - 30}" stroke="#000"/>'
@@ -106,8 +106,8 @@ def _scatter_svg(
     axes = (
         f'<line x1="30" y1="{h - 30}" x2="{w - 10}" y2="{h - 30}" stroke="#000"/>'
         f'<line x1="30" y1="10" x2="30" y2="{h - 30}" stroke="#000"/>'
-        f'<text x="{w // 2}" y="{h - 6}" font-size="11" text-anchor="middle">{sa} (log s)</text>'
-        f'<text x="10" y="{h // 2}" font-size="11" transform="rotate(-90 10 {h // 2})">{sb} (log s)</text>'
+        f'<text x="{w // 2}" y="{h - 6}" font-size="11" text-anchor="middle">{_esc(sa)} (log s)</text>'
+        f'<text x="10" y="{h // 2}" font-size="11" transform="rotate(-90 10 {h // 2})">{_esc(sb)} (log s)</text>'
     )
     return f'<svg width="{w}" height="{h}">{diag}{axes}{"".join(pts)}</svg>'
 
