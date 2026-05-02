@@ -2,6 +2,7 @@
 
 | date | label | view |
 |---|---|---|
+| 2026-05-02_2226 | qbf200-report-v2 | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-02_2226_qbf200-report-v2.html) · [source](2026-05-02_2226_qbf200-report-v2.html) |
 | 2026-05-02_2214 | qbf200-per-tab-controls | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-02_2214_qbf200-per-tab-controls.html) · [source](2026-05-02_2214_qbf200-per-tab-controls.html) |
 | 2026-05-02_2211 | qbf200-tabbed-explorer | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-02_2211_qbf200-tabbed-explorer.html) · [source](2026-05-02_2211_qbf200-tabbed-explorer.html) |
 | 2026-05-02_2147 | qbf100-interactive | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-02_2147_qbf100-interactive.html) · [source](2026-05-02_2147_qbf100-interactive.html) |
