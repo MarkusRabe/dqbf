@@ -60,7 +60,7 @@ def compare_cmd(baseline: str, candidate: str) -> None:
 @click.option("--root", required=True, type=click.Path(exists=True))
 @click.option("--solvers", default="forkres,cadet,caqe,rareqs")
 @click.option("-j", "--jobs", default=os.cpu_count() or 1, type=int)
-@click.option("--timeout", "timeout_s", default=5.0, type=float)
+@click.option("--timeout", "timeout_s", default=10.0, type=float)
 @click.option("-o", "--out", default="results/multi.jsonl", type=click.Path())
 @click.option("--report", "report_out", default="results/multi.html", type=click.Path())
 @click.option("--certdir", default="results/certs", type=click.Path())

@@ -167,9 +167,16 @@ def solve_cnf(n_vars: int, clauses: list[list[int]]) -> tuple[bool | None, list[
             return (sat, s.get_model() if sat else None)
     except ImportError:
         pass
-    for exe in ("cadical", "kissat"):
-        path = shutil.which(exe)
-        if not path:
+    tp = Path(__file__).resolve().parents[2] / "third_party"
+    candidates = [
+        shutil.which("cadical"),
+        shutil.which("kissat"),
+        shutil.which("satch"),
+        str(tp / "kissat/build/kissat"),
+        str(tp / "satch/satch"),
+    ]
+    for path in candidates:
+        if not path or not Path(path).is_file():
             continue
         with tempfile.NamedTemporaryFile("w", suffix=".cnf", delete=False) as tf:
             tf.write(f"p cnf {n_vars} {len(clauses)}\n")

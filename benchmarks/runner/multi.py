@@ -164,7 +164,7 @@ def _adapt_cadet_aag(path: str) -> str:
 CERT_ADAPTERS = {"cadet": _adapt_cadet_aag}
 
 
-def verify_certs(rows: list[RunRow], timeout_s: float = 5.0) -> None:
+def verify_certs(rows: list[RunRow], timeout_s: float = 10.0) -> None:
     """Mutates rows in place: fills cert_status for SAT certs via dqbf-verify."""
     import sys
 
