@@ -1,0 +1,12 @@
+[
+  {
+    "path": "dep_cycle_n1.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "dep_cycle"
+    ],
+    "params": {
+      "N": 1
+    }
+  }
+]

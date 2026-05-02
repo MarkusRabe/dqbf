@@ -1,0 +1,222 @@
+[
+  {
+    "path": "3qbf_s6000.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6000
+    }
+  },
+  {
+    "path": "3qbf_s6001.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6001
+    }
+  },
+  {
+    "path": "3qbf_s6002.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6002
+    }
+  },
+  {
+    "path": "3qbf_s6003.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6003
+    }
+  },
+  {
+    "path": "3qbf_s6004.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6004
+    }
+  },
+  {
+    "path": "3qbf_s6005.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6005
+    }
+  },
+  {
+    "path": "3qbf_s6006.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6006
+    }
+  },
+  {
+    "path": "3qbf_s6007.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6007
+    }
+  },
+  {
+    "path": "3qbf_s6008.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6008
+    }
+  },
+  {
+    "path": "3qbf_s6009.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6009
+    }
+  },
+  {
+    "path": "3qbf_s6010.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6010
+    }
+  },
+  {
+    "path": "3qbf_s6011.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6011
+    }
+  },
+  {
+    "path": "3qbf_s6012.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6012
+    }
+  },
+  {
+    "path": "3qbf_s6013.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6013
+    }
+  },
+  {
+    "path": "3qbf_s6014.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6014
+    }
+  },
+  {
+    "path": "3qbf_s6015.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6015
+    }
+  },
+  {
+    "path": "3qbf_s6016.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6016
+    }
+  },
+  {
+    "path": "3qbf_s6017.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6017
+    }
+  },
+  {
+    "path": "3qbf_s6018.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6018
+    }
+  },
+  {
+    "path": "3qbf_s6019.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 6019
+    }
+  }
+]

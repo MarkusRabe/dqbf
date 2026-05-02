@@ -85,11 +85,14 @@ dqbf-bench run --family train/bitwidth_scaling/build --prover forkres -j 8
 
 ## Benchmark split (read before touching benchmarks/)
 
-- `benchmarks/test/` — competition sets (QBFLIB, SMT-LIB, …). Used
-  **only** for milestone evaluation; never inside the improvement loop.
-- `benchmarks/train/` — scalable generated families (parameterized by
-  bit-width / BMC bound / …). This is what the prover-improvement loop
-  iterates against.
+- `benchmarks/train/` — what the improvement loop iterates on. Many
+  small families from distinct sources (generators, translations,
+  corner cases).
+- `benchmarks/valid/` — same kinds of families, disjoint seeds. Held
+  back from the loop; checked periodically during development.
+- `benchmarks/test/` — competition / externally curated sets.
+  Milestone evaluation only. **Competition benchmarks live only here.**
 
-Do not optimize prover heuristics against `test/`. See
-`docs/IMPROVEMENT_LOOP.md` for the loop mechanics and acceptance gate.
+Do not optimize prover heuristics against `valid/` or `test/`. See
+`docs/IMPROVEMENT_LOOP.md` and the provenance conventions in
+`benchmarks/CLAUDE.md`.

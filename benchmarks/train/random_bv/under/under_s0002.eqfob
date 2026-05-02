@@ -1,0 +1,11 @@
+-- random_bv seed=2 mode=under width=2
+param N = 2
+
+fun f0 : bv[N] -> bv[N]
+fun f1 : bv[N] -> bv[N]
+
+forall x0 : bv[N]
+forall x1 : bv[N]
+
+((f0(x1) < x1) && (~x0 > x1))
+(((2 & (f1(x1) & 1)) < ((f1(x0) ^ 3) | ~x1)) || ((x1 | ~f1(x1)) < ~x1))

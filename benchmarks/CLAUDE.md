@@ -1,31 +1,33 @@
 # benchmarks/
 
 ```
-test/      Competition sets (QBFLIB DQBF, SMT-LIB BV/UFBV, …).
-           Evaluation only — NEVER used inside the improvement loop.
-train/     Scalable generated families. The loop iterates here.
-runner/    Parallel harness, multi-solver compare, HTML report.
+train/     What the improvement loop iterates on. Many small families.
+valid/     Held back from the loop; checked periodically during dev.
+test/      Competition / externally curated sets. Milestone eval only.
+runner/    Parallel harness, multi-solver compare, interactive HTML report.
 _downloads/ (gitignored) tarball cache for download_benchmarks.sh
 ```
 
-See `docs/IMPROVEMENT_LOOP.md` for why the split exists and the
-acceptance gate.
+See `../README.md` § "Benchmark split" for the rationale, and
+`docs/IMPROVEMENT_LOOP.md` for the loop mechanics.
+
+## Provenance conventions (apply to every generated instance)
+
+1. **Header comment.** The first lines of every `.dqdimacs`/`.qdimacs`
+   we generate are `c` comments naming the producing script, the seed /
+   parameters, and the source file (e.g. the `.eqfob` or `.aag`).
+2. **Commit the source.** For EQFOB-compiled instances, commit the
+   `.eqfob` next to the `.dqdimacs.gz`. For BMC, commit the `.aag`.
+   For random generators, commit the generator and its manifest with
+   per-instance seeds. The compiled file alone is never enough.
+3. **One family = one directory** with its own `manifest.json`
+   (`[{"path", "expected", "tags", "params"}]`) and a short `README.md`
+   stating what the family measures.
 
 ## test/ sources
 
-| Set | URL | Format | Size | In repo? |
-|---|---|---|---|---|
-| **QBFLIB DQBF** | https://www.qbflib.org/DOWNLOADS/dqdimacs.zip | DQDIMACS | 7.6 MB (478) | **yes** → `test/dqbf_qbflib/{bloem,tentrup,balabanov,scholl}/` |
-| QBFEVAL'20/'23 PCNF | https://qbf23.pages.sai.jku.at/gallery/ | QDIMACS | 160–368 MB | script |
-| SMT-LIB BV/UFBV/ABV | https://zenodo.org/records/15493090 | SMT-LIB2 | large | script — see `test/qbvf/*/README.md` |
-| QBFLIB historical QBF | https://www.qbflib.org/index_eval.php | QDIMACS | varies | script |
-
-Anything with unclear redistribution terms stays behind
-`scripts/download_benchmarks.sh`.
-
-## Conventions
-
-- Instances >1 MB are `.gz`-compressed in the tree.
-- `train/` instances are never committed; commit the generator + manifest.
-- Expected results live in the runner manifest; filenames may also carry
-  `_sat`/`_unsat` suffixes for readability.
+| Set | URL | Format | In repo? |
+|---|---|---|---|
+| **QBFLIB DQBF** | https://www.qbflib.org/DOWNLOADS/dqdimacs.zip | DQDIMACS | yes → `test/dqbf_qbflib/{bloem,tentrup,balabanov,scholl}/` |
+| QBFEVAL'20/'23 PCNF | https://qbf23.pages.sai.jku.at/gallery/ | QDIMACS | script |
+| SMT-LIB BV/UFBV/ABV | https://zenodo.org/records/15493090 | SMT-LIB2 | script |
