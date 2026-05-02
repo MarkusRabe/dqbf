@@ -39,11 +39,25 @@ invalid.
 The trace format is `core/proof_trace.py` (JSON list of `Step`s). Any
 prover that searches in the fork-resolution calculus can emit it.
 
-## Trusted base
+## Trust boundary
 
-`core/{formula,dqdimacs,aiger,proof_trace}.py` (data) +
-`tools/verify/{sat,unsat}.py` (~250 lines total). Audited once; not
-touched by the improvement loop.
+Production verifier code (`sat.py`, `unsat.py`, `cli.py`) imports
+**only**:
+
+- `core/{formula,dqdimacs,aiger,proof_trace}.py` — pure data formats
+- standard library
+
+It never imports from `provers/`, and never imports private names from
+`core/semantics.py` (the brute-force test oracle). Some code is
+duplicated between `unsat.py` and `provers/forkres/rules.py` — that
+duplication is **intentional**: a prover bug must not be able to make
+the verifier agree on a wrong answer.
+
+`boundary_test.py` enforces this at CI time by AST-walking the imports.
+
+The trusted base is therefore those four `core/` files + the three
+files here, ~300 lines of checking logic. Review them; then leave them
+alone while iterating on `provers/`.
 
 ## References
 

@@ -1,10 +1,10 @@
 import pytest
 
 from core.formula import make_formula
-from core.semantics import is_true
-from provers.forkres.proof import replay
+from core.proof_trace import Proof
+from core.semantics import is_true, verify_skolem
 from provers.forkres.search import Result, SearchConfig, solve
-from tools.verify.sat import verify_skolem
+from tools.verify.unsat import verify_proof as replay
 
 CFG = SearchConfig(max_clauses=2000, max_forks=16, timeout_s=1.0)
 
@@ -92,8 +92,6 @@ def test_sfex_fires_on_dep_cycle() -> None:
 
 def test_sfex_proof_step_replays() -> None:
     """A hand-built sfex step replays through the independent verifier."""
-    from core.proof_trace import Proof
-
     f = make_formula(
         universals=[1, 2, 3],
         dependencies={4: [1, 2], 5: [2, 3], 6: [1, 3]},

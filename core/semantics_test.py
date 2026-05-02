@@ -1,5 +1,6 @@
+from core.certificate import skolem_from_json, skolem_to_json
 from core.formula import make_formula
-from core.semantics import find_skolem, is_true
+from core.semantics import find_skolem, is_true, verify_skolem
 
 
 def f_copy_sat():
@@ -29,3 +30,27 @@ def test_is_true_sat() -> None:
 
 def test_is_true_unsat() -> None:
     assert is_true(f_wrong_dep_unsat()) is False
+
+
+def test_verify_skolem_roundtrip() -> None:
+    f = f_copy_sat()
+    sk = find_skolem(f)
+    assert sk is not None
+    assert verify_skolem(f, sk)
+    sk2 = skolem_from_json(skolem_to_json(f, sk))
+    assert verify_skolem(f, sk2)
+
+
+def test_verify_skolem_rejects_incomplete() -> None:
+    f = make_formula(universals=[1], dependencies={2: [1]}, clauses=[[2]])
+    incomplete: dict[int, dict[tuple[bool, ...], bool]] = {2: {(False,): True}}
+    assert verify_skolem(f, incomplete) is False
+
+
+def test_verify_skolem_rejects_wrong() -> None:
+    f = f_copy_sat()
+    bad: dict[int, dict[tuple[bool, ...], bool]] = {
+        3: {(False,): True, (True,): False},
+        4: {(False,): False, (True,): True},
+    }
+    assert verify_skolem(f, bad) is False

@@ -8,9 +8,9 @@ from pathlib import Path
 import pytest
 
 from core import dqdimacs
-from provers.forkres.proof import replay
+from core.semantics import verify_skolem
 from provers.forkres.search import Result, SearchConfig, solve
-from tools.verify.sat import verify_skolem
+from tools.verify.unsat import verify_proof as replay
 
 HERE = Path(__file__).parent
 MANIFEST = json.loads((HERE / "manifest.json").read_text())

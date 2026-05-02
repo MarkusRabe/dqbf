@@ -14,8 +14,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from core.formula import Clause, Formula
+from core.proof_trace import Proof
 from core.semantics import Skolem, find_skolem
-from provers.forkres.proof import Proof
 from provers.forkres.rules import (
     find_information_fork,
     fork_extend,

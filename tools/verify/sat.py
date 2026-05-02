@@ -11,7 +11,6 @@ output may only depend on inputs in its declared dependency set.
 
 from __future__ import annotations
 
-import itertools
 import json
 import shutil
 import subprocess
@@ -21,7 +20,6 @@ from pathlib import Path
 
 from core.aiger import Aag
 from core.formula import Formula, var
-from core.semantics import Skolem, _all_universal_assignments, _apply_skolem, eval_matrix
 
 
 @dataclass
@@ -192,19 +190,3 @@ def decode_model(model: list[int], varmap: dict[str, dict[str, int]]) -> dict[st
         "universals": {u: (v in pos) for u, v in varmap["universals"].items()},
         "violated_clauses": [i for i, v in varmap["violated_clause"].items() if v in pos],
     }
-
-
-# --- tiny-instance fallback (kept for tests; enumerates 2^|U|) ------------
-
-
-def verify_skolem(f: Formula, sk: Skolem) -> bool:
-    if set(sk) != set(f.dependencies):
-        return False
-    for y, tbl in sk.items():
-        n = len(f.dependencies[y])
-        if set(tbl) != set(itertools.product((False, True), repeat=n)):
-            return False
-    for ua in _all_universal_assignments(f):
-        if not eval_matrix(f.clauses, _apply_skolem(f, sk, ua)):
-            return False
-    return True

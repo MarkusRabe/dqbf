@@ -7,7 +7,7 @@ import click
 from core import dqdimacs
 from core.aiger import skolem_to_aag
 from core.certificate import save_skolem
-from provers.forkres.proof import save as save_proof
+from core.proof_trace import save as save_proof
 from provers.forkres.search import Result, SearchConfig, solve
 
 

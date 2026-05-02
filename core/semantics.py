@@ -78,3 +78,21 @@ def find_skolem(f: Formula, budget: int = 200_000) -> Skolem | None:
         ):
             return sk
     return None
+
+
+def verify_skolem(f: Formula, sk: Skolem) -> bool:
+    """Brute-force oracle: True iff `sk` is a valid Skolem model of `f`.
+
+    Enumerates all 2^|U| universal assignments — test-only. The
+    production verifier is `tools/verify/sat.py:encode_verification`,
+    which reduces to a SAT problem instead.
+    """
+    if set(sk) != set(f.dependencies):
+        return False
+    for y, tbl in sk.items():
+        n = len(f.dependencies[y])
+        if set(tbl) != set(itertools.product((False, True), repeat=n)):
+            return False
+    return all(
+        eval_matrix(f.clauses, _apply_skolem(f, sk, ua)) for ua in _all_universal_assignments(f)
+    )
