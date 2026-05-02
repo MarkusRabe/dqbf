@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 class Solver:
     name: str
     cmd: list[str]  # {file} {timeout} {certdir} placeholders
-    cert_glob: str | None  # e.g. "{certdir}/{stem}.aag"
+    certs: dict[str, str]  # result -> path template, e.g. {"sat": "{certdir}/{stem}.aag"}
     available: bool
 
 
@@ -41,25 +41,28 @@ def registry() -> dict[str, Solver]:
                 "--proof",
                 "{certdir}/{stem}.frp",
             ],
-            cert_glob="{certdir}/{stem}.skolem.json.aag",
+            certs={
+                "sat": "{certdir}/{stem}.skolem.json.aag",
+                "unsat": "{certdir}/{stem}.frp",
+            },
             available=True,
         ),
         "cadet": Solver(
             name="cadet",
             cmd=[cadet, "-c", "{certdir}/{stem}.aag", "{file}"],
-            cert_glob="{certdir}/{stem}.aag",
+            certs={"sat": "{certdir}/{stem}.aag"},
             available=_exists(cadet),
         ),
         "caqe": Solver(
             name="caqe",
             cmd=[caqe, "{file}"],
-            cert_glob=None,
+            certs={},
             available=_exists(caqe),
         ),
         "rareqs": Solver(
             name="rareqs",
             cmd=[rareqs, "{file}"],
-            cert_glob=None,
+            certs={},
             available=_exists(rareqs),
         ),
     }

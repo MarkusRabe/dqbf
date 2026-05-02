@@ -81,8 +81,9 @@ def _run_one(
         got = "timeout"
     cert_path: str | None = None
     cert_bytes = 0
-    if solver.cert_glob:
-        cp_ = Path(solver.cert_glob.format(**fmt))
+    tmpl = solver.certs.get(got)
+    if tmpl:
+        cp_ = Path(tmpl.format(**fmt))
         if cp_.exists():
             cert_path = str(cp_)
             cert_bytes = cp_.stat().st_size
@@ -165,18 +166,17 @@ CERT_ADAPTERS = {"cadet": _adapt_cadet_aag}
 
 
 def verify_certs(rows: list[RunRow], timeout_s: float = 10.0) -> None:
-    """Mutates rows in place: fills cert_status for SAT certs via dqbf-verify."""
+    """Mutates rows in place: fills cert_status via dqbf-verify {sat,unsat}."""
     import sys
 
     for r in rows:
-        if r.got != "sat" or not r.cert_path:
+        if r.got not in ("sat", "unsat") or not r.cert_path:
             continue
         cert = r.cert_path
-        if r.solver in CERT_ADAPTERS:
+        if r.solver in CERT_ADAPTERS and r.got == "sat":
             cert = CERT_ADAPTERS[r.solver](cert)
-        cnf = r.cert_path + ".verify.cnf"
-        cp = subprocess.run(
-            [
+        if r.got == "sat":
+            cmd = [
                 sys.executable,
                 "-m",
                 "tools.verify.cli",
@@ -184,20 +184,24 @@ def verify_certs(rows: list[RunRow], timeout_s: float = 10.0) -> None:
                 r.path,
                 cert,
                 "-o",
-                cnf,
+                r.cert_path + ".verify.cnf",
                 "--solve",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=timeout_s,
-        )
-        if cp.returncode == 0:
+            ]
+        else:
+            cmd = [sys.executable, "-m", "tools.verify.cli", "unsat", r.path, cert]
+        try:
+            cp = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s)
+            rc = cp.returncode
+        except subprocess.TimeoutExpired:
+            r.cert_status = "timeout"
+            continue
+        if rc == 0:
             r.cert_status = "valid"
-        elif cp.returncode == 1:
+        elif rc == 1:
             r.cert_status = "invalid"
-        elif cp.returncode == 2:
+        elif rc == 2:
             r.cert_status = "dep"
-        elif cp.returncode == 3:
-            r.cert_status = "skipped"  # no SAT backend
+        elif rc == 3:
+            r.cert_status = "skipped"
         else:
             r.cert_status = "error"
