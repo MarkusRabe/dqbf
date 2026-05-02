@@ -21,11 +21,11 @@ CSS = (
     "svg{border:1px solid #ddd;margin:.5em;background:#fff}"
     "h2{border-bottom:1px solid #ccc;padding-bottom:.2em}"
     "h3{margin:.8em 0 .2em}"
-    "#controls{position:sticky;top:0;background:#fafafa;border:1px solid #ccc;"
-    "padding:.6em;margin:.5em 0 1em;display:flex;flex-wrap:wrap;gap:1.2em;"
-    "align-items:center;font-size:.9em;z-index:1}"
-    "#controls fieldset{border:1px solid #ddd;padding:.3em .5em}"
-    "#controls label{margin-right:.6em}"
+    ".ctl{background:#fafafa;border:1px solid #ccc;padding:.6em;margin:0 0 1em;"
+    "display:flex;flex-wrap:wrap;gap:1.2em;align-items:center;font-size:.9em}"
+    ".ctl fieldset{border:1px solid #ddd;padding:.3em .5em}"
+    ".ctl label{margin-right:.6em}"
+    "#tabs{position:sticky;top:0;background:#fff;padding:.4em 0;z-index:1}"
     ".panel{border:1px solid #ddd;padding:.6em;margin-bottom:1em}"
     ".scroll{max-height:14em;overflow:auto;border:1px solid #eee;padding:.3em;"
     "font-family:ui-monospace,monospace;font-size:.85em}"
@@ -92,11 +92,22 @@ def _cactus_svg(rows: list[dict], solvers: list[str], w: int = 520, h: int = 320
             f'<polyline fill="none" stroke="{c}" stroke-width="2" points="{pts}"/>'
             f'<text x="{w - 100}" y="{20 + i * 16}" fill="{c}" font-size="12">{_esc(s)} ({len(ts)})</text>'
         )
+    ticks = []
+    for frac in (0, 0.25, 0.5, 0.75, 1.0):
+        x = 40 + frac * (w - 60)
+        y = h - 30 - frac * (h - 50)
+        ticks.append(
+            f'<line x1="{x:.0f}" y1="{h - 30}" x2="{x:.0f}" y2="{h - 26}" stroke="#000"/>'
+            f'<text x="{x:.0f}" y="{h - 16}" font-size="9" text-anchor="middle">{int(frac * n_max)}</text>'
+            f'<line x1="36" y1="{y:.0f}" x2="40" y2="{y:.0f}" stroke="#000"/>'
+            f'<text x="33" y="{y + 3:.0f}" font-size="9" text-anchor="end">{frac * t_max:.2g}</text>'
+        )
     axes = (
         f'<line x1="40" y1="{h - 30}" x2="{w - 20}" y2="{h - 30}" stroke="#000"/>'
         f'<line x1="40" y1="20" x2="40" y2="{h - 30}" stroke="#000"/>'
-        f'<text x="{w // 2}" y="{h - 8}" font-size="11" text-anchor="middle"># solved</text>'
-        f'<text x="12" y="{h // 2}" font-size="11" transform="rotate(-90 12 {h // 2})">wall time (s, max={t_max:.2f})</text>'
+        f'<text x="{w // 2}" y="{h - 4}" font-size="11" text-anchor="middle"># instances solved</text>'
+        f'<text x="10" y="{h // 2}" font-size="11" transform="rotate(-90 10 {h // 2})">wall time (s)</text>'
+        + "".join(ticks)
     )
     return f'<svg width="{w}" height="{h}">{axes}{"".join(paths)}</svg>'
 
@@ -110,29 +121,28 @@ def _js_json(obj: object) -> str:
 _JS_FIELDS = ("solver", "path", "family", "expected", "got", "wall_s", "cert_status", "cert_bytes")
 
 
-def _controls_html(solvers: list[str], families: list[str]) -> str:
-    fam_boxes = "".join(
-        f'<label><input type="checkbox" class="famchk" value="{_esc(f)}" checked> {_esc(f)}</label>'
-        for f in families
-    )
-    opts = "".join(f'<option value="{_esc(s)}">{_esc(s)}</option>' for s in solvers)
-    b_default = solvers[1] if len(solvers) > 1 else solvers[0] if solvers else ""
-    opts_b = "".join(
-        f'<option value="{_esc(s)}"{" selected" if s == b_default else ""}>{_esc(s)}</option>'
+def _opts(solvers: list[str], selected: str = "") -> str:
+    return "".join(
+        f'<option value="{_esc(s)}"{" selected" if s == selected else ""}>{_esc(s)}</option>'
         for s in solvers
     )
+
+
+def _local_controls(scope: str, families: list[str], extra: str) -> str:
+    fam = "".join(
+        f'<label><input type="checkbox" class="famchk-{scope}" value="{_esc(f)}" checked> '
+        f"{_esc(f)}</label>"
+        for f in families
+    )
     return f"""
-<div id="controls">
-  <fieldset><legend>families</legend>{fam_boxes}</fieldset>
+<div class="ctl">
+  <fieldset><legend>families</legend>{fam}</fieldset>
   <fieldset><legend>result</legend>
-    <label><input type="radio" name="resf" value="all" checked> all</label>
-    <label><input type="radio" name="resf" value="sat"> sat</label>
-    <label><input type="radio" name="resf" value="unsat"> unsat</label>
+    <label><input type="radio" name="resf-{scope}" value="all" checked> all</label>
+    <label><input type="radio" name="resf-{scope}" value="sat"> sat</label>
+    <label><input type="radio" name="resf-{scope}" value="unsat"> unsat</label>
   </fieldset>
-  <fieldset><legend>single</legend><select id="solo">{opts}</select></fieldset>
-  <fieldset><legend>compare</legend>
-    A <select id="cmpA">{opts}</select> vs B <select id="cmpB">{opts_b}</select>
-  </fieldset>
+  {extra}
 </div>
 """
 
@@ -170,14 +180,10 @@ function tbl(headers, rows){
   return t;
 }
 
-function state(){
-  const fams = new Set($$(".famchk").filter(c=>c.checked).map(c=>c.value));
-  const resf = ($$("input[name=resf]").find(r=>r.checked)||{}).value || "all";
-  return {
-    fams, resf,
-    solo: $("#solo").value,
-    a: $("#cmpA").value, b: $("#cmpB").value,
-  };
+function state(scope){
+  const fams = new Set($$(".famchk-"+scope).filter(c=>c.checked).map(c=>c.value));
+  const resf = ($$("input[name=resf-"+scope+"]").find(r=>r.checked)||{}).value || "all";
+  return {fams, resf};
 }
 function rowsFor(solver, st){
   return DATA.filter(r =>
@@ -187,10 +193,11 @@ function rowsFor(solver, st){
 }
 
 function renderSingle(){
-  const st = state();
-  const rs = rowsFor(st.solo, st);
+  const st = state("single");
+  const solo = $("#solo").value;
+  const rs = rowsFor(solo, st);
   const root = $("#single"); root.textContent = "";
-  root.appendChild(el("h3",{text:`Solver: ${st.solo} — ${rs.length} instances`}));
+  root.appendChild(el("h3",{text:`Solver: ${solo} — ${rs.length} instances`}));
 
   // per-family
   const byFam = {};
@@ -257,9 +264,9 @@ function histogram(ts){
 }
 
 function renderPair(){
-  const st = state();
+  const st = state("pair");
   const root = $("#pair"); root.textContent = "";
-  const A=st.a, B=st.b;
+  const A=$("#cmpA").value, B=$("#cmpB").value;
   root.appendChild(el("h3",{text:`Compare: ${A} vs ${B}`}));
   const ra={}, rb={};
   for (const r of rowsFor(A,st)) ra[r.path]=r;
@@ -356,11 +363,13 @@ function showTab(id){
   for(const s of $$("section.tab")) s.classList.toggle("active", s.id===id);
   for(const b of $$("#tabs button")) b.classList.toggle("active", b.dataset.tab===id);
 }
-function rerender(){renderSingle();renderPair();}
 document.addEventListener("DOMContentLoaded",()=>{
-  for(const n of $$("#controls input, #controls select")) n.addEventListener("change",rerender);
+  for(const n of $$("#tab-single .ctl input, #tab-single .ctl select"))
+    n.addEventListener("change",renderSingle);
+  for(const n of $$("#tab-compare .ctl input, #tab-compare .ctl select"))
+    n.addEventListener("change",renderPair);
   for(const b of $$("#tabs button")) b.addEventListener("click",()=>showTab(b.dataset.tab));
-  rerender();
+  renderSingle(); renderPair();
   showTab("tab-overview");
 });
 """
@@ -452,16 +461,29 @@ def render(rows: list[dict], out: Path, timeout_s: float) -> None:
         "</nav>"
     )
 
+    b_default = solvers[1] if len(solvers) > 1 else (solvers[0] if solvers else "")
+    single_ctl = _local_controls(
+        "single",
+        families,
+        f'<fieldset><legend>solver</legend><select id="solo">{_opts(solvers)}</select></fieldset>',
+    )
+    pair_ctl = _local_controls(
+        "pair",
+        families,
+        "<fieldset><legend>compare</legend>"
+        f'A <select id="cmpA">{_opts(solvers)}</select> vs '
+        f'B <select id="cmpB">{_opts(solvers, b_default)}</select></fieldset>',
+    )
+
     html = f"""<!doctype html><meta charset=utf-8><title>multi-solver report</title>
 <style>{CSS}</style>
 <h1>Multi-solver benchmark</h1>
 {warn_html}
 {data_block}
-{_controls_html(solvers, families)}
 {tabs_nav}
 <section id="tab-overview" class="tab panel">{overview}</section>
-<section id="tab-single" class="tab panel"><div id="single"></div></section>
-<section id="tab-compare" class="tab panel"><div id="pair"></div></section>
+<section id="tab-single" class="tab panel">{single_ctl}<div id="single"></div></section>
+<section id="tab-compare" class="tab panel">{pair_ctl}<div id="pair"></div></section>
 <script>{_JS}</script>
 """
     out.write_text(html)
