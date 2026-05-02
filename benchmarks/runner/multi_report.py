@@ -1,9 +1,9 @@
 """Render a multi-solver benchmark JSONL to a self-contained HTML report.
 
-Top: interactive explorer (family filter, single-solver inspector,
-pairwise comparator) driven by inline vanilla JS over an embedded copy
-of the result rows. Bottom: static at-a-glance tables + cactus.
-Single file, no external assets, works offline.
+Three tabs (Overview / Single solver / Compare), each with its own
+family + result filter, all driven by inline vanilla JS over an
+embedded copy of the result rows. Single file, no external assets,
+works offline.
 """
 
 from __future__ import annotations
@@ -43,84 +43,8 @@ def load(path: Path) -> list[dict]:
     return [json.loads(ln) for ln in path.read_text().splitlines() if ln.strip()]
 
 
-def _solved(r: dict) -> bool:
-    return r["got"] in ("sat", "unsat")
-
-
-def _agree(rows: list[dict]) -> tuple[int, list[dict]]:
-    by_inst: dict[str, dict[str, str]] = defaultdict(dict)
-    for r in rows:
-        by_inst[r["path"]][r["solver"]] = r["got"]
-    n = 0
-    disagreements = []
-    for path, results in by_inst.items():
-        answers = {v for v in results.values() if v in ("sat", "unsat")}
-        if len(answers) > 1:
-            n += 1
-            disagreements.append({"path": path, **results})
-    return n, disagreements
-
-
 def _esc(x: object) -> str:
     return _html.escape(str(x), quote=True)
-
-
-def _table(headers: list[str], rows: list[list]) -> str:
-    h = "".join(f"<th>{_esc(x)}</th>" for x in headers)
-    body = "".join("<tr>" + "".join(f"<td>{_esc(c)}</td>" for c in r) + "</tr>" for r in rows)
-    return f"<table><tr>{h}</tr>{body}</table>"
-
-
-def _cactus_svg(rows: list[dict], solvers: list[str], w: int = 520, h: int = 320) -> str:
-    import math
-
-    times: dict[str, list[float]] = {
-        s: sorted(r["wall_s"] for r in rows if r["solver"] == s and _solved(r)) for s in solvers
-    }
-    n_max = max((len(v) for v in times.values()), default=1) or 1
-    t_max = max((v[-1] for v in times.values() if v), default=1.0)
-    lo, hi = -3, math.ceil(math.log10(max(t_max, 1e-3)))
-    span = hi - lo or 1
-
-    def yof(t: float) -> float:
-        return h - 30 - (math.log10(max(t, 1e-3)) - lo) / span * (h - 50)
-
-    colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b"]
-    paths = []
-    for i, s in enumerate(solvers):
-        ts = times[s]
-        if not ts:
-            continue
-        pts = " ".join(
-            f"{40 + (k + 1) / n_max * (w - 60):.1f},{yof(t):.1f}" for k, t in enumerate(ts)
-        )
-        c = colors[i % len(colors)]
-        paths.append(
-            f'<polyline fill="none" stroke="{c}" stroke-width="2" points="{pts}"/>'
-            f'<text x="{w - 100}" y="{20 + i * 16}" fill="{c}" font-size="12">{_esc(s)} ({len(ts)})</text>'
-        )
-    ticks = []
-    for frac in (0, 0.25, 0.5, 0.75, 1.0):
-        x = 40 + frac * (w - 60)
-        ticks.append(
-            f'<line x1="{x:.0f}" y1="{h - 30}" x2="{x:.0f}" y2="{h - 26}" stroke="#000"/>'
-            f'<text x="{x:.0f}" y="{h - 16}" font-size="9" text-anchor="middle">{int(frac * n_max)}</text>'
-        )
-    for e in range(lo, hi + 1):
-        y = yof(10**e)
-        lbl = f"{10**e:g}" if e >= 0 else f"1e{e}"
-        ticks.append(
-            f'<line x1="36" y1="{y:.0f}" x2="40" y2="{y:.0f}" stroke="#000"/>'
-            f'<text x="33" y="{y + 3:.0f}" font-size="9" text-anchor="end">{lbl}</text>'
-        )
-    axes = (
-        f'<line x1="40" y1="{h - 30}" x2="{w - 20}" y2="{h - 30}" stroke="#000"/>'
-        f'<line x1="40" y1="20" x2="40" y2="{h - 30}" stroke="#000"/>'
-        f'<text x="{w // 2}" y="{h - 4}" font-size="11" text-anchor="middle"># instances solved</text>'
-        f'<text x="10" y="{h // 2}" font-size="11" transform="rotate(-90 10 {h // 2})">wall time (s, log)</text>'
-        + "".join(ticks)
-    )
-    return f'<svg width="{w}" height="{h}">{axes}{"".join(paths)}</svg>'
 
 
 def _js_json(obj: object) -> str:
@@ -130,7 +54,6 @@ def _js_json(obj: object) -> str:
 
 # Only the fields the JS needs — keeps the embedded blob small.
 _JS_FIELDS = ("solver", "path", "family", "expected", "got", "wall_s", "cert_status", "cert_bytes")
-_CERT_HDR = ["solver", "#", "with cert", "valid", "invalid/dep/err", "skipped/timeout", "avg bytes"]
 
 
 def _opts(solvers: list[str], selected: str = "") -> str:
@@ -159,12 +82,42 @@ def _local_controls(scope: str, families: list[str], extra: str) -> str:
 """
 
 
+def _warnings(rows: list[dict], solvers: list[str]) -> str:
+    # Solvers with non-verifiable outputs (computed once over all data).
+    cert_warn: list[str] = []
+    for res in ("sat", "unsat"):
+        for s in solvers:
+            sr = [r for r in rows if r["solver"] == s and r["got"] == res]
+            with_cert = sum(1 for r in sr if (r.get("cert_status") or "n/a") != "n/a")
+            valid = sum(1 for r in sr if r.get("cert_status") == "valid")
+            skipped = sum(1 for r in sr if r.get("cert_status") in ("skipped", "timeout"))
+            if with_cert > 0 and (with_cert - valid - skipped) > 0:
+                cert_warn.append(f"{s}/{res}")
+    # Disagreement count.
+    by_inst: dict[str, set[str]] = defaultdict(set)
+    for r in rows:
+        if r["got"] in ("sat", "unsat"):
+            by_inst[r["path"]].add(r["got"])
+    n_dis = sum(1 for v in by_inst.values() if len(v) > 1)
+    out = ""
+    if cert_warn:
+        out += (
+            '<p class="warn">⚠ Solvers with non-verifiable outputs: '
+            f"{_esc(', '.join(cert_warn))}</p>"
+        )
+    if n_dis:
+        out += f'<p class="warn">⚠ {n_dis} instance(s) with solver DISAGREEMENT — see Overview tab.</p>'
+    return out
+
+
 _JS = r"""
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 const SOLVED = new Set(["sat","unsat"]);
 const SVGNS = "http://www.w3.org/2000/svg";
 const lg = t => Math.log10(Math.max(t, 1e-3)) + 3;  // shift so 1e-3 -> 0
+const COLORS = ["#1f77b4","#ff7f0e","#2ca02c","#d62728","#9467bd","#8c564b","#e377c2"];
+const CERT_HDR = ["solver","#","with cert","valid","invalid/dep/err","skipped/timeout","avg bytes"];
 
 function el(tag, attrs, kids){
   const n = document.createElement(tag);
@@ -179,6 +132,7 @@ function svg(tag, attrs){
   for (const [k,v] of Object.entries(attrs||{})) n.setAttribute(k, v);
   return n;
 }
+function svgt(attrs, text){ const n=svg("text",attrs); n.textContent=text; return n; }
 function tbl(headers, rows){
   const t = el("table");
   const hr = el("tr");
@@ -197,11 +151,127 @@ function state(scope){
   const resf = ($$("input[name=resf-"+scope+"]").find(r=>r.checked)||{}).value || "all";
   return {fams, resf};
 }
-function rowsFor(solver, st){
+function rowsAll(st){
   return DATA.filter(r =>
-    r.solver === solver &&
-    st.fams.has(r.family) &&
-    (st.resf === "all" || r.expected === st.resf));
+    st.fams.has(r.family) && (st.resf === "all" || r.expected === st.resf));
+}
+function rowsFor(solver, st){
+  return rowsAll(st).filter(r => r.solver === solver);
+}
+
+function certRowFor(srows){
+  const n = srows.length;
+  let withc=0, valid=0, inv=0, skip=0, bytes=0;
+  for (const r of srows){
+    const cs = r.cert_status || "n/a";
+    if (cs !== "n/a"){ withc++; bytes += (r.cert_bytes||0); }
+    if (cs === "valid") valid++;
+    else if (cs==="invalid"||cs==="dep"||cs==="error") inv++;
+    else if (cs==="skipped"||cs==="timeout") skip++;
+  }
+  return [n, withc, valid, inv, skip, withc?Math.round(bytes/withc):0];
+}
+
+function cactus(rs){
+  const W=520,H=320;
+  const times = {};
+  for (const s of SOLVERS)
+    times[s] = rs.filter(r=>r.solver===s && SOLVED.has(r.got)).map(r=>r.wall_s).sort((a,b)=>a-b);
+  const nMax = Math.max(1, ...Object.values(times).map(v=>v.length));
+  const tMax = Math.max(1e-3, ...Object.values(times).map(v=>v.length?v[v.length-1]:1e-3));
+  const lo=-3, hi=Math.ceil(Math.log10(tMax)), span=Math.max(1,hi-lo);
+  const yof = t => H-30 - (Math.log10(Math.max(t,1e-3))-lo)/span*(H-50);
+  const s = svg("svg",{width:W,height:H});
+  // axes
+  s.appendChild(svg("line",{x1:40,y1:H-30,x2:W-20,y2:H-30,stroke:"#000"}));
+  s.appendChild(svg("line",{x1:40,y1:20,x2:40,y2:H-30,stroke:"#000"}));
+  s.appendChild(svgt({x:W/2,y:H-4,"font-size":11,"text-anchor":"middle"},"# instances solved"));
+  s.appendChild(svgt({x:10,y:H/2,"font-size":11,transform:`rotate(-90 10 ${H/2})`},"wall time (s, log)"));
+  // ticks
+  for (const frac of [0,.25,.5,.75,1]){
+    const x=40+frac*(W-60);
+    s.appendChild(svg("line",{x1:x,y1:H-30,x2:x,y2:H-26,stroke:"#000"}));
+    s.appendChild(svgt({x:x,y:H-16,"font-size":9,"text-anchor":"middle"},String(Math.round(frac*nMax))));
+  }
+  for (let e=lo;e<=hi;e++){
+    const y=yof(Math.pow(10,e));
+    s.appendChild(svg("line",{x1:36,y1:y,x2:40,y2:y,stroke:"#000"}));
+    s.appendChild(svgt({x:33,y:y+3,"font-size":9,"text-anchor":"end"}, e<0?`1e${e}`:String(Math.pow(10,e))));
+  }
+  // series
+  SOLVERS.forEach((sv,i)=>{
+    const ts=times[sv]; if(!ts.length) return;
+    const pts=ts.map((t,k)=>`${(40+(k+1)/nMax*(W-60)).toFixed(1)},${yof(t).toFixed(1)}`).join(" ");
+    const c=COLORS[i%COLORS.length];
+    s.appendChild(svg("polyline",{fill:"none",stroke:c,"stroke-width":2,points:pts}));
+    s.appendChild(svgt({x:W-100,y:20+i*16,fill:c,"font-size":12},`${sv} (${ts.length})`));
+  });
+  return s;
+}
+
+function renderOverview(){
+  const st = state("overview");
+  const rs = rowsAll(st);
+  const root = $("#overview"); root.textContent = "";
+  const fams = FAMILIES.filter(f=>st.fams.has(f));
+
+  // per-family % solved
+  const nInst = {}; // family -> #unique paths
+  for (const f of fams)
+    nInst[f] = new Set(rs.filter(r=>r.family===f).map(r=>r.path)).size;
+  const famRows = fams.map(f=>{
+    const cells=[f];
+    for (const s of SOLVERS){
+      const ok = rs.filter(r=>r.family===f && r.solver===s && SOLVED.has(r.got)).length;
+      const n = nInst[f]||0;
+      cells.push(n?`${ok}/${n} (${Math.round(100*ok/n)}%)`:"-");
+    }
+    return cells;
+  });
+  root.appendChild(el("h3",{text:"% solved per family"}));
+  root.appendChild(tbl(["family",...SOLVERS], famRows));
+
+  // SAT vs UNSAT by expected
+  const suRows=[];
+  for (const exp of ["sat","unsat","unknown"]){
+    const n = new Set(rs.filter(r=>r.expected===exp).map(r=>r.path)).size;
+    if(!n) continue;
+    const cells=[exp,n];
+    for (const s of SOLVERS){
+      const ok = rs.filter(r=>r.expected===exp && r.solver===s && SOLVED.has(r.got)).length;
+      cells.push(`${ok} (${Math.round(100*ok/n)}%)`);
+    }
+    suRows.push(cells);
+  }
+  root.appendChild(el("h3",{text:"SAT vs UNSAT (by expected)"}));
+  root.appendChild(tbl(["expected","n",...SOLVERS], suRows));
+
+  // cactus
+  root.appendChild(el("h3",{text:"Scaling (cactus)"}));
+  root.appendChild(cactus(rs));
+
+  // cert tables
+  for (const res of ["sat","unsat"]){
+    const rows=[];
+    for (const s of SOLVERS){
+      const sr = rs.filter(r=>r.solver===s && r.got===res);
+      if(!sr.length) continue;
+      rows.push([s, ...certRowFor(sr)]);
+    }
+    root.appendChild(el("h3",{text:`${res.toUpperCase()} certificate verification`}));
+    root.appendChild(tbl(CERT_HDR, rows));
+  }
+
+  // disagreements
+  const inst={};
+  for (const r of rs) (inst[r.path] ||= {})[r.solver]=r.got;
+  const dis=[];
+  for (const [p,d] of Object.entries(inst)){
+    const ans=new Set(Object.values(d).filter(v=>SOLVED.has(v)));
+    if(ans.size>1) dis.push([p, ...SOLVERS.map(s=>d[s]||"-")]);
+  }
+  root.appendChild(el("h3",{text:`Disagreements (${dis.length})`}));
+  root.appendChild(dis.length ? tbl(["path",...SOLVERS], dis) : el("p",{text:"none"}));
 }
 
 function renderSingle(){
@@ -224,19 +294,11 @@ function renderSingle(){
   root.appendChild(tbl(["family","n","solved","sat","unsat","unknown","timeout","error"], famRows));
 
   // cert table
-  const cert = {sat:{}, unsat:{}};
-  for (const r of rs) if (SOLVED.has(r.got)){
-    const c = cert[r.got];
-    c.n=(c.n||0)+1;
-    if (r.cert_status && r.cert_status!=="n/a"){ c.with=(c.with||0)+1; c.bytes=(c.bytes||0)+(r.cert_bytes||0); }
-    c[r.cert_status||"n/a"]=(c[r.cert_status||"n/a"]||0)+1;
-  }
   const certRows=[];
   for (const res of ["sat","unsat"]){
-    const c=cert[res]; if(!c.n) continue;
-    const inv=(c.invalid||0)+(c.dep||0)+(c.error||0);
-    const skip=(c.skipped||0)+(c.timeout||0);
-    certRows.push([res,c.n,c.with||0,c.valid||0,inv,skip,c.with?Math.round((c.bytes||0)/(c.with)):0]);
+    const sr = rs.filter(r=>r.got===res);
+    if(!sr.length) continue;
+    certRows.push([res, ...certRowFor(sr)]);
   }
   root.appendChild(el("h3",{text:"certificates"}));
   root.appendChild(tbl(["result","#","with cert","valid","invalid/dep/err","skipped/timeout","avg bytes"],certRows));
@@ -267,10 +329,9 @@ function histogram(ts){
   for (let i=0;i<B;i++){
     const bw=(W-40)/B, x=30+i*bw, h=(H-30)*bins[i]/m;
     s.appendChild(svg("rect",{x:x+1,y:H-20-h,width:bw-2,height:h,fill:"#1f77b4"}));
-    const lbl=svg("text",{x:x+bw/2,y:H-6,"font-size":9,"text-anchor":"middle"});
-    lbl.textContent = (Math.pow(10,(i+1)/B*span-3)).toExponential(0);
-    s.appendChild(lbl);
-    if(bins[i]){const c=svg("text",{x:x+bw/2,y:H-24-h,"font-size":9,"text-anchor":"middle"});c.textContent=bins[i];s.appendChild(c);}
+    s.appendChild(svgt({x:x+bw/2,y:H-6,"font-size":9,"text-anchor":"middle"},
+      Math.pow(10,(i+1)/B*span-3).toExponential(0)));
+    if(bins[i]) s.appendChild(svgt({x:x+bw/2,y:H-24-h,"font-size":9,"text-anchor":"middle"},String(bins[i])));
   }
   return s;
 }
@@ -326,11 +387,11 @@ function scatter(paths,ra,rb,A,B){
   for(const [v,lbl] of ticks){
     const x=px(v), y=py(v);
     s.appendChild(svg("line",{x1:x,y1:H-M,x2:x,y2:H-M+4,stroke:"#000"}));
-    const tx=svg("text",{x:x,y:H-M+14,"font-size":9,"text-anchor":"middle"});tx.textContent=lbl;s.appendChild(tx);
+    s.appendChild(svgt({x:x,y:H-M+14,"font-size":9,"text-anchor":"middle"},lbl));
     s.appendChild(svg("line",{x1:M-4,y1:y,x2:M,y2:y,stroke:"#000"}));
-    const ty=svg("text",{x:M-6,y:y+3,"font-size":9,"text-anchor":"end"});ty.textContent=lbl;s.appendChild(ty);
+    s.appendChild(svgt({x:M-6,y:y+3,"font-size":9,"text-anchor":"end"},lbl));
   }
-  // diagonals: y=x, y=10x (B 10x slower), y=x/10 (A 10x slower)
+  // diagonals: y=x, y=10x, y=x/10
   const diag=(k,main)=>{
     const lo=1e-3, hi=TIMEOUT*1.1;
     const t0=Math.max(lo, lo/k), t1=Math.min(hi, hi/k);
@@ -339,14 +400,13 @@ function scatter(paths,ra,rb,A,B){
       stroke:main?"#888":"#ccc","stroke-dasharray":main?"4":"2"}));
     if(!main){
       const tm=Math.sqrt(t0*t1);
-      const l=svg("text",{x:px(tm)+4,y:py(k*tm)-4,"font-size":9,fill:"#888"});
-      l.textContent="10×";s.appendChild(l);
+      s.appendChild(svgt({x:px(tm)+4,y:py(k*tm)-4,"font-size":9,fill:"#888"},"10×"));
     }
   };
   diag(1,true); diag(10,false); diag(0.1,false);
   // axis labels
-  const xl=svg("text",{x:(M+W-10)/2,y:H-6,"font-size":11,"text-anchor":"middle"});xl.textContent=`${A} (s, log)`;s.appendChild(xl);
-  const yl=svg("text",{x:12,y:(10+H-M)/2,"font-size":11,transform:`rotate(-90 12 ${(10+H-M)/2})`});yl.textContent=`${B} (s, log)`;s.appendChild(yl);
+  s.appendChild(svgt({x:(M+W-10)/2,y:H-6,"font-size":11,"text-anchor":"middle"},`${A} (s, log)`));
+  s.appendChild(svgt({x:12,y:(10+H-M)/2,"font-size":11,transform:`rotate(-90 12 ${(10+H-M)/2})`},`${B} (s, log)`));
   // points
   for(const p of paths){
     const x=ra[p],y=rb[p];
@@ -366,7 +426,7 @@ function scatter(paths,ra,rb,A,B){
   s.appendChild(svg("rect",{x:lx-6,y:ly-10,width:152,height:14*L.length+6,fill:"#fff",stroke:"#ccc"}));
   L.forEach(([c,t],i)=>{
     s.appendChild(svg("circle",{cx:lx,cy:ly+i*14,r:3,fill:c}));
-    const l=svg("text",{x:lx+8,y:ly+i*14+3,"font-size":9});l.textContent=t;s.appendChild(l);
+    s.appendChild(svgt({x:lx+8,y:ly+i*14+3,"font-size":9},t));
   });
   return s;
 }
@@ -376,12 +436,14 @@ function showTab(id){
   for(const b of $$("#tabs button")) b.classList.toggle("active", b.dataset.tab===id);
 }
 document.addEventListener("DOMContentLoaded",()=>{
+  for(const n of $$("#tab-overview .ctl input"))
+    n.addEventListener("change",renderOverview);
   for(const n of $$("#tab-single .ctl input, #tab-single .ctl select"))
     n.addEventListener("change",renderSingle);
   for(const n of $$("#tab-compare .ctl input, #tab-compare .ctl select"))
     n.addEventListener("change",renderPair);
   for(const b of $$("#tabs button")) b.addEventListener("click",()=>showTab(b.dataset.tab));
-  renderSingle(); renderPair();
+  renderOverview(); renderSingle(); renderPair();
   showTab("tab-overview");
 });
 """
@@ -390,58 +452,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 def render(rows: list[dict], out: Path, timeout_s: float) -> None:
     solvers = sorted({r["solver"] for r in rows})
     families = sorted({r["family"] for r in rows})
-    n_disagree, disagreements = _agree(rows)
 
-    # --- static section (unchanged from before, minus all-pairs scatter) ---
-    fam_rows = []
-    for fam in families:
-        cells: list = [fam]
-        n_inst = len({r["path"] for r in rows if r["family"] == fam})
-        for s in solvers:
-            n_ok = sum(1 for r in rows if r["family"] == fam and r["solver"] == s and _solved(r))
-            cells.append(f"{n_ok}/{n_inst} ({100 * n_ok / max(n_inst, 1):.0f}%)")
-        fam_rows.append(cells)
-
-    su_rows = []
-    for exp in ("sat", "unsat", "unknown"):
-        n_inst = len({r["path"] for r in rows if r["expected"] == exp})
-        if n_inst == 0:
-            continue
-        cells = [exp, str(n_inst)]
-        for s in solvers:
-            n_ok = sum(1 for r in rows if r["expected"] == exp and r["solver"] == s and _solved(r))
-            cells.append(f"{n_ok} ({100 * n_ok / n_inst:.0f}%)")
-        su_rows.append(cells)
-
-    cert_rows: dict[str, list[list]] = {"sat": [], "unsat": []}
-    cert_warn: list[str] = []
-    for res in ("sat", "unsat"):
-        for s in solvers:
-            srows = [r for r in rows if r["solver"] == s and r["got"] == res]
-            n = len(srows)
-            if n == 0:
-                continue
-            with_cert = sum(1 for r in srows if r["cert_path"])
-            valid = sum(1 for r in srows if r["cert_status"] == "valid")
-            invalid = sum(1 for r in srows if r["cert_status"] in ("invalid", "dep", "error"))
-            skipped = sum(1 for r in srows if r["cert_status"] in ("skipped", "timeout"))
-            avg_bytes = sum(r["cert_bytes"] for r in srows) // max(with_cert, 1)
-            cert_rows[res].append([s, n, with_cert, valid, invalid, skipped, avg_bytes])
-            if with_cert > 0 and (with_cert - valid - skipped) > 0:
-                cert_warn.append(f"{s}/{res}")
-
-    warn_html = ""
-    if cert_warn:
-        warn_html = (
-            '<p class="warn">⚠ Solvers with non-verifiable outputs: '
-            f"{_esc(', '.join(cert_warn))}</p>"
-        )
-    if n_disagree:
-        warn_html += (
-            f'<p class="warn">⚠ {n_disagree} instance(s) with solver DISAGREEMENT — see below.</p>'
-        )
-
-    # --- interactive section: embed data + controls + panels + JS ---
     slim = [{k: r.get(k) for k in _JS_FIELDS} for r in rows]
     data_block = (
         "<script>"
@@ -452,21 +463,6 @@ def render(rows: list[dict], out: Path, timeout_s: float) -> None:
         "</script>"
     )
 
-    overview = f"""
-<h3>% solved per family</h3>
-{_table(["family", *solvers], fam_rows)}
-<h3>SAT vs UNSAT (by expected)</h3>
-{_table(["expected", "n", *solvers], su_rows)}
-<h3>Scaling (cactus)</h3>
-{_cactus_svg(rows, solvers)}
-<h3>SAT certificate verification</h3>
-{_table(_CERT_HDR, cert_rows["sat"])}
-<h3>UNSAT certificate verification</h3>
-{_table(_CERT_HDR, cert_rows["unsat"])}
-<h3>Disagreements</h3>
-{_table(["path", *solvers], [[d["path"], *(d.get(s, "-") for s in solvers)] for d in disagreements]) if disagreements else "<p>none</p>"}
-"""
-
     tabs_nav = (
         '<nav id="tabs">'
         '<button data-tab="tab-overview">Overview</button>'
@@ -475,6 +471,7 @@ def render(rows: list[dict], out: Path, timeout_s: float) -> None:
         "</nav>"
     )
 
+    overview_ctl = _local_controls("overview", families, "")
     b_default = solvers[1] if len(solvers) > 1 else (solvers[0] if solvers else "")
     single_ctl = _local_controls(
         "single",
@@ -492,10 +489,10 @@ def render(rows: list[dict], out: Path, timeout_s: float) -> None:
     html = f"""<!doctype html><meta charset=utf-8><title>multi-solver report</title>
 <style>{CSS}</style>
 <h1>Multi-solver report</h1>
-{warn_html}
+{_warnings(rows, solvers)}
 {data_block}
 {tabs_nav}
-<section id="tab-overview" class="tab panel">{overview}</section>
+<section id="tab-overview" class="tab panel">{overview_ctl}<div id="overview"></div></section>
 <section id="tab-single" class="tab panel">{single_ctl}<div id="single"></div></section>
 <section id="tab-compare" class="tab panel">{pair_ctl}<div id="pair"></div></section>
 <script>{_JS}</script>
