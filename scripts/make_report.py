@@ -199,13 +199,21 @@ def _git_head() -> str:
     ).stdout.strip()
 
 
+RAW = "https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/"
+PREVIEW = "https://htmlpreview.github.io/?" + RAW
+
+
 def write_index() -> None:
     items = sorted(REPORTS.glob("20*.html"), reverse=True)
-    rows = "".join(f'<li><a href="{esc(p.name)}">{esc(p.stem)}</a></li>' for p in items)
-    (REPORTS / "index.html").write_text(
-        f"<!doctype html><meta charset=utf-8><title>dqbf dev reports</title>"
-        f"<style>{CSS}</style><h1>dqbf — dev reports</h1><ul>{rows}</ul>"
-    )
+    lines = ["# dqbf — dev reports", ""]
+    lines.append("| date | label | view |")
+    lines.append("|---|---|---|")
+    for p in items:
+        parts = p.stem.split("_", 2)
+        d = "_".join(parts[:2])
+        lab = parts[2] if len(parts) > 2 else ""
+        lines.append(f"| {d} | {lab} | [rendered]({PREVIEW}{p.name}) · [source]({p.name}) |")
+    (REPORTS / "README.md").write_text("\n".join(lines) + "\n")
 
 
 def _slug(s: str) -> str:
