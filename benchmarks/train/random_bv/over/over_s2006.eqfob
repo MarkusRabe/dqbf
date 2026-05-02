@@ -1,0 +1,12 @@
+-- random_bv seed=2006 mode=over width=2
+param N = 2
+
+fun f0 : bv[N] -> bv[N]
+
+forall x0 : bv[N]
+
+(((f0(x0) & 2) == (f0(x0) & (x0 ^ f0(x0)))) && (f0(x0) != ~f0(x0)))
+((((x0 & x0) & (x0 | x0)) >= x0) && (((x0 ^ f0(x0)) + (x0 | f0(x0))) >= ~f0(x0)))
+((f0(x0) <= x0) || ((f0(x0) ^ (x0 ^ f0(x0))) < x0))
+(~f0(x0) != ~f0(x0))
+(f0(x0) >= (x0 & (f0(x0) | f0(x0))))

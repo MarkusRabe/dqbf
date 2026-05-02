@@ -1,0 +1,11 @@
+-- random_bv seed=1002 mode=mixed width=2
+param N = 2
+
+fun f0 : bv[N] -> bv[N]
+
+forall x0 : bv[N]
+forall x1 : bv[N]
+
+((((f0(x0) + x1) ^ 0) >= ((f0(x1) + x1) | x1)) && ((~x1 + x1) == f0(x0)))
+(((f0(x0) + 0) + 1) == ((f0(x1) + f0(x1)) + (f0(x1) | 3)))
+(f0(x0) == ~x1)

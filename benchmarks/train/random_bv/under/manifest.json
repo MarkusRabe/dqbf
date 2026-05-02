@@ -1,0 +1,257 @@
+[
+  {
+    "path": "under_s0000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 0,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 1
+    },
+    "source": "under_s0000.eqfob"
+  },
+  {
+    "path": "under_s0001.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 1,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 2
+    },
+    "source": "under_s0001.eqfob"
+  },
+  {
+    "path": "under_s0002.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 2,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 2
+    },
+    "source": "under_s0002.eqfob"
+  },
+  {
+    "path": "under_s0003.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 3,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 2
+    },
+    "source": "under_s0003.eqfob"
+  },
+  {
+    "path": "under_s0004.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 4,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 2
+    },
+    "source": "under_s0004.eqfob"
+  },
+  {
+    "path": "under_s0005.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 5,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 1
+    },
+    "source": "under_s0005.eqfob"
+  },
+  {
+    "path": "under_s0006.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 6,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 2
+    },
+    "source": "under_s0006.eqfob"
+  },
+  {
+    "path": "under_s0007.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 7,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 2
+    },
+    "source": "under_s0007.eqfob"
+  },
+  {
+    "path": "under_s0008.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 8,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 2
+    },
+    "source": "under_s0008.eqfob"
+  },
+  {
+    "path": "under_s0009.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 9,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 1
+    },
+    "source": "under_s0009.eqfob"
+  },
+  {
+    "path": "under_s0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 10,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 2
+    },
+    "source": "under_s0010.eqfob"
+  },
+  {
+    "path": "under_s0011.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 11,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 2
+    },
+    "source": "under_s0011.eqfob"
+  },
+  {
+    "path": "under_s0012.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 12,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 1
+    },
+    "source": "under_s0012.eqfob"
+  },
+  {
+    "path": "under_s0013.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 13,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 1
+    },
+    "source": "under_s0013.eqfob"
+  },
+  {
+    "path": "under_s0014.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 14,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 1
+    },
+    "source": "under_s0014.eqfob"
+  }
+]
