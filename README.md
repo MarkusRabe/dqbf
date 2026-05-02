@@ -1,7 +1,18 @@
-# dqbf
+# What is this?
 
-Provers and tooling for **Dependency Quantified Boolean Formulas (DQBF)**,
-built around the *fork resolution* proof system.
+This is an **experiment** to learn how well agentic programming can work for
+research that involves hard algorithmic questions. The core of this experiment
+is an improvement loop that allows softwware agents to iterate on the algorithms
+on their own. This includes a set of benchmarks and a verifier to check the
+correctnes of all results.
+
+This repository builds heavily on the work of the SAT and QBF community. In
+particular I am using the methodology to build logic solvers, such as the
+principle to produce certificates with each result. I am grateful for what
+I have learned from that community and perhaps this code might turn out to
+be useful to them.
+
+# What is DQBF?
 
 DQBF generalizes QBF by allowing each existential variable to depend on an
 explicitly listed subset of universals — equivalently, it asserts the

@@ -65,13 +65,13 @@ def gen_qdimacs(spec: QbfSpec) -> str:
 # --- static benchmark set -------------------------------------------------
 
 # Tuned so ~half SAT / ~half UNSAT (verified empirically with caqe/semantics).
-SET_2QBF = [QbfSpec(blocks=(("a", 3), ("e", 6)), n_clauses=16, k=3, seed=s) for s in range(50)]
+SET_2QBF = [QbfSpec(blocks=(("a", 3), ("e", 6)), n_clauses=18, k=3, seed=s) for s in range(100)]
 SET_3QBF = [
     QbfSpec(blocks=(("a", 2), ("e", 4), ("a", 2)), n_clauses=12, k=3, seed=1000 + s)
-    for s in range(25)
+    for s in range(50)
 ] + [
     QbfSpec(blocks=(("e", 3), ("a", 2), ("e", 4)), n_clauses=13, k=3, seed=2000 + s)
-    for s in range(25)
+    for s in range(50)
 ]
 
 
@@ -79,25 +79,30 @@ SET_3QBF = [
 @click.option("--out", type=click.Path(), default="benchmarks/train/random_qbf/instances")
 @click.option("--two-qbf-only", is_flag=True, help="emit only the ∀∃ subset (cadet-compatible)")
 def main(out: str, two_qbf_only: bool) -> None:
-    outdir = Path(out)
-    outdir.mkdir(parents=True, exist_ok=True)
-    specs = SET_2QBF + ([] if two_qbf_only else SET_3QBF)
-    manifest = []
-    for spec in specs:
-        kind = "2qbf" if len(spec.blocks) == 2 else "3qbf"
-        name = f"{kind}_s{spec.seed:04d}"
-        path = outdir / f"{name}.qdimacs"
-        path.write_text(gen_qdimacs(spec))
-        manifest.append(
-            {
-                "path": path.name,
-                "expected": "unknown",
-                "tags": ["random_qbf", kind],
-                "params": {"seed": spec.seed, "blocks": list(spec.blocks)},
-            }
-        )
-    (outdir / "manifest.json").write_text(json.dumps(manifest, indent=2))
-    print(f"wrote {len(manifest)} instances to {outdir}/")
+    base = Path(out)
+    families = {"2qbf": SET_2QBF, "3qbf": ([] if two_qbf_only else SET_3QBF)}
+    total = 0
+    for kind, specs in families.items():
+        if not specs:
+            continue
+        outdir = base / kind
+        outdir.mkdir(parents=True, exist_ok=True)
+        manifest = []
+        for spec in specs:
+            name = f"{kind}_s{spec.seed:04d}"
+            (outdir / f"{name}.qdimacs").write_text(gen_qdimacs(spec))
+            manifest.append(
+                {
+                    "path": f"{name}.qdimacs",
+                    "expected": "unknown",
+                    "tags": ["random_qbf", kind],
+                    "params": {"seed": spec.seed, "blocks": list(spec.blocks)},
+                }
+            )
+        (outdir / "manifest.json").write_text(json.dumps(manifest, indent=2))
+        total += len(manifest)
+        print(f"wrote {len(manifest)} instances to {outdir}/")
+    print(f"total: {total}")
 
 
 if __name__ == "__main__":

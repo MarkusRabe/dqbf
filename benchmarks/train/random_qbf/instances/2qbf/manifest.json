@@ -1,0 +1,2102 @@
+[
+  {
+    "path": "2qbf_s0000.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 0,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0001.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 1,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0002.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 2,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0003.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 3,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0004.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 4,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0005.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 5,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0006.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 6,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0007.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 7,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0008.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 8,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0009.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 9,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0010.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 10,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0011.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 11,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0012.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 12,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0013.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 13,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0014.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 14,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0015.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 15,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0016.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 16,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0017.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 17,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0018.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 18,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0019.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 19,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0020.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 20,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0021.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 21,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0022.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 22,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0023.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 23,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0024.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 24,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0025.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 25,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0026.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 26,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0027.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 27,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0028.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 28,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0029.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 29,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0030.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 30,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0031.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 31,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0032.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 32,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0033.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 33,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0034.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 34,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0035.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 35,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0036.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 36,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0037.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 37,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0038.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 38,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0039.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 39,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0040.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 40,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0041.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 41,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0042.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 42,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0043.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 43,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0044.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 44,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0045.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 45,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0046.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 46,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0047.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 47,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0048.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 48,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0049.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 49,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0050.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 50,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0051.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 51,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0052.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 52,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0053.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 53,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0054.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 54,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0055.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 55,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0056.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 56,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0057.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 57,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0058.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 58,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0059.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 59,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0060.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 60,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0061.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 61,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0062.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 62,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0063.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 63,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0064.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 64,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0065.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 65,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0066.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 66,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0067.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 67,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0068.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 68,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0069.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 69,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0070.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 70,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0071.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 71,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0072.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 72,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0073.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 73,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0074.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 74,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0075.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 75,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0076.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 76,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0077.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 77,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0078.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 78,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0079.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 79,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0080.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 80,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0081.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 81,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0082.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 82,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0083.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 83,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0084.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 84,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0085.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 85,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0086.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 86,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0087.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 87,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0088.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 88,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0089.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 89,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0090.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 90,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0091.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 91,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0092.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 92,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0093.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 93,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0094.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 94,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0095.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 95,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0096.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 96,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0097.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 97,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0098.qdimacs",
+    "expected": "sat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 98,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "path": "2qbf_s0099.qdimacs",
+    "expected": "unsat",
+    "tags": [
+      "random_qbf",
+      "2qbf"
+    ],
+    "params": {
+      "seed": 99,
+      "blocks": [
+        [
+          "a",
+          3
+        ],
+        [
+          "e",
+          6
+        ]
+      ]
+    }
+  }
+]

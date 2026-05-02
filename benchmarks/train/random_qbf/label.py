@@ -11,18 +11,19 @@ CAQE = HERE.parents[2] / "third_party/caqe/target/release/caqe"
 
 
 def main() -> None:
-    inst = HERE / "instances"
-    m = json.loads((inst / "manifest.json").read_text())
-    counts: dict[str, dict[str, int]] = {}
-    for e in m:
-        rc = subprocess.run([str(CAQE), str(inst / e["path"])], capture_output=True).returncode
-        e["expected"] = {10: "sat", 20: "unsat"}.get(rc, "unknown")
-        tag = e["tags"][1]
-        counts.setdefault(tag, {"sat": 0, "unsat": 0, "unknown": 0})
-        counts[tag][e["expected"]] += 1
-    (inst / "manifest.json").write_text(json.dumps(m, indent=2))
-    for k, v in counts.items():
-        print(f"{k}: {v}")
+    base = HERE / "instances"
+    for sub in sorted(base.iterdir()):
+        mf = sub / "manifest.json"
+        if not mf.exists():
+            continue
+        m = json.loads(mf.read_text())
+        counts = {"sat": 0, "unsat": 0, "unknown": 0}
+        for e in m:
+            rc = subprocess.run([str(CAQE), str(sub / e["path"])], capture_output=True).returncode
+            e["expected"] = {10: "sat", 20: "unsat"}.get(rc, "unknown")
+            counts[e["expected"]] += 1
+        mf.write_text(json.dumps(m, indent=2))
+        print(f"{sub.name}: {counts}")
 
 
 if __name__ == "__main__":
