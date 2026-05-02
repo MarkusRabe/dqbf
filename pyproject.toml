@@ -59,6 +59,9 @@ extend-exclude = [".claude", "benchmarks/holdout"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.per-file-ignores]
+"benchmarks/runner/multi_report.py" = ["E501"]
+
 [tool.mypy]
 python_version = "3.11"
 strict_optional = true

@@ -69,7 +69,7 @@ def _cactus_svg(rows: list[dict], solvers: list[str], w: int = 520, h: int = 320
         c = colors[i % len(colors)]
         paths.append(
             f'<polyline fill="none" stroke="{c}" stroke-width="2" points="{pts}"/>'
-            f'<text x="{w - 100}" y="{20 + i * 16}" fill="{c}" font-size="12">{s} ({len(ts)})</text>'
+            f'<text x="{w - 100}" y="{20 + i * 16}" fill="{c}" font-size="12">{s} ({len(ts)})</text>'  # noqa: E501
         )
     axes = (
         f'<line x1="40" y1="{h - 30}" x2="{w - 20}" y2="{h - 30}" stroke="#000"/>'
