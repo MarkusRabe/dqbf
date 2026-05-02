@@ -30,6 +30,12 @@ CSS = (
     ".scroll{max-height:14em;overflow:auto;border:1px solid #eee;padding:.3em;"
     "font-family:ui-monospace,monospace;font-size:.85em}"
     ".scroll div{white-space:nowrap}"
+    "nav#tabs{margin:.3em 0 0;border-bottom:1px solid #ccc}"
+    "nav#tabs button{border:1px solid #ccc;border-bottom:none;background:#f4f4f4;"
+    "padding:.4em 1em;margin-right:.3em;cursor:pointer;font-size:.95em}"
+    "nav#tabs button.active{background:#fff;font-weight:600;"
+    "border-bottom:1px solid #fff;position:relative;top:1px}"
+    "section.tab{display:none}section.tab.active{display:block}"
 )
 
 
@@ -287,31 +293,75 @@ function renderPair(){
 }
 
 function scatter(paths,ra,rb,A,B){
-  const W=360,H=360, span=lg(TIMEOUT*1.1);
+  const W=420,H=420,M=44, span=lg(TIMEOUT*1.1);
+  const px = t => M + lg(t)/span*(W-M-12);
+  const py = t => H-M - lg(t)/span*(H-M-12);
   const s=svg("svg",{width:W,height:H});
-  s.appendChild(svg("line",{x1:30,y1:H-30,x2:W-10,y2:H-30,stroke:"#000"}));
-  s.appendChild(svg("line",{x1:30,y1:10,x2:30,y2:H-30,stroke:"#000"}));
-  s.appendChild(svg("line",{x1:30,y1:H-30,x2:W-10,y2:10,stroke:"#aaa","stroke-dasharray":3}));
-  const xl=svg("text",{x:W/2,y:H-6,"font-size":11,"text-anchor":"middle"});xl.textContent=`${A} (log s)`;s.appendChild(xl);
-  const yl=svg("text",{x:10,y:H/2,"font-size":11,transform:`rotate(-90 10 ${H/2})`});yl.textContent=`${B} (log s)`;s.appendChild(yl);
+  // axes
+  s.appendChild(svg("line",{x1:M,y1:H-M,x2:W-10,y2:H-M,stroke:"#000"}));
+  s.appendChild(svg("line",{x1:M,y1:10,x2:M,y2:H-M,stroke:"#000"}));
+  // ticks at each power of 10 plus TO
+  const ticks=[];
+  for(let e=-3; Math.pow(10,e)<=TIMEOUT; e++) ticks.push([Math.pow(10,e), (e<0?`1e${e}`:String(Math.pow(10,e)))]);
+  ticks.push([TIMEOUT*1.1,"TO"]);
+  for(const [v,lbl] of ticks){
+    const x=px(v), y=py(v);
+    s.appendChild(svg("line",{x1:x,y1:H-M,x2:x,y2:H-M+4,stroke:"#000"}));
+    const tx=svg("text",{x:x,y:H-M+14,"font-size":9,"text-anchor":"middle"});tx.textContent=lbl;s.appendChild(tx);
+    s.appendChild(svg("line",{x1:M-4,y1:y,x2:M,y2:y,stroke:"#000"}));
+    const ty=svg("text",{x:M-6,y:y+3,"font-size":9,"text-anchor":"end"});ty.textContent=lbl;s.appendChild(ty);
+  }
+  // diagonals: y=x, y=10x (B 10x slower), y=x/10 (A 10x slower)
+  const diag=(k,main)=>{
+    const lo=1e-3, hi=TIMEOUT*1.1;
+    const t0=Math.max(lo, lo/k), t1=Math.min(hi, hi/k);
+    if(t0>=t1) return;
+    s.appendChild(svg("line",{x1:px(t0),y1:py(k*t0),x2:px(t1),y2:py(k*t1),
+      stroke:main?"#888":"#ccc","stroke-dasharray":main?"4":"2"}));
+    if(!main){
+      const tm=Math.sqrt(t0*t1);
+      const l=svg("text",{x:px(tm)+4,y:py(k*tm)-4,"font-size":9,fill:"#888"});
+      l.textContent="10×";s.appendChild(l);
+    }
+  };
+  diag(1,true); diag(10,false); diag(0.1,false);
+  // axis labels
+  const xl=svg("text",{x:(M+W-10)/2,y:H-6,"font-size":11,"text-anchor":"middle"});xl.textContent=`${A} (s, log)`;s.appendChild(xl);
+  const yl=svg("text",{x:12,y:(10+H-M)/2,"font-size":11,transform:`rotate(-90 12 ${(10+H-M)/2})`});yl.textContent=`${B} (s, log)`;s.appendChild(yl);
+  // points
   for(const p of paths){
     const x=ra[p],y=rb[p];
-    const tx=SOLVED.has(x.got)?x.wall_s:TIMEOUT*1.1;
-    const ty=SOLVED.has(y.got)?y.wall_s:TIMEOUT*1.1;
-    const cx=30+lg(tx)/span*(W-40), cy=H-30-lg(ty)/span*(H-40);
-    const col = (SOLVED.has(x.got)&&SOLVED.has(y.got)&&x.got!==y.got)?"#d62728":
-                (x.got==="sat"||y.got==="sat")?"#2ca02c":"#1f77b4";
-    const c=svg("circle",{cx:cx.toFixed(1),cy:cy.toFixed(1),r:2.5,fill:col,opacity:.7});
+    const sa=SOLVED.has(x.got), sb=SOLVED.has(y.got);
+    const tx=sa?x.wall_s:TIMEOUT*1.1, ty=sb?y.wall_s:TIMEOUT*1.1;
+    const col = (sa&&sb&&x.got!==y.got)?"#d62728":
+                (!sa||!sb)?"#999":
+                (x.expected==="sat")?"#2ca02c":"#1f77b4";
+    const c=svg("circle",{cx:px(tx).toFixed(1),cy:py(ty).toFixed(1),r:2.5,fill:col,opacity:.75});
     const t=svg("title");t.textContent=`${p}\n${A}: ${x.got} ${x.wall_s}s\n${B}: ${y.got} ${y.wall_s}s`;
     c.appendChild(t);s.appendChild(c);
   }
+  // legend
+  const L=[["#1f77b4","both solved (unsat)"],["#2ca02c","both solved (sat)"],
+           ["#d62728","disagree"],["#999","timeout / one unsolved"]];
+  const lx=W-150, ly=14;
+  s.appendChild(svg("rect",{x:lx-6,y:ly-10,width:152,height:14*L.length+6,fill:"#fff",stroke:"#ccc"}));
+  L.forEach(([c,t],i)=>{
+    s.appendChild(svg("circle",{cx:lx,cy:ly+i*14,r:3,fill:c}));
+    const l=svg("text",{x:lx+8,y:ly+i*14+3,"font-size":9});l.textContent=t;s.appendChild(l);
+  });
   return s;
 }
 
+function showTab(id){
+  for(const s of $$("section.tab")) s.classList.toggle("active", s.id===id);
+  for(const b of $$("#tabs button")) b.classList.toggle("active", b.dataset.tab===id);
+}
 function rerender(){renderSingle();renderPair();}
 document.addEventListener("DOMContentLoaded",()=>{
   for(const n of $$("#controls input, #controls select")) n.addEventListener("change",rerender);
+  for(const b of $$("#tabs button")) b.addEventListener("click",()=>showTab(b.dataset.tab));
   rerender();
+  showTab("tab-overview");
 });
 """
 
@@ -381,8 +431,7 @@ def render(rows: list[dict], out: Path, timeout_s: float) -> None:
         "</script>"
     )
 
-    static = f"""
-<h2>Static overview</h2>
+    overview = f"""
 <h3>% solved per family</h3>
 {_table(["family", *solvers], fam_rows)}
 <h3>SAT vs UNSAT (by expected)</h3>
@@ -395,16 +444,25 @@ def render(rows: list[dict], out: Path, timeout_s: float) -> None:
 {_table(["path", *solvers], [[d["path"], *(d.get(s, "-") for s in solvers)] for d in disagreements]) if disagreements else "<p>none</p>"}
 """
 
+    tabs_nav = (
+        '<nav id="tabs">'
+        '<button data-tab="tab-overview">Overview</button>'
+        '<button data-tab="tab-single">Single solver</button>'
+        '<button data-tab="tab-compare">Compare</button>'
+        "</nav>"
+    )
+
     html = f"""<!doctype html><meta charset=utf-8><title>multi-solver report</title>
 <style>{CSS}</style>
 <h1>Multi-solver benchmark</h1>
 {warn_html}
 {data_block}
 {_controls_html(solvers, families)}
-<div id="single" class="panel"></div>
-<div id="pair" class="panel"></div>
+{tabs_nav}
+<section id="tab-overview" class="tab panel">{overview}</section>
+<section id="tab-single" class="tab panel"><div id="single"></div></section>
+<section id="tab-compare" class="tab panel"><div id="pair"></div></section>
 <script>{_JS}</script>
-{static}
 """
     out.write_text(html)
     print(f"wrote {out}")
