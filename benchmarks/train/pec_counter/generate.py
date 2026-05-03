@@ -37,7 +37,7 @@ aag 11 0 3 1 8
 
 @click.command()
 @click.option("--out", type=click.Path(), default="benchmarks/train/pec_counter/instances")
-@click.option("-D", "bounds", default="8,16,24,32,40,48,56,64")
+@click.option("-D", "bounds", default="8,16,24,32,40,48,56,64,96,128")
 def main(out: str, bounds: str) -> None:
     outdir = Path(out)
     outdir.mkdir(parents=True, exist_ok=True)

@@ -21,8 +21,8 @@ from tools.pec2dqbf.aiger_seq import parse_seq_aag
 
 @click.command()
 @click.option("--out", type=click.Path(), default="benchmarks/train/bmc_mutex/instances")
-@click.option("-N", "ns", default="4,8,16")
-@click.option("-K", "ks", default="8,16,32")
+@click.option("-N", "ns", default="2,4,8,16,32")
+@click.option("-K", "ks", default="8,16,32,64,128")
 def main(out: str, ns: str, ks: str) -> None:
     outdir = Path(out)
     outdir.mkdir(parents=True, exist_ok=True)

@@ -41,6 +41,14 @@ benchmarks/_downloads/
 benchmarks/train/**/build/
 benchmarks/train/hwmcc_legacy/instances/*.dqdimacs.gz
 benchmarks/train/hwmcc_legacy/instances/manifest.json
+benchmarks/train/bmc_circuits/*/*.dqdimacs.gz
+benchmarks/train/bmc_circuits/*/manifest.json
+benchmarks/train/bmc_circuits_succinct/*/*.dqdimacs.gz
+benchmarks/train/bmc_circuits_succinct/*/manifest.json
+benchmarks/train/bmc_mutex/instances/*.dqdimacs.gz
+benchmarks/train/bmc_mutex/instances/manifest.json
+benchmarks/train/pec_counter/instances/*.dqdimacs.gz
+benchmarks/train/pec_counter/instances/manifest.json
 
 # Solver outputs / certificates
 *.aag.out
