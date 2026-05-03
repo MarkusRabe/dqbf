@@ -21,6 +21,22 @@ from benchmarks.runner.solvers import Solver, registry
 
 EXIT = {10: "sat", 20: "unsat", 0: "unknown", 30: "unknown"}
 
+_SAT_RE = re.compile(r"^(s SATISFIABLE|SATISFIABLE|SAT|\[RESULT\]\s+SAT)\s*$", re.MULTILINE)
+_UNSAT_RE = re.compile(
+    r"^(s UNSATISFIABLE|UNSATISFIABLE|UNSAT|\[RESULT\]\s+UNSAT)\s*$", re.MULTILINE
+)
+
+
+def _verdict_from_output(rc: int, stdout: str) -> str:
+    got = EXIT.get(rc, "error")
+    if got != "unknown":
+        return got
+    if _UNSAT_RE.search(stdout):
+        return "unsat"
+    if _SAT_RE.search(stdout):
+        return "sat"
+    return "unknown"
+
 
 @dataclass
 class RunRow:
@@ -97,7 +113,7 @@ def _run_one(
             preexec_fn=lambda: _affine(slot),
         )
         wall = time.monotonic() - t0
-        got = EXIT.get(cp.returncode, "error")
+        got = _verdict_from_output(cp.returncode, cp.stdout)
     except subprocess.TimeoutExpired:
         wall = timeout_s
         got = "timeout"
