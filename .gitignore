@@ -39,6 +39,8 @@ benchmarks/**/*.tar.bz2
 benchmarks/**/*.zip
 benchmarks/_downloads/
 benchmarks/train/**/build/
+benchmarks/train/hwmcc_legacy/instances/*.dqdimacs.gz
+benchmarks/train/hwmcc_legacy/instances/manifest.json
 
 # Solver outputs / certificates
 *.aag.out

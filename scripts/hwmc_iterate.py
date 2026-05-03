@@ -25,7 +25,7 @@ ABC = shutil.which("berkeley-abc") or shutil.which("abc") or "abc"
 A2A = str(ROOT / "third_party/aigtoaig")
 HQS = str(ROOT / "third_party/hqs/HQS/build/src/hqs/hqs2")
 PEDANT = str(ROOT / "third_party/pedant/build/src/pedant")
-TIMEOUT = 10
+TIMEOUT = 30
 MIN = ROOT / "scripts/minrepro"
 
 
@@ -54,7 +54,11 @@ def dqbf_verdict(aag_text: str, k: int, solver: str) -> str:
     with tempfile.NamedTemporaryFile("w", suffix=".dqdimacs", delete=False) as tf:
         tf.write(dqdimacs.dumps(f))
         path = tf.name
-    cp = subprocess.run([solver, path], capture_output=True, text=True, timeout=TIMEOUT)
+    try:
+        cp = subprocess.run([solver, path], capture_output=True, text=True, timeout=TIMEOUT)
+    except subprocess.TimeoutExpired:
+        Path(path).unlink(missing_ok=True)
+        return "unknown"
     Path(path).unlink(missing_ok=True)
     if cp.returncode == 10 or "SAT" in cp.stdout.upper().split():
         return "sat" if "UNSAT" not in cp.stdout.upper() else "unsat"
@@ -104,7 +108,7 @@ def shrink_aag(aag_text: str, k: int) -> str:
 
 
 def main() -> None:
-    fams = ["bmc_circuits", "bmc_mutex", "pec_counter"]
+    fams = ["bmc_circuits", "bmc_mutex", "pec_counter", "hwmcc_legacy"]
     insts: list[tuple[Path, str, int]] = []
     for fam in fams:
         for mf in (ROOT / f"benchmarks/train/{fam}").rglob("manifest.json"):

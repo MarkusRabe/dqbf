@@ -1,177 +1,1102 @@
 [
   {
-    "path": "bj08aut82.aag",
+    "path": "bj08aut82_k0010.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "bj08aut82"
+    }
   },
   {
-    "path": "bob2.aag",
+    "path": "bj08aut82_k0050.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "bj08aut82"
+    }
   },
   {
-    "path": "bobcount.aag",
+    "path": "bj08aut82_k0100.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "bj08aut82"
+    }
   },
   {
-    "path": "boblivear.aag",
+    "path": "bj08aut82_k1000.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "bj08aut82"
+    }
   },
   {
-    "path": "cmudme2.aag",
+    "path": "bob2_k0010.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "bob2"
+    }
   },
   {
-    "path": "counterp0.aag",
+    "path": "bob2_k0050.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "bob2"
+    }
   },
   {
-    "path": "eijks344.aag",
+    "path": "bob2_k0100.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "bob2"
+    }
   },
   {
-    "path": "eijks349.aag",
+    "path": "bob2_k1000.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "bob2"
+    }
   },
   {
-    "path": "eijks444.aag",
+    "path": "bobcount_k0010.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "bobcount"
+    }
   },
   {
-    "path": "intel001.aag",
+    "path": "bobcount_k0050.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "bobcount"
+    }
   },
   {
-    "path": "mutexp0.aag",
+    "path": "bobcount_k0100.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "bobcount"
+    }
   },
   {
-    "path": "ndista128.aag",
+    "path": "bobcount_k1000.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "bobcount"
+    }
   },
   {
-    "path": "neclaftp5001.aag",
+    "path": "boblivear_k0010.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "boblivear"
+    }
   },
   {
-    "path": "nusmvbrp.aag",
+    "path": "boblivear_k0050.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "boblivear"
+    }
   },
   {
-    "path": "nusmvsyncarb5p2.aag",
+    "path": "boblivear_k0100.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "boblivear"
+    }
   },
   {
-    "path": "pdtpmsarbiter.aag",
+    "path": "boblivear_k1000.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "boblivear"
+    }
   },
   {
-    "path": "pdtvisgray0.aag",
+    "path": "cmudme2_k0010.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "cmudme2"
+    }
   },
   {
-    "path": "power2bit128.aag",
+    "path": "cmudme2_k0050.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "cmudme2"
+    }
   },
   {
-    "path": "ringp0.aag",
+    "path": "cmudme2_k0100.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "cmudme2"
+    }
   },
   {
-    "path": "shift1add262144.aag",
+    "path": "cmudme2_k1000.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "cmudme2"
+    }
   },
   {
-    "path": "srg5ptimo.aag",
+    "path": "counterp0_k0010.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "counterp0"
+    }
   },
   {
-    "path": "texasifetch1p1.aag",
+    "path": "counterp0_k0050.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "counterp0"
+    }
   },
   {
-    "path": "vis4arbitp1.aag",
+    "path": "counterp0_k0100.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "counterp0"
+    }
   },
   {
-    "path": "visarbiter.aag",
+    "path": "counterp0_k1000.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "counterp0"
+    }
   },
   {
-    "path": "visemodel.aag",
+    "path": "eijks344_k0010.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "hwmcc17"
-    ]
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "eijks344"
+    }
+  },
+  {
+    "path": "eijks344_k0050.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "eijks344"
+    }
+  },
+  {
+    "path": "eijks344_k0100.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "eijks344"
+    }
+  },
+  {
+    "path": "eijks344_k1000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "eijks344"
+    }
+  },
+  {
+    "path": "eijks349_k0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "eijks349"
+    }
+  },
+  {
+    "path": "eijks349_k0050.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "eijks349"
+    }
+  },
+  {
+    "path": "eijks349_k0100.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "eijks349"
+    }
+  },
+  {
+    "path": "eijks349_k1000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "eijks349"
+    }
+  },
+  {
+    "path": "eijks444_k0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "eijks444"
+    }
+  },
+  {
+    "path": "eijks444_k0050.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "eijks444"
+    }
+  },
+  {
+    "path": "eijks444_k0100.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "eijks444"
+    }
+  },
+  {
+    "path": "eijks444_k1000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "eijks444"
+    }
+  },
+  {
+    "path": "intel001_k0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "intel001"
+    }
+  },
+  {
+    "path": "intel001_k0050.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "intel001"
+    }
+  },
+  {
+    "path": "intel001_k0100.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "intel001"
+    }
+  },
+  {
+    "path": "intel001_k1000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "intel001"
+    }
+  },
+  {
+    "path": "mutexp0_k0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "mutexp0"
+    }
+  },
+  {
+    "path": "mutexp0_k0050.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "mutexp0"
+    }
+  },
+  {
+    "path": "mutexp0_k0100.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "mutexp0"
+    }
+  },
+  {
+    "path": "mutexp0_k1000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "mutexp0"
+    }
+  },
+  {
+    "path": "ndista128_k0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "ndista128"
+    }
+  },
+  {
+    "path": "ndista128_k0050.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "ndista128"
+    }
+  },
+  {
+    "path": "ndista128_k0100.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "ndista128"
+    }
+  },
+  {
+    "path": "ndista128_k1000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "ndista128"
+    }
+  },
+  {
+    "path": "neclaftp5001_k0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "neclaftp5001"
+    }
+  },
+  {
+    "path": "neclaftp5001_k0050.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "neclaftp5001"
+    }
+  },
+  {
+    "path": "neclaftp5001_k0100.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "neclaftp5001"
+    }
+  },
+  {
+    "path": "neclaftp5001_k1000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "neclaftp5001"
+    }
+  },
+  {
+    "path": "nusmvbrp_k0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "nusmvbrp"
+    }
+  },
+  {
+    "path": "nusmvbrp_k0050.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "nusmvbrp"
+    }
+  },
+  {
+    "path": "nusmvbrp_k0100.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "nusmvbrp"
+    }
+  },
+  {
+    "path": "nusmvbrp_k1000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "nusmvbrp"
+    }
+  },
+  {
+    "path": "nusmvsyncarb5p2_k0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "nusmvsyncarb5p2"
+    }
+  },
+  {
+    "path": "nusmvsyncarb5p2_k0050.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "nusmvsyncarb5p2"
+    }
+  },
+  {
+    "path": "nusmvsyncarb5p2_k0100.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "nusmvsyncarb5p2"
+    }
+  },
+  {
+    "path": "nusmvsyncarb5p2_k1000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "nusmvsyncarb5p2"
+    }
+  },
+  {
+    "path": "pdtpmsarbiter_k0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "pdtpmsarbiter"
+    }
+  },
+  {
+    "path": "pdtpmsarbiter_k0050.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "pdtpmsarbiter"
+    }
+  },
+  {
+    "path": "pdtpmsarbiter_k0100.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "pdtpmsarbiter"
+    }
+  },
+  {
+    "path": "pdtpmsarbiter_k1000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "pdtpmsarbiter"
+    }
+  },
+  {
+    "path": "pdtvisgray0_k0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "pdtvisgray0"
+    }
+  },
+  {
+    "path": "pdtvisgray0_k0050.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "pdtvisgray0"
+    }
+  },
+  {
+    "path": "pdtvisgray0_k0100.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "pdtvisgray0"
+    }
+  },
+  {
+    "path": "pdtvisgray0_k1000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "pdtvisgray0"
+    }
+  },
+  {
+    "path": "power2bit128_k0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "power2bit128"
+    }
+  },
+  {
+    "path": "power2bit128_k0050.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "power2bit128"
+    }
+  },
+  {
+    "path": "power2bit128_k0100.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "power2bit128"
+    }
+  },
+  {
+    "path": "power2bit128_k1000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "power2bit128"
+    }
+  },
+  {
+    "path": "ringp0_k0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "ringp0"
+    }
+  },
+  {
+    "path": "ringp0_k0050.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "ringp0"
+    }
+  },
+  {
+    "path": "ringp0_k0100.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "ringp0"
+    }
+  },
+  {
+    "path": "ringp0_k1000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "ringp0"
+    }
+  },
+  {
+    "path": "shift1add262144_k0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "shift1add262144"
+    }
+  },
+  {
+    "path": "shift1add262144_k0050.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "shift1add262144"
+    }
+  },
+  {
+    "path": "shift1add262144_k0100.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "shift1add262144"
+    }
+  },
+  {
+    "path": "shift1add262144_k1000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "shift1add262144"
+    }
+  },
+  {
+    "path": "srg5ptimo_k0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "srg5ptimo"
+    }
+  },
+  {
+    "path": "srg5ptimo_k0050.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "srg5ptimo"
+    }
+  },
+  {
+    "path": "srg5ptimo_k0100.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "srg5ptimo"
+    }
+  },
+  {
+    "path": "srg5ptimo_k1000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "srg5ptimo"
+    }
+  },
+  {
+    "path": "texasifetch1p1_k0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "texasifetch1p1"
+    }
+  },
+  {
+    "path": "texasifetch1p1_k0050.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "texasifetch1p1"
+    }
+  },
+  {
+    "path": "texasifetch1p1_k0100.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "texasifetch1p1"
+    }
+  },
+  {
+    "path": "texasifetch1p1_k1000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "texasifetch1p1"
+    }
+  },
+  {
+    "path": "vis4arbitp1_k0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "vis4arbitp1"
+    }
+  },
+  {
+    "path": "vis4arbitp1_k0050.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "vis4arbitp1"
+    }
+  },
+  {
+    "path": "vis4arbitp1_k0100.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "vis4arbitp1"
+    }
+  },
+  {
+    "path": "vis4arbitp1_k1000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "vis4arbitp1"
+    }
+  },
+  {
+    "path": "visarbiter_k0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "visarbiter"
+    }
+  },
+  {
+    "path": "visarbiter_k0050.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "visarbiter"
+    }
+  },
+  {
+    "path": "visarbiter_k0100.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "visarbiter"
+    }
+  },
+  {
+    "path": "visarbiter_k1000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "visarbiter"
+    }
+  },
+  {
+    "path": "visemodel_k0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 10,
+      "circuit": "visemodel"
+    }
+  },
+  {
+    "path": "visemodel_k0050.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 50,
+      "circuit": "visemodel"
+    }
+  },
+  {
+    "path": "visemodel_k0100.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 100,
+      "circuit": "visemodel"
+    }
+  },
+  {
+    "path": "visemodel_k1000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc_legacy"
+    ],
+    "params": {
+      "k": 1000,
+      "circuit": "visemodel"
+    }
   }
 ]
