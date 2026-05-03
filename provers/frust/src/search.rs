@@ -119,6 +119,12 @@ impl Db {
         }
         false
     }
+
+    fn compact_occ(&mut self) {
+        for list in self.occ.values_mut() {
+            list.retain(|&di| !self.dead[di]);
+        }
+    }
     fn backward_subsume(&mut self, c: &Clause, csig: u64, self_ci: usize) {
         if c.is_empty() {
             return;
@@ -189,9 +195,10 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
     let (fp, pre) = crate::preprocess::preprocess(f);
 
     // Phase 0: greedy universal expansion on the simplified formula.
+    let mut unsat_row: Option<u32> = None;
     if cfg.extract_cert {
         if let Some(mut sk) =
-            crate::expand::try_expand(&fp, cfg.timeout_s, &start, cfg.debug_expand)
+            crate::expand::try_expand(&fp, cfg.timeout_s, &start, cfg.debug_expand, &mut unsat_row)
         {
             crate::preprocess::extend_skolem(&mut sk, &pre);
             return Output {
@@ -207,6 +214,7 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
         }
     }
 
+    let _ = unsat_row; // TODO: emit Q-resolution from CDCL trace
     let mut g = f.clone();
     let mut db = Db::new();
 
@@ -253,6 +261,9 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                 continue;
             }
             db.processed[cursor] = true;
+            if cursor & 0x7ff == 0x7ff {
+                db.compact_occ();
+            }
             let c = db.clauses[cursor].clone();
             let ci = db.idx[&c];
             'lits: for &l in &c {

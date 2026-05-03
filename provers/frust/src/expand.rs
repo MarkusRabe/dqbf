@@ -23,6 +23,7 @@ pub fn try_expand(
     deadline: f64,
     start: &std::time::Instant,
     debug: bool,
+    unsat_row: &mut Option<u32>,
 ) -> Option<Skolem> {
     let nu = f.universals.len();
     if nu > MAX_U {
@@ -104,6 +105,15 @@ pub fn try_expand(
                 "free pass row {}: UNSAT/budget — falling through",
                 ub
             );
+            // If the core is empty or only universals, the row is
+            // genuinely UNSAT under universals → DQBF UNSAT.
+            if cdcl
+                .last_core()
+                .iter()
+                .all(|&l| f.is_universal(l.unsigned_abs()))
+            {
+                *unsat_row = Some(ub);
+            }
             return None;
         }
         for (i, &y) in exs.iter().enumerate() {

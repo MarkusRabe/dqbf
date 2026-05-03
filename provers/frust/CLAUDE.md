@@ -182,3 +182,4 @@ start, and reading CAQE before iter 8.
 | 24 | `under_s9010` (672 slots) | tried analyzeFinal-based slot backjump; buggy (-6) | reverted; analyzeFinal stays as cdcl.rs infrastructure | 517/804 (held) |
 | 25 | linear pick_branch over clauses | minisat VSIDS: bump in analyze, decay 0.95 | +2 -3 (model variation again) |
 | 26 | iter-25 lost 3 | VSIDS adds variation when row was conflict-free | hybrid: first-unset until first conflict, then VSIDS | 519/804 (+3, all 3 recovered) |
+| 27 | `activate` 69% (subsumption) | tried cap-64 (faster but lost mutex_n4_k004); replaced with periodic occ compaction | 519/804 (+0, but `2qbf_v2` 1.6s→0.5s under cap, reverted) |
