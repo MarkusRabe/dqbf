@@ -63,6 +63,14 @@ ZENODO="https://zenodo.org/records/15493090/files"
 fetch "$ZENODO/BV.tar.zst" smtlib_BV.tar.zst ""
 safe_extract "$DL/smtlib_BV.tar.zst" "$ROOT/benchmarks/test/qbvf/bv" --zstd
 
+# --- Freiburg PEC instances --------------------------------------------
+# The Gitina/Scholl PEC families (bitcell, lookahead, pec_xor) are
+# referenced in the literature but not publicly archived as .dqdimacs.
+# QBFLIB's DQBF set (test/dqbf_qbflib/, fetched above) includes the
+# Scholl/Bloem PEC encodings — those stay test-only. For training we
+# generate fresh PEC instances from the in-repo circuit zoo:
+#   python -m benchmarks.train.pec_circuits.generate
+
 # --- HWMCC + SYNTCOMP (delegated to per-dir scripts) -------------------
 # test/ = latest edition only (HWMCC'20, SYNTCOMP v2026).
 # Older-year subsets for training are *committed* under
