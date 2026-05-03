@@ -13,11 +13,29 @@ use std::collections::HashMap;
 
 pub const MAX_U: usize = 16;
 
-pub fn try_expand(f: &Formula, deadline: f64, start: &std::time::Instant) -> Option<Skolem> {
+macro_rules! dbg_ex {
+    ($d:expr, $($a:tt)*) => { if $d { eprintln!("c [expand] {}", format!($($a)*)); } }
+}
+
+pub fn try_expand(
+    f: &Formula,
+    deadline: f64,
+    start: &std::time::Instant,
+    debug: bool,
+) -> Option<Skolem> {
     let nu = f.universals.len();
     if nu > MAX_U {
+        dbg_ex!(debug, "skip: |U|={} > MAX_U={}", nu, MAX_U);
         return None;
     }
+    dbg_ex!(
+        debug,
+        "|U|={} ({} rows), |E|={}, |C|={}",
+        nu,
+        1u32 << nu,
+        f.deps.len(),
+        f.clauses.len()
+    );
     let n = f.n_vars as usize + 1;
     let occ = build_occ(&f.clauses, n);
     let exs: Vec<Var> = f.deps.keys().copied().collect();
@@ -78,6 +96,19 @@ pub fn try_expand(f: &Formula, deadline: f64, start: &std::time::Instant) -> Opt
     // constrained = vars with a conflict (regardless of dep width — a
     // full-dep var has one row per key so never conflicts).
     let constrained = conflict;
+    let n_constrained = constrained.iter().filter(|&&c| c).count();
+    let n_slots: usize = key_conflict
+        .iter()
+        .map(|kc| kc.iter().filter(|&&c| c).count())
+        .sum();
+    dbg_ex!(
+        debug,
+        "free pass done in {:.2}s; {} constrained vars, {} conflicting slots, row_budget={}",
+        start.elapsed().as_secs_f64(),
+        n_constrained,
+        n_slots,
+        row_budget
+    );
 
     // ---- Pinned passes (4 polarity strategies) ----------------------
     for &(first, use_votes) in &[(1i8, true), (-1, true), (1, false), (-1, false)] {
@@ -135,8 +166,22 @@ pub fn try_expand(f: &Formula, deadline: f64, start: &std::time::Instant) -> Opt
             }
         }
         if !ok || row_conflict.iter().any(|&c| c) {
+            dbg_ex!(
+                debug,
+                "heuristic (first={}, votes={}): {} ({} new conflicts)",
+                first,
+                use_votes,
+                if !ok { "row UNSAT" } else { "row_conflict" },
+                row_conflict.iter().filter(|&&c| c).count()
+            );
             continue;
         }
+        dbg_ex!(
+            debug,
+            "heuristic (first={}, votes={}): SAT",
+            first,
+            use_votes
+        );
         return Some(build_skolem(&exs, &dep_lists, &tables));
     }
 
@@ -151,8 +196,10 @@ pub fn try_expand(f: &Formula, deadline: f64, start: &std::time::Instant) -> Opt
         }
     }
     if slots.is_empty() {
+        dbg_ex!(debug, "no slots — falling through");
         return None; // no slots but heuristics failed → not expand-SAT
     }
+    dbg_ex!(debug, "slot-DPLL on {} slots", slots.len());
     // ---- Slot-level DPLL (CEGAR-ish) -------------------------------
     // Order slots by |vote| descending — most-determined first.
     slots.sort_by_key(|&(i, k)| -(votes[i][k].abs()));

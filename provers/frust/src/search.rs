@@ -19,6 +19,7 @@ pub struct Config {
     pub max_forks: usize,
     pub timeout_s: f64,
     pub extract_cert: bool,
+    pub debug_expand: bool,
 }
 impl Default for Config {
     fn default() -> Self {
@@ -27,6 +28,7 @@ impl Default for Config {
             max_forks: 256,
             timeout_s: 10.0,
             extract_cert: true,
+            debug_expand: false,
         }
     }
 }
@@ -188,7 +190,9 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
 
     // Phase 0: greedy universal expansion on the simplified formula.
     if cfg.extract_cert {
-        if let Some(mut sk) = crate::expand::try_expand(&fp, cfg.timeout_s, &start) {
+        if let Some(mut sk) =
+            crate::expand::try_expand(&fp, cfg.timeout_s, &start, cfg.debug_expand)
+        {
             crate::preprocess::extend_skolem(&mut sk, &pre);
             return Output {
                 verdict: Verdict::Sat,

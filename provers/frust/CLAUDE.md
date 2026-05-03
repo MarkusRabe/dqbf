@@ -130,6 +130,44 @@ fixed the runaway; tuning is fiddly. **CDCL is the unambiguous next
 architecture step** — 1-UIP learning would solve `mutex_n4` in
 milliseconds and learned clauses persist across all 2^|U| rows.
 
+## Retrospective (after 20 iterations)
+
+**Probe set too narrow until iter 18.** Optimized against 344 instances
+for 17 iterations, then widened to 804 and immediately found
+`dep_cycle_n1` (11 vars — the paper's own §6 counterexample) and the
+74s-on-3s-timeout bug. Both were sitting there the whole time. Starting
+on the full train set would have surfaced them at iter 0.
+
+**Read the relevant papers before re-inventing them.** Iters 8-13 were
+six iterations of groping toward what CAQE/iDQ already describe — the
+slot-DPLL at iter 16 is their abstraction-refinement loop. Cited those
+papers at iter 11 but didn't internalize the technique until 14.
+Reading them carefully at iter 4 (when expand was introduced) would
+have saved roughly half the iterations.
+
+**Per-instance regression diff.** Iters 10, 13, 19, 20 each *lost*
+instances; only noticed because the count dropped. A "which instances
+flipped solved→unknown" diff in the probe output would have made each
+regression immediately explainable instead of guesswork tuning.
+
+**Stricter cert checking from the start.** The `"VALID" in "INVALID"`
+substring bug (iter 5) and the "ever_decided" soundness bug (iter 13)
+both slipped because the probe used grep-style checks. The tiny
+`fork_unsat` instance that exposed iter 13 should have been a unit test
+for `expand` from the moment expand was written.
+
+**Should have built CDCL at iter 6, not deferred it.** Trail-DPLL →
+occ-prop → conflict-cap tuning is three iterations spent reimplementing
+1/3 of a SAT solver. CDCL with the existing `row_conflict` guard
+catching any cert inconsistency would have been safe to ship.
+
+**A `--debug-expand` flag.** Rebuilt-with-eprintln a dozen times to see
+slot counts, which strategy fired, where it bailed. A structured debug
+dump would have cut each "examine" step in half.
+
+The two that would have moved the needle most: full train set from the
+start, and reading CAQE before iter 8.
+
 ## Next
 
 - **CDCL** in place of DPLL inside expand (1-UIP, watched literals,

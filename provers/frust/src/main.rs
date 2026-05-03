@@ -39,6 +39,7 @@ fn main() -> ExitCode {
                 proof_path = Some(args[i].clone());
             }
             "--trace" => trace = true,
+            "--debug-expand" => cfg.debug_expand = true,
             s if !s.starts_with('-') => path = Some(s.to_string()),
             _ => {}
         }
