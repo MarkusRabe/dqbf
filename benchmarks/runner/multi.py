@@ -21,6 +21,10 @@ from benchmarks.runner.solvers import Solver, registry
 
 EXIT = {10: "sat", 20: "unsat", 0: "unknown", 30: "unknown"}
 
+# Note on HW model checkers: abc-bmc/-pdr answer the *unbounded* question
+# on the source .aag, while a .dqdimacs instance encodes a *bounded* k. So
+# abc may report SAT (bug at frame > k) where the DQBF instance is UNSAT —
+# that's a question mismatch, not a solver bug.
 _SAT_PATTERNS = [
     re.compile(r"^(s SATISFIABLE|SATISFIABLE|SAT|\[RESULT\]\s+SAT)\s*$", re.MULTILINE),
     re.compile(r"was asserted in frame", re.IGNORECASE),  # abc bmc3

@@ -2,6 +2,7 @@
 
 | date | label | view |
 |---|---|---|
+| 2026-05-03_0502 | bmc-encoding-fixed-abc-vs-dqbf | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-03_0502_bmc-encoding-fixed-abc-vs-dqbf.html) · [source](2026-05-03_0502_bmc-encoding-fixed-abc-vs-dqbf.html) |
 | 2026-05-03_0446 | abc-vs-hqs-bmc-circuits | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-03_0446_abc-vs-hqs-bmc-circuits.html) · [source](2026-05-03_0446_abc-vs-hqs-bmc-circuits.html) |
 | 2026-05-03_0218 | train-consolidated-foldable | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-03_0218_train-consolidated-foldable.html) · [source](2026-05-03_0218_train-consolidated-foldable.html) |
 | 2026-05-03_0045 | train585-bmc-circuits | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-03_0045_train585-bmc-circuits.html) · [source](2026-05-03_0045_train585-bmc-circuits.html) |
