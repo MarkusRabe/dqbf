@@ -105,7 +105,26 @@ def main() -> None:
             f"  {r['wall_s']:6.2f}s nv={r['n_vars']:5d} sur={r['surprise']:.4f} "
             f"{r['got']:7s} {r['path']}"
         )
-    Path("/tmp/frust_probe.jsonl").write_text("\n".join(json.dumps(r) for r in results))
+    out = Path("/tmp/frust_probe.jsonl")
+    if out.exists():
+        old = {r["path"]: r["got"] for r in (json.loads(ln) for ln in out.read_text().splitlines())}
+        gained = [
+            r["path"]
+            for r in results
+            if r["got"] in ("sat", "unsat") and old.get(r["path"]) == "unknown"
+        ]
+        lost = [
+            r["path"]
+            for r in results
+            if r["got"] == "unknown" and old.get(r["path"]) in ("sat", "unsat")
+        ]
+        if gained or lost:
+            print(f"\nDiff vs previous run: +{len(gained)} -{len(lost)}")
+            for p in gained[:5]:
+                print(f"  + {p}")
+            for p in lost[:5]:
+                print(f"  - {p}")
+    out.write_text("\n".join(json.dumps(r) for r in results))
 
 
 if __name__ == "__main__":
