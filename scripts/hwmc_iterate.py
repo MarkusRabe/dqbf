@@ -37,12 +37,15 @@ def abc_verdict(aag_text: str, k: int) -> str:
         a.write_text(aag_text)
         b = Path(d) / "c.aig"
         subprocess.run([A2A, str(a), str(b)], check=True, capture_output=True)
-        cp = subprocess.run(
-            [ABC, "-q", f"read {b}; bmc3 -F {k + 1}"],
-            capture_output=True,
-            text=True,
-            timeout=TIMEOUT,
-        )
+        try:
+            cp = subprocess.run(
+                [ABC, "-q", f"read {b}; bmc3 -F {k + 1}"],
+                capture_output=True,
+                text=True,
+                timeout=TIMEOUT,
+            )
+        except subprocess.TimeoutExpired:
+            return "unknown"
     if "was asserted in frame" in cp.stdout:
         return "sat"
     if "No output asserted" in cp.stdout:
@@ -71,8 +74,10 @@ def dqbf_verdict(aag_text: str, k: int, solver: str) -> str:
 
 def disagrees(aag_text: str, k: int) -> tuple[str, str] | None:
     a = abc_verdict(aag_text, k)
+    if a not in ("sat", "unsat"):
+        return None
     d = dqbf_verdict(aag_text, k, HQS)
-    if a in ("sat", "unsat") and d in ("sat", "unsat") and a != d:
+    if d in ("sat", "unsat") and a != d:
         return (a, d)
     return None
 
@@ -130,7 +135,11 @@ def main() -> None:
         futs = {ex.submit(disagrees, src.read_text(), k): (src, fam, k) for src, fam, k in insts}
         for fut in as_completed(futs):
             src, fam, k = futs[fut]
-            d = fut.result()
+            try:
+                d = fut.result()
+            except Exception as e:
+                print(f"  ERROR {fam}/{src.name} k={k}: {e!r}")
+                continue
             if d:
                 bad.append((src, k, *d))
                 print(f"  DISAGREE {fam}/{src.name} k={k}: abc={d[0]} hqs={d[1]}")
