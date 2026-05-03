@@ -57,6 +57,8 @@ pub struct Cdcl {
     ok: bool,
     phase: Vec<i8>, // saved last-polarity per var
     core: Vec<Lit>, // assumptions that caused last UNSAT
+    activity: Vec<f64>,
+    var_inc: f64,
     pub conflicts: u64,
     pub n_learned: usize,
 }
@@ -78,6 +80,8 @@ impl Cdcl {
             ok: true,
             phase: vec![1i8; n_vars + 1],
             core: Vec::new(),
+            activity: vec![0.0; n_vars + 1],
+            var_inc: 1.0,
             conflicts: 0,
             n_learned: 0,
         };
@@ -271,6 +275,7 @@ impl Cdcl {
                 }
                 self.seen[v] = 1;
                 to_clear.push(v);
+                self.bump(v);
                 if self.level[v] == dl {
                     path_c += 1;
                 } else {
@@ -314,40 +319,29 @@ impl Cdcl {
         (learned, bt)
     }
 
-    fn pick_branch(&self) -> Option<ILit> {
-        // First-unset-in-first-unsatisfied (placeholder; VSIDS in a
-        // later iteration).
-        for &cr in &self.crefs {
-            let len = self.cl_len(cr);
-            let mut sat = false;
-            let mut cand: Option<ILit> = None;
-            for k in 0..len {
-                let l = self.cl_lit(cr, k);
-                match self.val_lit(l) {
-                    1 => {
-                        sat = true;
-                        break;
-                    }
-                    0 => {
-                        if cand.is_none() {
-                            cand = Some(l);
-                        }
-                    }
-                    _ => {}
+    fn pick_branch(&self, vsids: bool) -> Option<ILit> {
+        // Hybrid: first-unset (deterministic) until a conflict happened
+        // in this solve; then VSIDS.
+        let v = if vsids {
+            let mut best: Option<usize> = None;
+            let mut best_a = -1.0f64;
+            for v in 1..=self.n_vars {
+                if self.value[v] == 0 && self.activity[v] > best_a {
+                    best_a = self.activity[v];
+                    best = Some(v);
                 }
             }
-            if !sat {
-                if let Some(l) = cand {
-                    let v = ivar(l);
-                    return Some(if self.phase[v] >= 0 {
-                        2 * v as ILit
-                    } else {
-                        2 * v as ILit + 1
-                    });
-                }
+            best
+        } else {
+            (1..=self.n_vars).find(|&v| self.value[v] == 0)
+        };
+        v.map(|v| {
+            if self.phase[v] >= 0 {
+                2 * v as ILit
+            } else {
+                2 * v as ILit + 1
             }
-        }
-        None
+        })
     }
 
     /// Incremental solve under `assumptions` (external Lit polarity).
@@ -356,6 +350,17 @@ impl Cdcl {
     pub fn reset_phase(&mut self) {
         for p in self.phase.iter_mut() {
             *p = 1;
+        }
+    }
+
+    #[inline]
+    fn bump(&mut self, v: usize) {
+        self.activity[v] += self.var_inc;
+        if self.activity[v] > 1e100 {
+            for a in self.activity.iter_mut() {
+                *a *= 1e-100;
+            }
+            self.var_inc *= 1e-100;
         }
     }
 
@@ -411,6 +416,7 @@ impl Cdcl {
             let confl = self.propagate();
             if confl != UNDEF {
                 self.conflicts += 1;
+                self.var_inc /= 0.95;
                 if self.dl() == 0 {
                     self.ok = false;
                     return false;
@@ -453,7 +459,7 @@ impl Cdcl {
                 }
                 continue;
             }
-            match self.pick_branch() {
+            match self.pick_branch(self.conflicts > start_conflicts) {
                 None => {
                     // SAT.
                     for v in 1..=self.n_vars {

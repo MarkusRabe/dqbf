@@ -180,3 +180,5 @@ start, and reading CAQE before iter 8.
 | 22 | `peano_v2_*` regressed (CDCL model drift) | greedy fills pinned as assumptions → CDCL-UNSAT; slot-DPLL decided all-then-check (no pruning) | phase-saving + reset before free pass; pin only slot entries; CEGAR add new conflicts | 506/804 |
 | 23 | `peano_v2_mul_n4` (62 slots, lost) | decide-all-then-check killed pruning | incremental: 1 slot/iter; CDCL-UNSAT prunes subtree, soft-conflict just decides more | 517/804 (+11) |
 | 24 | `under_s9010` (672 slots) | tried analyzeFinal-based slot backjump; buggy (-6) | reverted; analyzeFinal stays as cdcl.rs infrastructure | 517/804 (held) |
+| 25 | linear pick_branch over clauses | minisat VSIDS: bump in analyze, decay 0.95 | +2 -3 (model variation again) |
+| 26 | iter-25 lost 3 | VSIDS adds variation when row was conflict-free | hybrid: first-unset until first conflict, then VSIDS | 519/804 (+3, all 3 recovered) |
