@@ -36,3 +36,4 @@ Exit codes 10/20/0 (sat/unsat/unknown).
 | 14 | same | 4 heuristic seeds all fail; ≤16 conflicting slots | iDQ-style: enumerate 2^slots when slots≤16 | 294/344, instance **10ms VALID** |
 | 15 | `peano_v2_mul_n3` | enumerating ALL keys of conflicting vars (>16 slots) | enumerate only the (i,k) pairs that actually disagreed; cap 20 | 296/344, n3/both_n2 solved |
 | 16 | `peano_v2_mul_n4` (32 slots) | 2^32 enumeration hopeless | DPLL-over-slots: vote-ordered, backtrack on row fail | 305/344, n4-6 solved |
+| 17 | `v2_mul_n8` (192 slots) | 53% in DPLL — re-runs all rows per slot decision | cache row models keyed by row-local slot-signature | 306/344, marginal (slots overlap most rows) |

@@ -148,6 +148,26 @@ pub fn try_expand(f: &Formula, deadline: f64, start: &std::time::Instant) -> Opt
     // ---- Slot-level DPLL (CEGAR-ish) -------------------------------
     // Order slots by |vote| descending — most-determined first.
     slots.sort_by_key(|&(i, k)| -(votes[i][k].abs()));
+    // Precompute: for each row, which slots are pinned in it.
+    let row_slots: Vec<Vec<usize>> = (0..rows)
+        .map(|ub| {
+            slots
+                .iter()
+                .enumerate()
+                .filter(|&(_, &(i, k))| extract(ub, dep_mask[i]) as usize == k)
+                .map(|(p, _)| p)
+                .collect()
+        })
+        .collect();
+    // Cache: last (slot_val signature, model) per row.
+    let mut row_cache: Vec<Option<(u64, Vec<i8>)>> = vec![None; rows as usize];
+    let row_sig = |slot_val: &[i8], rs: &[usize]| -> u64 {
+        let mut h = 0u64;
+        for &p in rs {
+            h = h.wrapping_mul(3).wrapping_add(slot_val[p] as u64);
+        }
+        h
+    };
     let mut slot_val: Vec<i8> = vec![0; slots.len()];
     let mut decisions: Vec<(usize, bool)> = Vec::new(); // (slot_idx, flipped)
     let mut next_slot = 0usize;
@@ -174,22 +194,39 @@ pub fn try_expand(f: &Formula, deadline: f64, start: &std::time::Instant) -> Opt
         }
         let mut fail = false;
         for ub in 0..rows {
-            reset_row(f, &mut polarity, ub);
-            for (i, &y) in exs.iter().enumerate() {
-                let key = extract(ub, dep_mask[i]) as usize;
-                let t = tables[i][key];
-                if t != 0 {
-                    polarity[y as usize] = t;
+            let rs = &row_slots[ub as usize];
+            let sig = row_sig(&slot_val, rs);
+            let model: Vec<i8> = if let Some((csig, m)) = &row_cache[ub as usize] {
+                if *csig == sig {
+                    m.clone()
+                } else {
+                    Vec::new()
                 }
-            }
-            let mut decided: Vec<usize> = Vec::new();
-            if !dpll(&f.clauses, &occ, &mut polarity, 1, &mut decided) {
-                fail = true;
-                break;
-            }
+            } else {
+                Vec::new()
+            };
+            let model = if model.is_empty() {
+                reset_row(f, &mut polarity, ub);
+                for (i, &y) in exs.iter().enumerate() {
+                    let key = extract(ub, dep_mask[i]) as usize;
+                    let t = tables[i][key];
+                    if t != 0 {
+                        polarity[y as usize] = t;
+                    }
+                }
+                let mut decided: Vec<usize> = Vec::new();
+                if !dpll(&f.clauses, &occ, &mut polarity, 1, &mut decided) {
+                    fail = true;
+                    break;
+                }
+                row_cache[ub as usize] = Some((sig, polarity.clone()));
+                polarity.clone()
+            } else {
+                model
+            };
             for (i, &y) in exs.iter().enumerate() {
                 let key = extract(ub, dep_mask[i]) as usize;
-                let v: i8 = if polarity[y as usize] > 0 { 1 } else { -1 };
+                let v: i8 = if model[y as usize] > 0 { 1 } else { -1 };
                 if tables[i][key] == 0 {
                     tables[i][key] = v;
                 } else if tables[i][key] != v {
