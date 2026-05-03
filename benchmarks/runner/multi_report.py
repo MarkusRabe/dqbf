@@ -36,6 +36,12 @@ CSS = (
     "nav#tabs button.active{background:#fff;font-weight:600;"
     "border-bottom:1px solid #fff;position:relative;top:1px}"
     "section.tab{display:none}section.tab.active{display:block}"
+    "ul.famtree,ul.famtree ul{list-style:none;margin:0;padding-left:1em}"
+    "ul.famtree>li{padding-left:0}"
+    "ul.famtree li{line-height:1.5}"
+    "a.famonly{font-size:.8em;color:#888;margin-left:.4em;cursor:pointer;"
+    "text-decoration:none}a.famonly:hover{text-decoration:underline;color:#555}"
+    ".ctl fieldset.families{max-height:16em;overflow:auto;min-width:14em}"
 )
 
 
@@ -63,15 +69,49 @@ def _opts(solvers: list[str], selected: str = "") -> str:
     )
 
 
-def _local_controls(scope: str, families: list[str], extra: str) -> str:
-    fam = "".join(
-        f'<label><input type="checkbox" class="famchk-{scope}" value="{_esc(f)}" checked> '
-        f"{_esc(f)}</label>"
-        for f in families
+def _family_tree(scope: str, families: list[str]) -> str:
+    """Nested <ul class="famtree"> with one checkbox per node + an 'only' link.
+
+    Leaf checkboxes carry class=famchk-<scope> and value=<full family path>
+    so the existing state(scope) JS keeps working unchanged. Interior
+    checkboxes use class=famint-<scope> and have no value.
+    """
+    # Build a trie: node = {"_leaf": str|None, children: {seg: node}}
+    root: dict = {"_leaf": None, "ch": {}}
+    for fam in sorted(families):
+        cur = root
+        for seg in fam.split("/"):
+            cur = cur["ch"].setdefault(seg, {"_leaf": None, "ch": {}})
+        cur["_leaf"] = fam
+
+    def emit(label: str, node: dict) -> str:
+        leaf = node["_leaf"]
+        kids = node["ch"]
+        if leaf is not None and not kids:
+            cb = f'<input type="checkbox" class="famchk-{scope}" value="{_esc(leaf)}" checked>'
+        elif leaf is not None:
+            # Node is both a family and has sub-families: render as a leaf
+            # checkbox (so it's selectable) AND nest the children.
+            cb = f'<input type="checkbox" class="famchk-{scope}" value="{_esc(leaf)}" checked>'
+        else:
+            cb = f'<input type="checkbox" class="famint-{scope}" checked>'
+        sub = ""
+        if kids:
+            sub = "<ul>" + "".join(emit(k, v) for k, v in sorted(kids.items())) + "</ul>"
+        return f'<li>{cb} {_esc(label)} <a class="famonly">only</a>{sub}</li>'
+
+    inner = "".join(emit(k, v) for k, v in sorted(root["ch"].items()))
+    return (
+        f'<ul class="famtree" data-scope="{scope}">'
+        f'<li><input type="checkbox" class="famint-{scope}" checked> all '
+        f'<a class="famonly">only</a><ul>{inner}</ul></li></ul>'
     )
+
+
+def _local_controls(scope: str, families: list[str], extra: str) -> str:
     return f"""
 <div class="ctl">
-  <fieldset><legend>families</legend>{fam}</fieldset>
+  <fieldset class="families"><legend>families</legend>{_family_tree(scope, families)}</fieldset>
   <fieldset><legend>result</legend>
     <label><input type="radio" name="resf-{scope}" value="all" checked> all</label>
     <label><input type="radio" name="resf-{scope}" value="sat"> sat</label>
@@ -435,13 +475,61 @@ function showTab(id){
   for(const s of $$("section.tab")) s.classList.toggle("active", s.id===id);
   for(const b of $$("#tabs button")) b.classList.toggle("active", b.dataset.tab===id);
 }
+
+function wireFamTree(tree, render){
+  const scope = tree.dataset.scope;
+  const leavesOf = li => Array.from(li.querySelectorAll(".famchk-"+scope));
+  const interiorsOf = li => Array.from(li.querySelectorAll(".famint-"+scope));
+  function syncInterior(){
+    // bottom-up: each interior reflects its descendant leaves
+    const ints = Array.from(tree.querySelectorAll(".famint-"+scope)).reverse();
+    for(const cb of ints){
+      const ls = leavesOf(cb.closest("li"));
+      const on = ls.filter(l=>l.checked).length;
+      cb.checked = on===ls.length && ls.length>0;
+      cb.indeterminate = on>0 && on<ls.length;
+    }
+  }
+  // interior toggle => set all descendant leaves
+  for(const cb of tree.querySelectorAll(".famint-"+scope)){
+    cb.addEventListener("change", ()=>{
+      const li = cb.closest("li");
+      for(const l of leavesOf(li)) l.checked = cb.checked;
+      for(const i of interiorsOf(li)) { i.checked = cb.checked; i.indeterminate=false; }
+      syncInterior(); render();
+    });
+  }
+  // leaf change => resync interior
+  for(const cb of tree.querySelectorAll(".famchk-"+scope)){
+    cb.addEventListener("change", ()=>{ syncInterior(); render(); });
+  }
+  // 'only' => uncheck all leaves in scope, check leaves under this <li>
+  for(const a of tree.querySelectorAll("a.famonly")){
+    a.addEventListener("click", ev=>{
+      ev.preventDefault();
+      const li = a.closest("li");
+      for(const l of tree.querySelectorAll(".famchk-"+scope)) l.checked=false;
+      for(const l of leavesOf(li)) l.checked=true;
+      syncInterior(); render();
+    });
+  }
+  syncInterior();
+}
+
 document.addEventListener("DOMContentLoaded",()=>{
-  for(const n of $$("#tab-overview .ctl input"))
-    n.addEventListener("change",renderOverview);
-  for(const n of $$("#tab-single .ctl input, #tab-single .ctl select"))
-    n.addEventListener("change",renderSingle);
-  for(const n of $$("#tab-compare .ctl input, #tab-compare .ctl select"))
-    n.addEventListener("change",renderPair);
+  const SCOPES = [
+    ["overview","tab-overview",renderOverview],
+    ["single","tab-single",renderSingle],
+    ["pair","tab-compare",renderPair],
+  ];
+  const renderOf = Object.fromEntries(SCOPES.map(([s,,r])=>[s,r]));
+  for(const tree of $$("ul.famtree"))
+    wireFamTree(tree, renderOf[tree.dataset.scope]);
+  // result-filter radios + solver selects (non-famtree controls)
+  for(const [,tab,render] of SCOPES){
+    for(const n of $$(`#${tab} .ctl input[type=radio], #${tab} .ctl select`))
+      n.addEventListener("change", render);
+  }
   for(const b of $$("#tabs button")) b.addEventListener("click",()=>showTab(b.dataset.tab));
   renderOverview(); renderSingle(); renderPair();
   showTab("tab-overview");
