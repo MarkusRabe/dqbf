@@ -142,52 +142,85 @@ pub fn try_expand(f: &Formula, deadline: f64, start: &std::time::Instant) -> Opt
             }
         }
     }
-    if slots.len() <= 20 {
-        for bits in 0u32..(1u32 << slots.len()) {
-            if start.elapsed().as_secs_f64() > deadline * 0.7 {
+    if slots.is_empty() {
+        return None; // no slots but heuristics failed → not expand-SAT
+    }
+    // ---- Slot-level DPLL (CEGAR-ish) -------------------------------
+    // Order slots by |vote| descending — most-determined first.
+    slots.sort_by_key(|&(i, k)| -(votes[i][k].abs()));
+    let mut slot_val: Vec<i8> = vec![0; slots.len()];
+    let mut decisions: Vec<(usize, bool)> = Vec::new(); // (slot_idx, flipped)
+    let mut next_slot = 0usize;
+    let mut iters = 0u64;
+    loop {
+        iters += 1;
+        if iters & 0x3f == 0 && start.elapsed().as_secs_f64() > deadline * 0.7 {
+            return None;
+        }
+        // Decide next unset slot, prefer vote sign.
+        if next_slot < slots.len() {
+            let (i, k) = slots[next_slot];
+            let pref = if votes[i][k] >= 0 { 1i8 } else { -1 };
+            slot_val[next_slot] = pref;
+            decisions.push((next_slot, false));
+            next_slot += 1;
+        }
+        // Run all rows with current slot assignment + greedy fill.
+        let mut tables: Vec<Vec<i8>> = (0..exs.len())
+            .map(|i| vec![0i8; 1usize << dep_lists[i].len()])
+            .collect();
+        for (p, &(i, k)) in slots.iter().enumerate() {
+            tables[i][k] = slot_val[p];
+        }
+        let mut fail = false;
+        for ub in 0..rows {
+            reset_row(f, &mut polarity, ub);
+            for (i, &y) in exs.iter().enumerate() {
+                let key = extract(ub, dep_mask[i]) as usize;
+                let t = tables[i][key];
+                if t != 0 {
+                    polarity[y as usize] = t;
+                }
+            }
+            let mut decided: Vec<usize> = Vec::new();
+            if !dpll(&f.clauses, &occ, &mut polarity, 1, &mut decided) {
+                fail = true;
                 break;
             }
-            let mut tables: Vec<Vec<i8>> = (0..exs.len())
-                .map(|i| vec![0i8; 1usize << dep_lists[i].len()])
-                .collect();
-            for (p, &(i, k)) in slots.iter().enumerate() {
-                tables[i][k] = if (bits >> p) & 1 == 1 { 1 } else { -1 };
-            }
-            let mut ok = true;
-            let mut row_conflict = false;
-            for ub in 0..rows {
-                reset_row(f, &mut polarity, ub);
-                for (i, &y) in exs.iter().enumerate() {
-                    let key = extract(ub, dep_mask[i]) as usize;
-                    let t = tables[i][key];
-                    if t != 0 {
-                        polarity[y as usize] = t;
-                    }
-                }
-                let mut decided: Vec<usize> = Vec::new();
-                if !dpll(&f.clauses, &occ, &mut polarity, 1, &mut decided) {
-                    ok = false;
-                    break;
-                }
-                for (i, &y) in exs.iter().enumerate() {
-                    let key = extract(ub, dep_mask[i]) as usize;
-                    let v: i8 = if polarity[y as usize] > 0 { 1 } else { -1 };
-                    if tables[i][key] == 0 {
-                        tables[i][key] = v;
-                    } else if tables[i][key] != v {
-                        row_conflict = true;
-                    }
-                }
-                if row_conflict {
-                    break;
+            for (i, &y) in exs.iter().enumerate() {
+                let key = extract(ub, dep_mask[i]) as usize;
+                let v: i8 = if polarity[y as usize] > 0 { 1 } else { -1 };
+                if tables[i][key] == 0 {
+                    tables[i][key] = v;
+                } else if tables[i][key] != v {
+                    fail = true;
                 }
             }
-            if ok && !row_conflict {
-                return Some(build_skolem(&exs, &dep_lists, &tables));
+            if fail {
+                break;
             }
         }
+        if !fail {
+            return Some(build_skolem(&exs, &dep_lists, &tables));
+        }
+        // Backtrack.
+        loop {
+            let (si, flipped) = match decisions.pop() {
+                Some(d) => d,
+                None => return None,
+            };
+            if !flipped {
+                slot_val[si] = -slot_val[si];
+                decisions.push((si, true));
+                next_slot = si + 1;
+                for j in next_slot..slots.len() {
+                    slot_val[j] = 0;
+                }
+                break;
+            }
+            slot_val[si] = 0;
+        }
     }
-    None
 }
 
 fn build_skolem(exs: &[Var], dep_lists: &[Vec<Var>], tables: &[Vec<i8>]) -> Skolem {
