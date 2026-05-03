@@ -32,16 +32,26 @@ _SAT_PATTERNS = [
 _UNSAT_PATTERNS = [
     re.compile(r"^(s UNSATISFIABLE|UNSATISFIABLE|UNSAT|\[RESULT\]\s+UNSAT)\s*$", re.MULTILINE),
     re.compile(r"Property proved|Invariant.*holds", re.IGNORECASE),  # abc pdr
+    re.compile(r"No output asserted in \d+ frames"),  # abc bmc3 (bounded UNSAT)
 ]
 
 
-def _verdict_from_output(rc: int, stdout: str) -> str:
+_ABC_FRAME = re.compile(r"was asserted in frame (\d+)")
+
+
+def _verdict_from_output(rc: int, stdout: str, k: int | None = None) -> str:
     got = EXIT.get(rc, "error")
     if got != "unknown":
         return got
     for p in _UNSAT_PATTERNS:
         if p.search(stdout):
             return "unsat"
+    m = _ABC_FRAME.search(stdout)
+    if m:
+        frame = int(m.group(1))
+        # pdr's counterexample isn't guaranteed shortest, so frame>k tells us
+        # nothing about reachability within k.
+        return "sat" if (k is None or frame <= k) else "unknown"
     for p in _SAT_PATTERNS:
         if p.search(stdout):
             return "sat"
@@ -71,20 +81,20 @@ class RunRow:
     cert_status: str  # "n/a" | "valid" | "invalid" | "dep" | "error" | "skipped"
 
 
-def discover(root: Path) -> list[tuple[Path, str, str]]:
-    """Return (path, family, expected) for every *.qdimacs / *.dqdimacs[.gz]."""
+def discover(root: Path) -> list[tuple[Path, str, str, dict]]:
+    """Return (path, family, expected, params) for every instance."""
     root_r = root.resolve()
-    out: list[tuple[Path, str, str]] = []
+    out: list[tuple[Path, str, str, dict]] = []
     for mf in root.rglob("manifest.json"):
         fam = str(mf.parent.relative_to(root))
         for e in json.loads(mf.read_text()):
             p = (mf.parent / e["path"]).resolve()
             if not p.is_relative_to(root_r):
                 continue
-            out.append((p, fam, e.get("expected", "unknown")))
+            out.append((p, fam, e.get("expected", "unknown"), e.get("params", {})))
     if not out:
         for p in sorted(root.rglob("*.qdimacs")) + sorted(root.rglob("*.dqdimacs")):
-            out.append((p, str(p.parent.relative_to(root)), "unknown"))
+            out.append((p, str(p.parent.relative_to(root)), "unknown", {}))
     return out
 
 
@@ -93,6 +103,7 @@ def _run_one(
     inst: Path,
     family: str,
     expected: str,
+    params: dict,
     timeout_s: float,
     certdir: Path,
     slot: int,
@@ -153,7 +164,15 @@ def _run_one(
             cert_bytes=0,
             cert_status="n/a",
         )
-    fmt = {"file": file_path, "timeout": str(timeout_s), "certdir": str(sub), "stem": stem}
+    k = params.get("k")
+    fmt = {
+        "file": file_path,
+        "timeout": str(timeout_s),
+        "certdir": str(sub),
+        "stem": stem,
+        "k": str(k) if k is not None else "1000",
+        "kp1": str(k + 1) if isinstance(k, int) else "1001",
+    }
     cmd = [t.format(**fmt) for t in solver.cmd]
     t0 = time.monotonic()
     try:
@@ -165,7 +184,7 @@ def _run_one(
             preexec_fn=lambda: _affine(slot),
         )
         wall = time.monotonic() - t0
-        got = _verdict_from_output(cp.returncode, cp.stdout)
+        got = _verdict_from_output(cp.returncode, cp.stdout, k=params.get("k"))
     except subprocess.TimeoutExpired:
         wall = timeout_s
         got = "timeout"
@@ -213,14 +232,12 @@ def run_multi(
         print(f"skipping unavailable solvers: {skipped}")
     instances = discover(root)
     print(f"{len(instances)} instances × {len(solvers)} solvers, timeout={timeout_s}s, j={jobs}")
-    tasks = [
-        (sv, inst, fam, exp, i) for i, (inst, fam, exp) in enumerate(instances) for sv in solvers
-    ]
     rows: list[RunRow] = []
     with sink_path.open("w") as sink, ProcessPoolExecutor(max_workers=jobs) as ex:
         futs = {
-            ex.submit(_run_one, sv, inst, fam, exp, timeout_s, certdir, i): (sv.name, inst)
-            for (sv, inst, fam, exp, i) in tasks
+            ex.submit(_run_one, sv, inst, fam, exp, prm, timeout_s, certdir, i): (sv.name, inst)
+            for i, (inst, fam, exp, prm) in enumerate(instances)
+            for sv in solvers
         }
         for fut in as_completed(futs):
             r = fut.result()

@@ -33,9 +33,9 @@ def main(out: str, ns: str, ks: str) -> None:
         seq = parse_seq_aag(aag)
         for k in (int(x) for x in ks.split(",")):
             stem = f"mutex_n{n}_k{k:03d}"
-            f = encode(seq, k=k, safe=True, source=f"mutex_n{n}.aag")
+            f = encode(seq, k=k, safe=False, source=f"mutex_n{n}.aag")
             with gzip.open(outdir / f"{stem}.dqdimacs.gz", "wt") as fp:
-                fp.write(f"c bmc2dqbf encode n={n} k={k} safe=True source=mutex_n{n}.aag\n")
+                fp.write(f"c bmc2dqbf encode n={n} k={k} safe=False source=mutex_n{n}.aag\n")
                 fp.write(f"c circuit: {comment}\n")
                 fp.write(dqdimacs.dumps(f))
             manifest.append(
