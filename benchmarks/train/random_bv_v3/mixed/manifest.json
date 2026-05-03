@@ -1,0 +1,172 @@
+[
+  {
+    "path": "mixed_s100000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "mixed"
+    ],
+    "params": {
+      "seed": 100000,
+      "mode": "mixed",
+      "width": 12,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 3
+    },
+    "source": "mixed_s100000.eqfob"
+  },
+  {
+    "path": "mixed_s100001.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "mixed"
+    ],
+    "params": {
+      "seed": 100001,
+      "mode": "mixed",
+      "width": 12,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 4
+    },
+    "source": "mixed_s100001.eqfob"
+  },
+  {
+    "path": "mixed_s100002.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "mixed"
+    ],
+    "params": {
+      "seed": 100002,
+      "mode": "mixed",
+      "width": 12,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 4
+    },
+    "source": "mixed_s100002.eqfob"
+  },
+  {
+    "path": "mixed_s100003.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "mixed"
+    ],
+    "params": {
+      "seed": 100003,
+      "mode": "mixed",
+      "width": 12,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 3
+    },
+    "source": "mixed_s100003.eqfob"
+  },
+  {
+    "path": "mixed_s100004.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "mixed"
+    ],
+    "params": {
+      "seed": 100004,
+      "mode": "mixed",
+      "width": 12,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 4
+    },
+    "source": "mixed_s100004.eqfob"
+  },
+  {
+    "path": "mixed_s100005.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "mixed"
+    ],
+    "params": {
+      "seed": 100005,
+      "mode": "mixed",
+      "width": 12,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 3
+    },
+    "source": "mixed_s100005.eqfob"
+  },
+  {
+    "path": "mixed_s100006.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "mixed"
+    ],
+    "params": {
+      "seed": 100006,
+      "mode": "mixed",
+      "width": 12,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 4
+    },
+    "source": "mixed_s100006.eqfob"
+  },
+  {
+    "path": "mixed_s100007.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "mixed"
+    ],
+    "params": {
+      "seed": 100007,
+      "mode": "mixed",
+      "width": 12,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 3
+    },
+    "source": "mixed_s100007.eqfob"
+  },
+  {
+    "path": "mixed_s100008.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "mixed"
+    ],
+    "params": {
+      "seed": 100008,
+      "mode": "mixed",
+      "width": 12,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 4
+    },
+    "source": "mixed_s100008.eqfob"
+  },
+  {
+    "path": "mixed_s100009.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "mixed"
+    ],
+    "params": {
+      "seed": 100009,
+      "mode": "mixed",
+      "width": 12,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 4
+    },
+    "source": "mixed_s100009.eqfob"
+  }
+]

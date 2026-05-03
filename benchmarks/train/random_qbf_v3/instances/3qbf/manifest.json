@@ -1,0 +1,752 @@
+[
+  {
+    "path": "3qbf_v3_s31000.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31000,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31001.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31001,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31002.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31002,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31003.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31003,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31004.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31004,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31005.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31005,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31006.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31006,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31007.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31007,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31008.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31008,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31009.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31009,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31010.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31010,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31011.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31011,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31012.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31012,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31013.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31013,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31014.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31014,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31015.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31015,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31016.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31016,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31017.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31017,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31018.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31018,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31019.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31019,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31020.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31020,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31021.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31021,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31022.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31022,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31023.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31023,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31024.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31024,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31025.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31025,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31026.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31026,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31027.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31027,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31028.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31028,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  },
+  {
+    "path": "3qbf_v3_s31029.qdimacs",
+    "expected": "unknown",
+    "tags": [
+      "random_qbf_v3",
+      "3qbf"
+    ],
+    "params": {
+      "seed": 31029,
+      "blocks": [
+        [
+          "e",
+          20
+        ],
+        [
+          "a",
+          20
+        ],
+        [
+          "e",
+          40
+        ]
+      ]
+    }
+  }
+]
