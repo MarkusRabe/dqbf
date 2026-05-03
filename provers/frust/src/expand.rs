@@ -12,9 +12,6 @@ use std::collections::HashMap;
 
 pub const MAX_U: usize = 16;
 
-/// Greedy expansion. Returns Some(sk) only when it finds a verifiable
-/// Skolem model; otherwise None (caller falls back to saturation).
-/// Never concludes UNSAT — that requires a checkable proof.
 pub fn try_expand(f: &Formula) -> Option<Skolem> {
     let nu = f.universals.len();
     if nu > MAX_U {
@@ -31,69 +28,98 @@ pub fn try_expand(f: &Formula) -> Option<Skolem> {
         .enumerate()
         .map(|(i, &u)| (u, i))
         .collect();
-    // For each existential, the bitmask of universal indices it depends on.
     let dep_mask: Vec<u32> = dep_lists
         .iter()
         .map(|ds| ds.iter().map(|d| 1u32 << u_idx[d]).sum())
         .collect();
-    // table[i]: dep-projection -> chosen value for existential i.
-    let mut tables: Vec<HashMap<u32, bool>> = vec![HashMap::new(); exs.len()];
+    // tables[i][key] = 0 unset / 1 true / -1 false
+    let mut tables: Vec<Vec<i8>> = (0..exs.len())
+        .map(|i| vec![0i8; 1usize << dep_lists[i].len()])
+        .collect();
+    // Compact dep-key: pext-style extract of ub bits at dep positions.
+    let extract = |ub: u32, mask: u32| -> u32 {
+        let mut out = 0u32;
+        let mut b = 0;
+        let mut m = mask;
+        while m != 0 {
+            let i = m.trailing_zeros();
+            if (ub >> i) & 1 == 1 {
+                out |= 1 << b;
+            }
+            b += 1;
+            m &= m - 1;
+        }
+        out
+    };
 
     let n = f.n_vars as usize + 1;
-    let mut polarity = vec![0i8; n]; // 0=unset, 1=true, -1=false
+    let mut polarity = vec![0i8; n];
+    let occ = build_occ(&f.clauses, n);
 
     for ub in 0..(1u32 << nu) {
-        // Reset polarity, set universals from ub.
         for p in polarity.iter_mut() {
             *p = 0;
         }
         for (i, &u) in f.universals.iter().enumerate() {
             polarity[u as usize] = if (ub >> i) & 1 == 1 { 1 } else { -1 };
         }
-        // Pin existentials whose dep-projection has been decided by an earlier row.
         for (i, &y) in exs.iter().enumerate() {
-            let key = ub & dep_mask[i];
-            if let Some(&v) = tables[i].get(&key) {
-                polarity[y as usize] = if v { 1 } else { -1 };
+            let key = extract(ub, dep_mask[i]) as usize;
+            let t = tables[i][key];
+            if t != 0 {
+                polarity[y as usize] = t;
             }
         }
-        // DPLL on the remaining vars.
-        if !dpll(&f.clauses, &mut polarity) {
+        if !dpll(&f.clauses, &occ, &mut polarity) {
             return None;
         }
         for (i, &y) in exs.iter().enumerate() {
-            let key = ub & dep_mask[i];
-            tables[i].entry(key).or_insert(polarity[y as usize] == 1);
-        }
-    }
-    // Build Skolem bitmaps.
-    let mut sk = Skolem::new();
-    for (i, &y) in exs.iter().enumerate() {
-        let ndeps = dep_lists[i].len();
-        let size = 1usize << ndeps;
-        let mut bits = vec![0u64; (size + 63) / 64];
-        for kb in 0..size as u32 {
-            let mut key = 0u32;
-            for (b, d) in dep_lists[i].iter().enumerate() {
-                if (kb >> b) & 1 == 1 {
-                    key |= 1u32 << u_idx[d];
+            let key = extract(ub, dep_mask[i]) as usize;
+            if tables[i][key] == 0 {
+                tables[i][key] = polarity[y as usize].max(-1).min(1);
+                if tables[i][key] == 0 {
+                    tables[i][key] = -1;
                 }
             }
-            if tables[i].get(&key).copied().unwrap_or(false) {
-                bits[kb as usize / 64] |= 1u64 << (kb % 64);
+        }
+    }
+    let mut sk = Skolem::new();
+    for (i, &y) in exs.iter().enumerate() {
+        let nd = dep_lists[i].len();
+        let size = 1usize << nd;
+        let mut bits = vec![0u64; (size + 63) / 64];
+        for j in 0..size {
+            if tables[i][j] == 1 {
+                bits[j / 64] |= 1u64 << (j % 64);
             }
         }
-        sk.insert(y, (bits, ndeps));
+        sk.insert(y, (bits, nd));
     }
     Some(sk)
 }
 
-/// Iterative DPLL with a trail (no per-branch clone).
-fn dpll(clauses: &[Clause], pol: &mut [i8]) -> bool {
+/// occ[2*v] = clause indices containing +v; occ[2*v+1] = containing -v.
+fn build_occ(clauses: &[Clause], n: usize) -> Vec<Vec<u32>> {
+    let mut occ = vec![Vec::new(); 2 * n];
+    for (ci, c) in clauses.iter().enumerate() {
+        for &l in c {
+            let idx = 2 * var(l) as usize + if l < 0 { 1 } else { 0 };
+            occ[idx].push(ci as u32);
+        }
+    }
+    occ
+}
+
+fn dpll(clauses: &[Clause], occ: &[Vec<u32>], pol: &mut [i8]) -> bool {
     let mut trail: Vec<usize> = Vec::new();
-    let mut decisions: Vec<(usize, usize, bool)> = Vec::new(); // (var, trail-len before, tried_neg)
+    let mut decisions: Vec<(usize, usize, bool)> = Vec::new();
+    let mut prop_from = 0usize;
+    // Seed: enqueue all initially-set vars by pretending a "full scan" once.
+    if !scan_all(clauses, pol, &mut trail) {
+        return false;
+    }
     loop {
-        if !unit_propagate(clauses, pol, &mut trail) {
+        if !propagate(clauses, occ, pol, &mut trail, &mut prop_from) {
             loop {
                 let (dv, tl, tried_neg) = match decisions.pop() {
                     Some(d) => d,
@@ -102,6 +128,7 @@ fn dpll(clauses: &[Clause], pol: &mut [i8]) -> bool {
                 while trail.len() > tl {
                     pol[trail.pop().unwrap()] = 0;
                 }
+                prop_from = trail.len();
                 if !tried_neg {
                     pol[dv] = -1;
                     trail.push(dv);
@@ -122,37 +149,20 @@ fn dpll(clauses: &[Clause], pol: &mut [i8]) -> bool {
     }
 }
 
-fn unit_propagate(clauses: &[Clause], pol: &mut [i8], trail: &mut Vec<usize>) -> bool {
+/// One initial linear scan (handles units present in input under fixed pol).
+fn scan_all(clauses: &[Clause], pol: &mut [i8], trail: &mut Vec<usize>) -> bool {
     loop {
         let mut changed = false;
         for c in clauses {
-            let mut unassigned: Option<i32> = None;
-            let mut sat = false;
-            let mut multi = false;
-            for &l in c {
-                let v = var(l) as usize;
-                let p = pol[v];
-                if p != 0 {
-                    if (l > 0) == (p > 0) {
-                        sat = true;
-                        break;
-                    }
-                } else if unassigned.is_some() {
-                    multi = true;
-                } else {
-                    unassigned = Some(l);
-                }
-            }
-            if sat {
-                continue;
-            }
-            match (unassigned, multi) {
-                (None, _) => return false,
-                (Some(l), false) => {
+            match clause_status(c, pol) {
+                Status::Conflict => return false,
+                Status::Unit(l) => {
                     let v = var(l) as usize;
-                    pol[v] = if l > 0 { 1 } else { -1 };
-                    trail.push(v);
-                    changed = true;
+                    if pol[v] == 0 {
+                        pol[v] = if l > 0 { 1 } else { -1 };
+                        trail.push(v);
+                        changed = true;
+                    }
                 }
                 _ => {}
             }
@@ -160,6 +170,67 @@ fn unit_propagate(clauses: &[Clause], pol: &mut [i8], trail: &mut Vec<usize>) ->
         if !changed {
             return true;
         }
+    }
+}
+
+/// Occurrence-driven propagation: only re-check clauses containing the
+/// negation of newly-assigned literals.
+fn propagate(
+    clauses: &[Clause],
+    occ: &[Vec<u32>],
+    pol: &mut [i8],
+    trail: &mut Vec<usize>,
+    from: &mut usize,
+) -> bool {
+    while *from < trail.len() {
+        let v = trail[*from];
+        *from += 1;
+        let p = pol[v];
+        let neg_idx = 2 * v + if p > 0 { 1 } else { 0 };
+        for &ci in &occ[neg_idx] {
+            match clause_status(&clauses[ci as usize], pol) {
+                Status::Conflict => return false,
+                Status::Unit(l) => {
+                    let u = var(l) as usize;
+                    if pol[u] == 0 {
+                        pol[u] = if l > 0 { 1 } else { -1 };
+                        trail.push(u);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    true
+}
+
+enum Status {
+    Sat,
+    Conflict,
+    Unit(i32),
+    Unresolved,
+}
+
+#[inline]
+fn clause_status(c: &Clause, pol: &[i8]) -> Status {
+    let mut unassigned: Option<i32> = None;
+    let mut multi = false;
+    for &l in c {
+        let p = pol[var(l) as usize];
+        if p != 0 {
+            if (l > 0) == (p > 0) {
+                return Status::Sat;
+            }
+        } else if unassigned.is_some() {
+            multi = true;
+        } else {
+            unassigned = Some(l);
+        }
+    }
+    match (unassigned, multi) {
+        (None, _) => Status::Conflict,
+        (Some(l), false) => Status::Unit(l),
+        _ => Status::Unresolved,
     }
 }
 

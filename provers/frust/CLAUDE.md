@@ -26,3 +26,4 @@ Exit codes 10/20/0 (sat/unsat/unknown).
 | 4 | same | only 4 universals → saturation is wrong tool | greedy ∀-expansion + per-row DPLL (SAT-only, cert-producing); fall back on failure | 279/344, 0 invalid; instance now **7ms** with VALID cert; missing-certs 70→6 |
 | 5 | `and_n8` (47v, \|U\|=16, 12s) | 115 MB cert (Shannon = 3·2¹⁶ gates/output) | bitmap-packed BDD-style memoized Shannon (fixed cofactor-bit bug); probe substring fix | 289/344, 0 invalid; cert **925 B**, 0.93s |
 | 6 | `peano_add_n8` (292v, 9.6s) | 32% in DPLL (clones `pol` per branch), 11% BTreeMap Skolem | trail-based DPLL (fixed backtrack bug); bitmap Skolem repr | 289/344, 0 invalid; instance 5.4s |
+| 7 | same, 5.4s | 78% try_expand: 19M HashMap hashes + linear-scan unit-prop | flat-array tables + occurrence-driven propagation | 290/344, 0 invalid; instance **1.8s** |
