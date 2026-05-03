@@ -55,3 +55,4 @@ benchmarks/train/syntcomp_legacy/instances/*.dqdimacs.gz
 benchmarks/train/syntcomp_legacy/instances/manifest.json
 benchmarks/train/cbmc/instances/*.dqdimacs.gz
 benchmarks/train/cbmc/instances/manifest.json
+benchmarks/train/conjunction/instances/
