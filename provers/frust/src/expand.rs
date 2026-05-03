@@ -36,6 +36,7 @@ pub fn try_expand(f: &Formula, deadline: f64, start: &std::time::Instant) -> Opt
         .map(|ds| ds.iter().map(|d| 1u32 << u_idx[d]).sum())
         .collect();
     let rows = 1u32 << nu;
+    let row_budget: u32 = (1_000_000 / rows.max(1)).clamp(100, 50_000);
 
     // ---- Free pass --------------------------------------------------
     // votes[i][k] tallies polarity; first_seen[i][k] holds the first
@@ -58,7 +59,7 @@ pub fn try_expand(f: &Formula, deadline: f64, start: &std::time::Instant) -> Opt
         }
         reset_row(f, &mut polarity, ub);
         let mut decided: Vec<usize> = Vec::new();
-        if !dpll(&f.clauses, &occ, &mut polarity, 1, &mut decided) {
+        if !dpll(&f.clauses, &occ, &mut polarity, 1, &mut decided, row_budget) {
             return None;
         }
         for (i, &y) in exs.iter().enumerate() {
@@ -112,7 +113,14 @@ pub fn try_expand(f: &Formula, deadline: f64, start: &std::time::Instant) -> Opt
                 }
             }
             let mut decided: Vec<usize> = Vec::new();
-            if !dpll(&f.clauses, &occ, &mut polarity, first, &mut decided) {
+            if !dpll(
+                &f.clauses,
+                &occ,
+                &mut polarity,
+                first,
+                &mut decided,
+                row_budget,
+            ) {
                 ok = false;
                 break;
             }
@@ -215,7 +223,7 @@ pub fn try_expand(f: &Formula, deadline: f64, start: &std::time::Instant) -> Opt
                     }
                 }
                 let mut decided: Vec<usize> = Vec::new();
-                if !dpll(&f.clauses, &occ, &mut polarity, 1, &mut decided) {
+                if !dpll(&f.clauses, &occ, &mut polarity, 1, &mut decided, row_budget) {
                     fail = true;
                     break;
                 }
@@ -313,14 +321,13 @@ fn build_occ(clauses: &[Clause], n: usize) -> Vec<Vec<u32>> {
     occ
 }
 
-const DPLL_MAX_CONFLICTS: u32 = 200_000;
-
 fn dpll(
     clauses: &[Clause],
     occ: &[Vec<u32>],
     pol: &mut [i8],
     first: i8,
     decided: &mut Vec<usize>,
+    max_conflicts: u32,
 ) -> bool {
     let mut trail: Vec<usize> = Vec::new();
     let mut decisions: Vec<(usize, usize, bool)> = Vec::new();
@@ -330,7 +337,7 @@ fn dpll(
         return false;
     }
     loop {
-        if conflicts > DPLL_MAX_CONFLICTS {
+        if conflicts > max_conflicts {
             return false;
         }
         if !propagate(clauses, occ, pol, &mut trail, &mut prop_from) {

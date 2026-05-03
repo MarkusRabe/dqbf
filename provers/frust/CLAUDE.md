@@ -39,3 +39,4 @@ Exit codes 10/20/0 (sat/unsat/unknown).
 | 17 | `v2_mul_n8` (192 slots) | 53% in DPLL — re-runs all rows per slot decision | cache row models keyed by row-local slot-signature | 306/344, marginal (slots overlap most rows) |
 | 18 | `dep_cycle_n1` (11v, 12s) — needs SFEx | also `mutex_n2_k016` ignores --timeout (74s on 3s) | SFEx wired into choose_fork | 513/804; dep_cycle still UNKNOWN (partition heuristic) |
 | 19 | `mutex_n2_k016` (\|U\|=0, 74s on --timeout 3!) | DPLL has no conflict bound; saturation inner loop no timeout check | DPLL_MAX_CONFLICTS=200k; tick-based inner check | 513/804; mutex_n2 16ms |
+| 20 | `mutex_n4_k008` (\|U\|=0, expand DPLL exponential on UNSAT) | DPLL conflict budget unbounded for rows=1 | budget=clamp(1M/rows, 100, 50k); decided CDCL is the right next step | ? |
