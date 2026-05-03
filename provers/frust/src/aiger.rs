@@ -54,12 +54,12 @@ fn rec(
         return (bits[0] & 1) as u32;
     }
     // Check constant.
-    let words = (span + 63) / 64;
+    let words = span.div_ceil(64);
     let all_zero = bits[..words].iter().all(|&w| w == 0);
     if all_zero {
         return 0;
     }
-    let mask_last = if span % 64 == 0 {
+    let mask_last = if span.is_multiple_of(64) {
         u64::MAX
     } else {
         (1u64 << (span % 64)) - 1
@@ -77,7 +77,7 @@ fn rec(
     }
     // Cofactor on input[depth]: low half (bit=0) and high half (bit=1).
     let half = span / 2;
-    let hw = (half + 63) / 64;
+    let hw = half.div_ceil(64);
     let mut lo = vec![0u64; hw];
     let mut hi = vec![0u64; hw];
     for i in 0..half {

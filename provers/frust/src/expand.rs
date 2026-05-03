@@ -1,11 +1,15 @@
-//! Universal expansion + per-row DPLL for small |U|.
+//! Universal expansion + slot search for |U| ≤ MAX_U.
 //!
-//! Two-pass: a free pass solves every row unconstrained, recording (a)
-//! which existentials were ever DECIDED (vs unit-propagated) — those are
-//! the only ones that need cross-row consistency — and (b) per-key vote
-//! tallies. The pinned pass seeds the *constrained* partial-dep
-//! existentials from the votes and re-solves; defined / full-dep vars
-//! are left to unit-prop. Only emits SAT (cert is checkable).
+//! Free pass: solve each of the 2^|U| rows under universals-only
+//! assumptions with one persistent CDCL. If any row is genuinely UNSAT
+//! → DQBF UNSAT (caller emits the verdict). Otherwise record per-
+//! (existential, dep-key) the first model value and the slot set =
+//! {(i,k) : two rows disagreed}. If no slots, the free pass is a valid
+//! Skolem. Otherwise DPLL over slot values: pin slots, re-solve rows,
+//! check the resulting tables are consistent; on row-UNSAT prune, on
+//! greedy-fill conflict decide more, on full exhaust grow the slot set
+//! by the new conflicts and retry (≤5 rounds). Only emits SAT — the
+//! cert is independently checkable.
 
 use crate::aiger::Skolem;
 use crate::cdcl::Cdcl;
@@ -79,20 +83,13 @@ pub fn try_expand(
         a
     };
 
-    // ---- Free pass --------------------------------------------------
-    // votes[i][k] tallies polarity; first_seen[i][k] holds the first
-    // value; conflict[i] marks existentials whose free-pass value
-    // differed across rows with the same dep-key.
-    let mut votes: Vec<Vec<i32>> = (0..exs.len())
-        .map(|i| vec![0i32; 1usize << dep_lists[i].len()])
-        .collect();
+    // ---- Free pass: solve every row free; record first value per
+    // (existential, dep-key) and the set of (i,k) pairs that disagreed.
     let mut first_seen: Vec<Vec<i8>> = (0..exs.len())
         .map(|i| vec![0i8; 1usize << dep_lists[i].len()])
         .collect();
-    let mut key_conflict: Vec<Vec<bool>> = (0..exs.len())
-        .map(|i| vec![false; 1usize << dep_lists[i].len()])
-        .collect();
-    let mut conflict = vec![false; exs.len()];
+    let mut slots: Vec<(usize, usize)> = Vec::new();
+    let mut in_slot: std::collections::HashSet<(usize, usize)> = std::collections::HashSet::new();
     for ub in 0..rows {
         if start.elapsed().as_secs_f64() > deadline * 0.4 {
             return None;
@@ -100,13 +97,7 @@ pub fn try_expand(
         cdcl.reset_phase();
         let assumps = row_assumps(f, ub, &[]);
         if !cdcl.solve(&assumps, &mut model, row_budget) {
-            dbg_ex!(
-                debug,
-                "free pass row {}: UNSAT/budget — falling through",
-                ub
-            );
-            // Genuine UNSAT (not budget) under universals-only
-            // assumptions → DQBF is UNSAT.
+            dbg_ex!(debug, "free pass row {}: UNSAT/budget", ub);
             if !cdcl.budget_hit {
                 *unsat_row = Some(ub);
             }
@@ -115,127 +106,33 @@ pub fn try_expand(
         for (i, &y) in exs.iter().enumerate() {
             let key = extract(ub, dep_mask[i]) as usize;
             let v: i8 = if model[y as usize] > 0 { 1 } else { -1 };
-            votes[i][key] += v as i32;
             if first_seen[i][key] == 0 {
                 first_seen[i][key] = v;
-            } else if first_seen[i][key] != v {
-                conflict[i] = true;
-                key_conflict[i][key] = true;
+            } else if first_seen[i][key] != v && in_slot.insert((i, key)) {
+                slots.push((i, key));
             }
         }
     }
-    // If no conflicts at all, the free pass IS a valid Skolem.
-    // constrained = vars with a conflict (regardless of dep width — a
-    // full-dep var has one row per key so never conflicts).
-    let constrained = conflict;
-    let n_constrained = constrained.iter().filter(|&&c| c).count();
-    let n_slots: usize = key_conflict
-        .iter()
-        .map(|kc| kc.iter().filter(|&&c| c).count())
-        .sum();
     dbg_ex!(
         debug,
-        "free pass done in {:.2}s; {} constrained vars, {} conflicting slots, row_budget={}",
+        "free pass {:.2}s; {} slots; row_budget={}",
         start.elapsed().as_secs_f64(),
-        n_constrained,
-        n_slots,
+        slots.len(),
         row_budget
     );
-
-    // ---- Pinned passes (4 polarity strategies) ----------------------
-    for &(first, use_votes) in &[(1i8, true), (-1, true), (1, false), (-1, false)] {
-        if start.elapsed().as_secs_f64() > deadline * 0.6 {
-            return None;
-        }
-        let mut tables: Vec<Vec<i8>> = (0..exs.len())
-            .map(|i| vec![0i8; 1usize << dep_lists[i].len()])
-            .collect();
-        if use_votes {
-            for (i, t) in tables.iter_mut().enumerate() {
-                if !constrained[i] {
-                    continue;
-                }
-                for (k, slot) in t.iter_mut().enumerate() {
-                    *slot = match votes[i][k].signum() {
-                        1 => 1,
-                        -1 => -1,
-                        _ => 0,
-                    };
-                }
-            }
-        }
-        let _ = first;
-        let mut ok = true;
-        let mut row_conflict = vec![false; exs.len()];
-        for ub in 0..rows {
-            let pins: Vec<(Var, i8)> = exs
-                .iter()
-                .enumerate()
-                .map(|(i, &y)| (y, tables[i][extract(ub, dep_mask[i]) as usize]))
-                .filter(|&(_, t)| t != 0)
-                .collect();
-            let assumps = row_assumps(f, ub, &pins);
-            if !cdcl.solve(&assumps, &mut model, row_budget) {
-                ok = false;
-                break;
-            }
-            for (i, &y) in exs.iter().enumerate() {
-                let key = extract(ub, dep_mask[i]) as usize;
-                let v: i8 = if model[y as usize] > 0 { 1 } else { -1 };
-                if tables[i][key] == 0 {
-                    tables[i][key] = v;
-                } else if tables[i][key] != v {
-                    row_conflict[i] = true;
-                }
-            }
-        }
-        if !ok || row_conflict.iter().any(|&c| c) {
-            dbg_ex!(
-                debug,
-                "heuristic (first={}, votes={}): {} ({} new conflicts)",
-                first,
-                use_votes,
-                if !ok { "row UNSAT" } else { "row_conflict" },
-                row_conflict.iter().filter(|&&c| c).count()
-            );
-            continue;
-        }
-        dbg_ex!(
-            debug,
-            "heuristic (first={}, votes={}): SAT",
-            first,
-            use_votes
-        );
-        return Some(build_skolem(&exs, &dep_lists, &tables));
-    }
-
-    // ---- Enumeration fallback (iDQ-style) ---------------------------
-    // Slot list: only the (i, k) pairs that actually disagreed.
-    let mut slots: Vec<(usize, usize)> = Vec::new();
-    for (i, kc) in key_conflict.iter().enumerate() {
-        for (k, &c) in kc.iter().enumerate() {
-            if c {
-                slots.push((i, k));
-            }
-        }
-    }
     if slots.is_empty() {
-        dbg_ex!(debug, "no slots — falling through");
-        return None; // no slots but heuristics failed → not expand-SAT
+        // No conflicts: the free pass IS a consistent Skolem.
+        return Some(build_skolem(&exs, &dep_lists, &first_seen));
     }
-    let mut in_slots: std::collections::HashSet<(usize, usize)> = slots.iter().copied().collect();
     let mut cegar_round = 0;
     'cegar: loop {
         cegar_round += 1;
         dbg_ex!(
             debug,
-            "slot-DPLL round {} on {} slots",
+            "slot-DPLL round {}: {} slots",
             cegar_round,
             slots.len()
         );
-        // ---- Slot-level DPLL (CEGAR-ish) -------------------------------
-        // Order slots by |vote| descending — most-determined first.
-        slots.sort_by_key(|&(i, k)| -(votes[i][k].abs()));
         // Precompute: for each row, which slots are pinned in it.
         let row_slots: Vec<Vec<usize>> = (0..rows)
             .map(|ub| {
@@ -247,15 +144,6 @@ pub fn try_expand(
                     .collect()
             })
             .collect();
-        // Cache: last (slot_val signature, model) per row.
-        let mut row_cache: Vec<Option<(u64, Vec<i8>)>> = vec![None; rows as usize];
-        let row_sig = |slot_val: &[i8], rs: &[usize]| -> u64 {
-            let mut h = 0u64;
-            for &p in rs {
-                h = h.wrapping_mul(3).wrapping_add(slot_val[p] as u64);
-            }
-            h
-        };
         let mut slot_val: Vec<i8> = vec![0; slots.len()];
         let mut decisions: Vec<(usize, bool)> = Vec::new(); // (slot_idx, flipped)
         let mut next_slot = 0usize;
@@ -270,8 +158,7 @@ pub fn try_expand(
             // Decide one slot at a time so CDCL-UNSAT can prune subtrees.
             if next_slot < slots.len() {
                 let (i, k) = slots[next_slot];
-                let pref = if votes[i][k] >= 0 { 1i8 } else { -1 };
-                slot_val[next_slot] = pref;
+                slot_val[next_slot] = first_seen[i][k]; // prefer first-seen value
                 decisions.push((next_slot, false));
                 next_slot += 1;
             }
@@ -286,40 +173,20 @@ pub fn try_expand(
             let mut prune = false; // CDCL-UNSAT under slot pins → backtrack
             let mut soft_conflict = false; // greedy-fill disagree → decide more
             for ub in 0..rows {
-                let rs = &row_slots[ub as usize];
-                let sig = row_sig(&slot_val, rs);
-                let cached: Vec<i8> = if let Some((csig, m)) = &row_cache[ub as usize] {
-                    if *csig == sig {
-                        m.clone()
-                    } else {
-                        Vec::new()
-                    }
-                } else {
-                    Vec::new()
-                };
-                let row_model = if cached.is_empty() {
-                    let pins: Vec<(Var, i8)> = rs
-                        .iter()
-                        .filter(|&&p| slot_val[p] != 0)
-                        .map(|&p| {
-                            let (i, _k) = slots[p];
-                            (exs[i], slot_val[p])
-                        })
-                        .collect();
-                    cdcl.reset_phase();
-                    let assumps = row_assumps(f, ub, &pins);
-                    if !cdcl.solve(&assumps, &mut model, row_budget) {
-                        prune = true;
-                        break;
-                    }
-                    row_cache[ub as usize] = Some((sig, model.clone()));
-                    model.clone()
-                } else {
-                    cached
-                };
+                let pins: Vec<(Var, i8)> = row_slots[ub as usize]
+                    .iter()
+                    .filter(|&&p| slot_val[p] != 0)
+                    .map(|&p| (exs[slots[p].0], slot_val[p]))
+                    .collect();
+                cdcl.reset_phase();
+                let assumps = row_assumps(f, ub, &pins);
+                if !cdcl.solve(&assumps, &mut model, row_budget) {
+                    prune = true;
+                    break;
+                }
                 for (i, &y) in exs.iter().enumerate() {
                     let key = extract(ub, dep_mask[i]) as usize;
-                    let v: i8 = if row_model[y as usize] > 0 { 1 } else { -1 };
+                    let v: i8 = if model[y as usize] > 0 { 1 } else { -1 };
                     if tables[i][key] == 0 {
                         tables[i][key] = v;
                     } else if tables[i][key] != v {
@@ -355,7 +222,7 @@ pub fn try_expand(
                         );
                         let added: Vec<_> = new_conflicts
                             .iter()
-                            .filter(|s| !in_slots.contains(s))
+                            .filter(|s| !in_slot.contains(s))
                             .copied()
                             .collect();
                         if added.is_empty()
@@ -366,7 +233,7 @@ pub fn try_expand(
                         }
                         for s in added {
                             slots.push(s);
-                            in_slots.insert(s);
+                            in_slot.insert(s);
                         }
                         continue 'cegar;
                     }
@@ -391,7 +258,7 @@ fn build_skolem(exs: &[Var], dep_lists: &[Vec<Var>], tables: &[Vec<i8>]) -> Skol
     for (i, &y) in exs.iter().enumerate() {
         let nd = dep_lists[i].len();
         let size = 1usize << nd;
-        let mut bits = vec![0u64; (size + 63) / 64];
+        let mut bits = vec![0u64; size.div_ceil(64)];
         for j in 0..size {
             if tables[i][j] == 1 {
                 bits[j / 64] |= 1u64 << (j % 64);

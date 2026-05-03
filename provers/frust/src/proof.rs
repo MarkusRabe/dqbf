@@ -15,16 +15,33 @@ pub struct Step {
 }
 
 impl Step {
-    pub fn axiom(c: &Clause) -> Self {
+    fn new(clause: Vec<Lit>, rule: &'static str, premises: Vec<usize>) -> Self {
         Self {
-            clause: c.clone(),
-            rule: "axiom",
-            premises: vec![],
+            clause,
+            rule,
+            premises,
             pivot: None,
             part: None,
             c3: None,
             fresh: None,
         }
+    }
+    pub fn axiom(c: &Clause) -> Self {
+        Self::new(c.clone(), "axiom", vec![])
+    }
+    pub fn ured(c: &Clause, from: usize) -> Self {
+        Self::new(c.clone(), "ured", vec![from])
+    }
+    pub fn res(c: &Clause, a: usize, b: usize, pivot: Var) -> Self {
+        let mut s = Self::new(c.clone(), "res", vec![a, b]);
+        s.pivot = Some(pivot);
+        s
+    }
+    pub fn fex(c: &Clause, src: usize, part: Vec<Lit>, fresh: Var) -> Self {
+        let mut s = Self::new(c.clone(), "fex", vec![src]);
+        s.part = Some(part);
+        s.fresh = Some(fresh);
+        s
     }
 }
 

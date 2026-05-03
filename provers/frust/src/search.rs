@@ -1,7 +1,7 @@
 //! Given-clause saturation with proof recording.
 
 use crate::aiger::Skolem;
-use crate::formula::{var, Clause, Formula, Var};
+use crate::formula::{var, Clause, Formula};
 use crate::proof::{Proof, Step};
 use crate::rules::{is_tautology, resolve, universal_reduce};
 use std::collections::{HashMap, HashSet};
@@ -189,27 +189,17 @@ use crate::formula::Lit;
 pub fn solve(f: &Formula, cfg: &Config) -> Output {
     let start = Instant::now();
 
-    // Phase -1: light preprocessing (SAT path only — UNSAT proofs are
-    // derived over the original f to keep the .frp checkable without
-    // replaying eliminations).
-    let (fp, pre) = crate::preprocess::preprocess(f);
-
-    // Phase 0: greedy universal expansion on the simplified formula.
+    // Phase 0: universal expansion (SAT path) + UNSAT-row detection.
     let mut unsat_row: Option<u32> = None;
     if cfg.extract_cert {
-        if let Some(mut sk) =
-            crate::expand::try_expand(&fp, cfg.timeout_s, &start, cfg.debug_expand, &mut unsat_row)
+        if let Some(sk) =
+            crate::expand::try_expand(f, cfg.timeout_s, &start, cfg.debug_expand, &mut unsat_row)
         {
-            crate::preprocess::extend_skolem(&mut sk, &pre);
             return Output {
                 verdict: Verdict::Sat,
                 proof: None,
                 skolem: Some(sk),
-                stats: format!(
-                    "expand (pre: -{}e -{}u)",
-                    pre.fixed.len(),
-                    pre.dropped_universals.len()
-                ),
+                stats: "expand".into(),
             };
         }
     }
@@ -233,18 +223,7 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
         let ai = db.record(c, Step::axiom(c));
         let rc = universal_reduce(&g, c);
         if rc != *c {
-            db.record(
-                &rc,
-                Step {
-                    clause: rc.clone(),
-                    rule: "ured",
-                    premises: vec![ai],
-                    pivot: None,
-                    part: None,
-                    c3: None,
-                    fresh: None,
-                },
-            );
+            db.record(&rc, Step::ured(&rc, ai));
         }
         db.activate(rc);
     }
@@ -299,15 +278,7 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                             continue;
                         }
                         let dpi = db.idx[&db.clauses[di]];
-                        let step = Step {
-                            clause: rr.clone(),
-                            rule: "res",
-                            premises: vec![ci, dpi],
-                            pivot: Some(var(l)),
-                            part: None,
-                            c3: None,
-                            fresh: None,
-                        };
+                        let step = Step::res(&rr, ci, dpi, var(l));
                         if rr.is_empty() {
                             db.admit(rr, step);
                             found_empty = true;
@@ -340,36 +311,12 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
             let c = db.clauses[i].clone();
             if let Some((part, fr)) = crate::rules::choose_fork(&mut g, &c) {
                 let src = db.idx[&c];
-                let part_v = part.clone();
-                let rule = if fr.c3.is_some() { "sfex" } else { "fex" };
-                for (cl, _half) in [(&fr.left, "l"), (&fr.right, "r")] {
-                    db.record(
-                        cl,
-                        Step {
-                            clause: cl.clone(),
-                            rule,
-                            premises: vec![src],
-                            pivot: None,
-                            part: Some(part_v.clone()),
-                            c3: fr.c3.clone(),
-                            fresh: Some(fr.fresh),
-                        },
-                    );
+                for cl in [&fr.left, &fr.right] {
+                    db.record(cl, Step::fex(cl, src, part.clone(), fr.fresh));
                     let rcl = universal_reduce(&g, cl);
                     if rcl != *cl {
                         let pi = db.idx[cl];
-                        db.record(
-                            &rcl,
-                            Step {
-                                clause: rcl.clone(),
-                                rule: "ured",
-                                premises: vec![pi],
-                                pivot: None,
-                                part: None,
-                                c3: None,
-                                fresh: None,
-                            },
-                        );
+                        db.record(&rcl, Step::ured(&rcl, pi));
                     }
                     db.activate(rcl);
                 }
@@ -390,15 +337,10 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                     stats: "expand/saturation contradiction".into(),
                 };
             }
-            let sk = if cfg.extract_cert {
-                find_skolem_brute(f, &start, cfg.timeout_s)
-            } else {
-                None
-            };
             return Output {
                 verdict: Verdict::Sat,
                 proof: None,
-                skolem: sk,
+                skolem: None,
                 stats: format!("saturated: {} clauses", db.clauses.len()),
             };
         }
@@ -428,81 +370,4 @@ fn bail(db: &Db, forks: usize, known_unsat: bool) -> Output {
             forks
         ),
     }
-}
-
-fn find_skolem_brute(f: &Formula, start: &Instant, deadline: f64) -> Option<Skolem> {
-    let exs: Vec<Var> = f.deps.keys().copied().collect();
-    let dep_lists: Vec<Vec<Var>> = exs
-        .iter()
-        .map(|y| f.deps[y].iter().copied().collect())
-        .collect();
-    let dom_sizes: Vec<usize> = dep_lists.iter().map(|d| 1usize << d.len()).collect();
-    let total_bits: usize = dom_sizes.iter().sum();
-    if total_bits > 20 {
-        return None;
-    }
-    let total: u64 = 1u64 << total_bits;
-    let mut tables: Vec<Vec<bool>> = dom_sizes.iter().map(|&s| vec![false; s]).collect();
-    for counter in 0..total {
-        if counter & 0x3ff == 0 && start.elapsed().as_secs_f64() > deadline {
-            return None;
-        }
-        // unpack counter into tables
-        let mut bits = counter;
-        for (i, t) in tables.iter_mut().enumerate() {
-            for b in t.iter_mut() {
-                *b = bits & 1 == 1;
-                bits >>= 1;
-            }
-            let _ = i;
-        }
-        if check_model(f, &exs, &dep_lists, &tables) {
-            let mut sk = Skolem::new();
-            for (i, &y) in exs.iter().enumerate() {
-                let nd = dep_lists[i].len();
-                let mut bits = vec![0u64; ((1usize << nd) + 63) / 64];
-                for (j, &v) in tables[i].iter().enumerate() {
-                    if v {
-                        bits[j / 64] |= 1u64 << (j % 64);
-                    }
-                }
-                sk.insert(y, (bits, nd));
-            }
-            return Some(sk);
-        }
-    }
-    None
-}
-
-fn check_model(f: &Formula, exs: &[Var], deps: &[Vec<Var>], tables: &[Vec<bool>]) -> bool {
-    let nu = f.universals.len();
-    let mut asg = vec![false; f.n_vars as usize + 1];
-    for ub in 0..(1u64 << nu) {
-        for (i, &u) in f.universals.iter().enumerate() {
-            asg[u as usize] = (ub >> i) & 1 == 1;
-        }
-        for (i, &y) in exs.iter().enumerate() {
-            let mut k = 0usize;
-            for (b, d) in deps[i].iter().enumerate() {
-                if asg[*d as usize] {
-                    k |= 1 << b;
-                }
-            }
-            asg[y as usize] = tables[i][k];
-        }
-        for c in &f.clauses {
-            let mut ok = false;
-            for &l in c {
-                let v = var(l);
-                if (l > 0) == asg[v as usize] {
-                    ok = true;
-                    break;
-                }
-            }
-            if !ok {
-                return false;
-            }
-        }
-    }
-    true
 }

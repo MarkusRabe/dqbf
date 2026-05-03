@@ -6,7 +6,7 @@
 //! Reference: minisat `Solver::propagate`/`analyze`/`search`; satch's
 //! comments for the watch-relink invariants.
 
-use crate::formula::{var, Lit, Var};
+use crate::formula::{var, Lit};
 
 /// Internal lit encoding: 2*v for +v, 2*v+1 for -v. Index 0/1 unused.
 type ILit = u32;
@@ -56,7 +56,6 @@ pub struct Cdcl {
     n_vars: usize,
     ok: bool,
     phase: Vec<i8>, // saved last-polarity per var
-    core: Vec<Lit>, // assumptions that caused last UNSAT
     activity: Vec<f64>,
     var_inc: f64,
     pub conflicts: u64,
@@ -80,7 +79,6 @@ impl Cdcl {
             n_vars,
             ok: true,
             phase: vec![1i8; n_vars + 1],
-            core: Vec::new(),
             activity: vec![0.0; n_vars + 1],
             var_inc: 1.0,
             conflicts: 0,
@@ -366,48 +364,7 @@ impl Cdcl {
         }
     }
 
-    /// Minisat analyzeFinal: given that `p` is false at the current
-    /// assumption level, return the subset of assumptions implying ¬p.
-    fn analyze_final(&mut self, p: ILit) -> Vec<Lit> {
-        let mut out: Vec<Lit> = Vec::new();
-        if self.dl() == 0 {
-            return out;
-        }
-        self.seen[ivar(p)] = 1;
-        let mut to_clear = vec![ivar(p)];
-        for &l in self.trail.iter().rev() {
-            let v = ivar(l);
-            if self.seen[v] == 0 {
-                continue;
-            }
-            if self.reason[v] == UNDEF {
-                // assumption / decision
-                debug_assert!(self.level[v] > 0);
-                out.push(if isign(l) > 0 { v as Lit } else { -(v as Lit) });
-            } else {
-                let cr = self.reason[v];
-                let len = self.cl_len(cr);
-                for k in 1..len {
-                    let q = self.cl_lit(cr, k);
-                    if self.level[ivar(q)] > 0 {
-                        self.seen[ivar(q)] = 1;
-                        to_clear.push(ivar(q));
-                    }
-                }
-            }
-        }
-        for v in to_clear {
-            self.seen[v] = 0;
-        }
-        out
-    }
-
-    pub fn last_core(&self) -> &[Lit] {
-        &self.core
-    }
-
     pub fn solve(&mut self, assumptions: &[Lit], model: &mut [i8], max_conflicts: u64) -> bool {
-        self.core.clear();
         self.budget_hit = false;
         if !self.ok {
             return false;
@@ -452,7 +409,6 @@ impl Cdcl {
                     1 => self.trail_lim.push(self.trail.len()), // empty level
                     -1 => {
                         // Assumption violated → UNSAT under assumptions.
-                        self.core = self.analyze_final(neg(a));
                         self.cancel_until(0);
                         return false;
                     }

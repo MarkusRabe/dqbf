@@ -3,7 +3,6 @@ mod cdcl;
 mod expand;
 mod formula;
 mod parse;
-mod preprocess;
 mod proof;
 mod rules;
 mod search;
