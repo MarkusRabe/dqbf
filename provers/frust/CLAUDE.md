@@ -178,3 +178,4 @@ start, and reading CAQE before iter 8.
   whole-table expansion (each output bit's cone is small).
 | 21 | `mutex_n4_k008` (DPLL exponential) | studied minisat/picosat/satch | 2-watched-lit + 1-UIP CDCL with assumption-based incremental solve; learned clauses persist across rows | ? |
 | 22 | `peano_v2_*` regressed (CDCL model drift) | greedy fills pinned as assumptions → CDCL-UNSAT; slot-DPLL decided all-then-check (no pruning) | phase-saving + reset before free pass; pin only slot entries; CEGAR add new conflicts | 506/804 |
+| 23 | `peano_v2_mul_n4` (62 slots, lost) | decide-all-then-check killed pruning | incremental: 1 slot/iter; CDCL-UNSAT prunes subtree, soft-conflict just decides more | 517/804 (+11) |

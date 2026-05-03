@@ -261,15 +261,15 @@ pub fn try_expand(
             if iters & 0x3f == 0 && start.elapsed().as_secs_f64() > deadline * 0.7 {
                 return None;
             }
-            // Decide all remaining slots up front (vote-preferred); only
-            // check rows once the assignment is total.
-            while next_slot < slots.len() {
+            // Decide one slot at a time so CDCL-UNSAT can prune subtrees.
+            if next_slot < slots.len() {
                 let (i, k) = slots[next_slot];
                 let pref = if votes[i][k] >= 0 { 1i8 } else { -1 };
                 slot_val[next_slot] = pref;
                 decisions.push((next_slot, false));
                 next_slot += 1;
             }
+            let all_decided = next_slot >= slots.len();
             // Run all rows with current slot assignment + greedy fill.
             let mut tables: Vec<Vec<i8>> = (0..exs.len())
                 .map(|i| vec![0i8; 1usize << dep_lists[i].len()])
@@ -277,7 +277,8 @@ pub fn try_expand(
             for (p, &(i, k)) in slots.iter().enumerate() {
                 tables[i][k] = slot_val[p];
             }
-            let mut fail = false;
+            let mut prune = false; // CDCL-UNSAT under slot pins → backtrack
+            let mut soft_conflict = false; // greedy-fill disagree → decide more
             for ub in 0..rows {
                 let rs = &row_slots[ub as usize];
                 let sig = row_sig(&slot_val, rs);
@@ -291,9 +292,9 @@ pub fn try_expand(
                     Vec::new()
                 };
                 let row_model = if cached.is_empty() {
-                    // Pin only slot entries — greedy fills are observed, not assumed.
                     let pins: Vec<(Var, i8)> = rs
                         .iter()
+                        .filter(|&&p| slot_val[p] != 0)
                         .map(|&p| {
                             let (i, _k) = slots[p];
                             (exs[i], slot_val[p])
@@ -302,7 +303,7 @@ pub fn try_expand(
                     cdcl.reset_phase();
                     let assumps = row_assumps(f, ub, &pins);
                     if !cdcl.solve(&assumps, &mut model, row_budget) {
-                        fail = true;
+                        prune = true;
                         break;
                     }
                     row_cache[ub as usize] = Some((sig, model.clone()));
@@ -316,15 +317,12 @@ pub fn try_expand(
                     if tables[i][key] == 0 {
                         tables[i][key] = v;
                     } else if tables[i][key] != v {
-                        fail = true;
+                        soft_conflict = true;
                         new_conflicts.insert((i, key));
                     }
                 }
-                if fail {
-                    break;
-                }
             }
-            if !fail {
+            if !prune && !soft_conflict {
                 dbg_ex!(
                     debug,
                     "slot-DPLL: SAT after {} iters, {} learned",
@@ -333,7 +331,11 @@ pub fn try_expand(
                 );
                 return Some(build_skolem(&exs, &dep_lists, &tables));
             }
-            // Backtrack.
+            if !prune && !all_decided {
+                // soft conflict but more slots to decide — keep going.
+                continue;
+            }
+            // Backtrack (prune, or soft_conflict at a leaf).
             loop {
                 let (si, flipped) = match decisions.pop() {
                     Some(d) => d,
