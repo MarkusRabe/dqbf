@@ -57,7 +57,50 @@ a == add(a, 0)
 add(mul(a, b), a) == mul(a, b + 1)
 """
 
-PROBLEMS = {"add": ADD, "mul": MUL, "both": BOTH}
+V2_ADD = """\
+param N = {N}
+fun s : bv[N] -> bv[N]
+fun add : bv[N], bv[N] -> bv[N]
+forall a : bv[N]
+forall b : bv[N]
+(a + 1) == s(a)
+a == add(a, 0)
+s(add(a, b)) == add(a, s(b))
+"""
+
+V2_MUL = """\
+param N = {N}
+fun s : bv[N] -> bv[N]
+fun mul : bv[N], bv[N] -> bv[N]
+forall a : bv[N]
+forall b : bv[N]
+(a + 1) == s(a)
+0 == mul(a, 0)
+(mul(a, b) + a) == mul(a, s(b))
+"""
+
+V2_BOTH = """\
+param N = {N}
+fun s : bv[N] -> bv[N]
+fun add : bv[N], bv[N] -> bv[N]
+fun mul : bv[N], bv[N] -> bv[N]
+forall a : bv[N]
+forall b : bv[N]
+(a + 1) == s(a)
+a == add(a, 0)
+s(add(a, b)) == add(a, s(b))
+0 == mul(a, 0)
+add(mul(a, b), a) == mul(a, s(b))
+"""
+
+PROBLEMS = {
+    "add": ADD,
+    "mul": MUL,
+    "both": BOTH,
+    "v2_add": V2_ADD,
+    "v2_mul": V2_MUL,
+    "v2_both": V2_BOTH,
+}
 
 
 @click.command()
