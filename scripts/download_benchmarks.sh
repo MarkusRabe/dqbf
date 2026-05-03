@@ -63,4 +63,8 @@ ZENODO="https://zenodo.org/records/15493090/files"
 fetch "$ZENODO/BV.tar.zst" smtlib_BV.tar.zst ""
 safe_extract "$DL/smtlib_BV.tar.zst" "$ROOT/benchmarks/test/qbvf/bv" --zstd
 
-echo "done. Large sets unpacked under benchmarks/{qbf,qbvf}/."
+# --- HWMCC + SYNTCOMP (delegated to per-dir scripts) -------------------
+"$ROOT/benchmarks/test/hwmcc/download.sh"
+"$ROOT/benchmarks/test/syntcomp/download.sh"
+
+echo "done. Large sets unpacked under benchmarks/test/{qbf,qbvf,hwmcc,syntcomp}/."

@@ -16,6 +16,7 @@ class Solver:
     cmd: list[str]  # {file} {timeout} {certdir} placeholders
     certs: dict[str, str]  # result -> path template, e.g. {"sat": "{certdir}/{stem}.aag"}
     available: bool
+    input_format: str = "dqdimacs"  # "dqdimacs" | "aag" | "tlsf"
 
 
 def _exists(p: str) -> bool:
@@ -85,5 +86,35 @@ def registry() -> dict[str, Solver]:
             cmd=[hqs, "{file}"],
             certs={},
             available=_exists(hqs),
+        ),
+        # --- HW model checkers (consume AIGER, not DQDIMACS) ---
+        "abc-bmc": Solver(
+            name="abc-bmc",
+            cmd=[
+                shutil.which("berkeley-abc") or shutil.which("abc") or "abc",
+                "-q",
+                "read_aiger {file}; bmc3 -v -F 1000 -T {timeout}",
+            ],
+            certs={},
+            available=_exists("berkeley-abc") or _exists("abc"),
+            input_format="aag",
+        ),
+        "abc-pdr": Solver(
+            name="abc-pdr",
+            cmd=[
+                shutil.which("berkeley-abc") or shutil.which("abc") or "abc",
+                "-q",
+                "read_aiger {file}; pdr -v -T {timeout}",
+            ],
+            certs={},
+            available=_exists("berkeley-abc") or _exists("abc"),
+            input_format="aag",
+        ),
+        "avy": Solver(
+            name="avy",
+            cmd=[str(ROOT / "third_party/avy/build/avy/src/avy"), "{file}"],
+            certs={},
+            available=_exists(str(ROOT / "third_party/avy/build/avy/src/avy")),
+            input_format="aag",
         ),
     }
