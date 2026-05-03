@@ -1,0 +1,23 @@
+-- Collatz unrolled BMC: every nonzero 12-bit start reaches 1 in <= 8 steps?
+-- SAT iff yes (UNSAT expected for small K -- many starts need more steps).
+param N = 12
+forall x : bv[N]
+exists s0 : bv[N]
+exists s1 : bv[N]
+exists s2 : bv[N]
+exists s3 : bv[N]
+exists s4 : bv[N]
+exists s5 : bv[N]
+exists s6 : bv[N]
+exists s7 : bv[N]
+exists s8 : bv[N]
+s0 == x
+s1 == ite(s0 <= 1, (s0 & 0) + 1, ite((s0 & 1) == 0, s0 >>> 1, (s0 << 1) + s0 + 1))
+s2 == ite(s1 <= 1, (s1 & 0) + 1, ite((s1 & 1) == 0, s1 >>> 1, (s1 << 1) + s1 + 1))
+s3 == ite(s2 <= 1, (s2 & 0) + 1, ite((s2 & 1) == 0, s2 >>> 1, (s2 << 1) + s2 + 1))
+s4 == ite(s3 <= 1, (s3 & 0) + 1, ite((s3 & 1) == 0, s3 >>> 1, (s3 << 1) + s3 + 1))
+s5 == ite(s4 <= 1, (s4 & 0) + 1, ite((s4 & 1) == 0, s4 >>> 1, (s4 << 1) + s4 + 1))
+s6 == ite(s5 <= 1, (s5 & 0) + 1, ite((s5 & 1) == 0, s5 >>> 1, (s5 << 1) + s5 + 1))
+s7 == ite(s6 <= 1, (s6 & 0) + 1, ite((s6 & 1) == 0, s6 >>> 1, (s6 << 1) + s6 + 1))
+s8 == ite(s7 <= 1, (s7 & 0) + 1, ite((s7 & 1) == 0, s7 >>> 1, (s7 << 1) + s7 + 1))
+(x == 0) || (s0 == 1) || (s1 == 1) || (s2 == 1) || (s3 == 1) || (s4 == 1) || (s5 == 1) || (s6 == 1) || (s7 == 1) || (s8 == 1)
