@@ -4,7 +4,7 @@ use crate::aiger::Skolem;
 use crate::formula::{var, Clause, Formula, Var};
 use crate::proof::{Proof, Step};
 use crate::rules::{find_information_fork, fork_extend, is_tautology, resolve, universal_reduce};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -400,13 +400,14 @@ fn find_skolem_brute(f: &Formula, start: &Instant, deadline: f64) -> Option<Skol
         if check_model(f, &exs, &dep_lists, &tables) {
             let mut sk = Skolem::new();
             for (i, &y) in exs.iter().enumerate() {
-                let mut tbl = BTreeMap::new();
+                let nd = dep_lists[i].len();
+                let mut bits = vec![0u64; ((1usize << nd) + 63) / 64];
                 for (j, &v) in tables[i].iter().enumerate() {
-                    let key: Vec<bool> =
-                        (0..dep_lists[i].len()).map(|b| (j >> b) & 1 == 1).collect();
-                    tbl.insert(key, v);
+                    if v {
+                        bits[j / 64] |= 1u64 << (j % 64);
+                    }
                 }
-                sk.insert(y, tbl);
+                sk.insert(y, (bits, nd));
             }
             return Some(sk);
         }

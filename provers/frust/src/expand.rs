@@ -8,7 +8,7 @@
 
 use crate::aiger::Skolem;
 use crate::formula::{var, Clause, Formula, Var};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 pub const MAX_U: usize = 16;
 
@@ -58,60 +58,71 @@ pub fn try_expand(f: &Formula) -> Option<Skolem> {
             }
         }
         // DPLL on the remaining vars.
-        let model = match dpll(&f.clauses, polarity.clone()) {
-            Some(m) => m,
-            None => return None, // greedy failed; fall back to saturation
-        };
-        // Record the existential choices for this row's dep-projections.
+        if !dpll(&f.clauses, &mut polarity) {
+            return None;
+        }
         for (i, &y) in exs.iter().enumerate() {
             let key = ub & dep_mask[i];
-            tables[i].entry(key).or_insert(model[y as usize] == 1);
+            tables[i].entry(key).or_insert(polarity[y as usize] == 1);
         }
     }
-    // Build Skolem from tables.
+    // Build Skolem bitmaps.
     let mut sk = Skolem::new();
     for (i, &y) in exs.iter().enumerate() {
-        let mut tbl = BTreeMap::new();
         let ndeps = dep_lists[i].len();
-        for kb in 0..(1u32 << ndeps) {
-            // map kb (over dep_lists[i]) to ub-mask
+        let size = 1usize << ndeps;
+        let mut bits = vec![0u64; (size + 63) / 64];
+        for kb in 0..size as u32 {
             let mut key = 0u32;
             for (b, d) in dep_lists[i].iter().enumerate() {
                 if (kb >> b) & 1 == 1 {
                     key |= 1u32 << u_idx[d];
                 }
             }
-            let v = tables[i].get(&key).copied().unwrap_or(false);
-            let kvec: Vec<bool> = (0..ndeps).map(|b| (kb >> b) & 1 == 1).collect();
-            tbl.insert(kvec, v);
+            if tables[i].get(&key).copied().unwrap_or(false) {
+                bits[kb as usize / 64] |= 1u64 << (kb % 64);
+            }
         }
-        sk.insert(y, tbl);
+        sk.insert(y, (bits, ndeps));
     }
     Some(sk)
 }
 
-/// Tiny DPLL: unit prop + first-unset branch. Returns a total model or None.
-fn dpll(clauses: &[Clause], mut pol: Vec<i8>) -> Option<Vec<i8>> {
-    if !unit_propagate(clauses, &mut pol) {
-        return None;
-    }
-    // Find an unset var that appears in some unsatisfied clause.
-    let pick = pick_var(clauses, &pol);
-    let pick = match pick {
-        Some(v) => v,
-        None => return Some(pol), // all clauses satisfied
-    };
-    for &val in &[1i8, -1i8] {
-        let mut p2 = pol.clone();
-        p2[pick] = val;
-        if let Some(m) = dpll(clauses, p2) {
-            return Some(m);
+/// Iterative DPLL with a trail (no per-branch clone).
+fn dpll(clauses: &[Clause], pol: &mut [i8]) -> bool {
+    let mut trail: Vec<usize> = Vec::new();
+    let mut decisions: Vec<(usize, usize, bool)> = Vec::new(); // (var, trail-len before, tried_neg)
+    loop {
+        if !unit_propagate(clauses, pol, &mut trail) {
+            loop {
+                let (dv, tl, tried_neg) = match decisions.pop() {
+                    Some(d) => d,
+                    None => return false,
+                };
+                while trail.len() > tl {
+                    pol[trail.pop().unwrap()] = 0;
+                }
+                if !tried_neg {
+                    pol[dv] = -1;
+                    trail.push(dv);
+                    decisions.push((dv, tl, true));
+                    break;
+                }
+            }
+            continue;
+        }
+        match pick_var(clauses, pol) {
+            None => return true,
+            Some(v) => {
+                decisions.push((v, trail.len(), false));
+                pol[v] = 1;
+                trail.push(v);
+            }
         }
     }
-    None
 }
 
-fn unit_propagate(clauses: &[Clause], pol: &mut Vec<i8>) -> bool {
+fn unit_propagate(clauses: &[Clause], pol: &mut [i8], trail: &mut Vec<usize>) -> bool {
     loop {
         let mut changed = false;
         for c in clauses {
@@ -120,28 +131,27 @@ fn unit_propagate(clauses: &[Clause], pol: &mut Vec<i8>) -> bool {
             let mut multi = false;
             for &l in c {
                 let v = var(l) as usize;
-                match (pol[v], l > 0) {
-                    (1, true) | (-1, false) => {
+                let p = pol[v];
+                if p != 0 {
+                    if (l > 0) == (p > 0) {
                         sat = true;
                         break;
                     }
-                    (0, _) => {
-                        if unassigned.is_some() {
-                            multi = true;
-                        } else {
-                            unassigned = Some(l);
-                        }
-                    }
-                    _ => {}
+                } else if unassigned.is_some() {
+                    multi = true;
+                } else {
+                    unassigned = Some(l);
                 }
             }
             if sat {
                 continue;
             }
             match (unassigned, multi) {
-                (None, _) => return false, // conflict
+                (None, _) => return false,
                 (Some(l), false) => {
-                    pol[var(l) as usize] = if l > 0 { 1 } else { -1 };
+                    let v = var(l) as usize;
+                    pol[v] = if l > 0 { 1 } else { -1 };
+                    trail.push(v);
                     changed = true;
                 }
                 _ => {}
@@ -159,13 +169,14 @@ fn pick_var(clauses: &[Clause], pol: &[i8]) -> Option<usize> {
         let mut cand = None;
         for &l in c {
             let v = var(l) as usize;
-            match (pol[v], l > 0) {
-                (1, true) | (-1, false) => {
+            let p = pol[v];
+            if p != 0 {
+                if (l > 0) == (p > 0) {
                     sat = true;
                     break;
                 }
-                (0, _) => cand = Some(v),
-                _ => {}
+            } else {
+                cand = Some(v);
             }
         }
         if !sat {

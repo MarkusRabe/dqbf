@@ -4,7 +4,8 @@ use crate::formula::{Formula, Var};
 use std::collections::BTreeMap;
 use std::io::Write;
 
-pub type Skolem = BTreeMap<Var, BTreeMap<Vec<bool>, bool>>;
+/// Per-existential: (truth-table bitmap of length 2^ndeps bits, ndeps).
+pub type Skolem = BTreeMap<Var, (Vec<u64>, usize)>;
 
 struct Aig {
     n_inputs: usize,
@@ -35,25 +36,9 @@ impl Aig {
 
 use std::collections::HashMap;
 
-/// Shannon synthesis with cofactor memoization (BDD-style sharing).
-fn shannon(aig: &mut Aig, tbl: &BTreeMap<Vec<bool>, bool>, inputs: &[u32]) -> u32 {
-    let n = inputs.len();
-    // Pack truth table into a bitvec indexed by minterm.
-    let size = 1usize << n;
-    let mut bits = vec![0u64; (size + 63) / 64];
-    for (k, v) in tbl {
-        if *v {
-            let mut idx = 0usize;
-            for (b, &kb) in k.iter().enumerate() {
-                if kb {
-                    idx |= 1 << b;
-                }
-            }
-            bits[idx / 64] |= 1u64 << (idx % 64);
-        }
-    }
+fn shannon(aig: &mut Aig, bits: &[u64], n: usize, inputs: &[u32]) -> u32 {
     let mut memo: HashMap<(usize, Vec<u64>), u32> = HashMap::new();
-    rec(aig, &bits, 0, n, inputs, &mut memo)
+    rec(aig, bits, 0, n, inputs, &mut memo)
 }
 
 fn rec(
@@ -133,10 +118,10 @@ pub fn write_skolem_aag<W: Write>(w: &mut W, f: &Formula, sk: &Skolem) -> std::i
         .map(|(i, &u)| (u, aig.lit_input(i)))
         .collect();
     let mut outputs: Vec<(Var, u32)> = Vec::new();
-    for (&y, tbl) in sk {
+    for (&y, (bits, ndeps)) in sk {
         let deps: Vec<Var> = f.deps[&y].iter().copied().collect();
         let ins: Vec<u32> = deps.iter().map(|d| u_lit[d]).collect();
-        let out = shannon(&mut aig, tbl, &ins);
+        let out = shannon(&mut aig, bits, *ndeps, &ins);
         outputs.push((y, out));
     }
     let m = aig.max_var();
