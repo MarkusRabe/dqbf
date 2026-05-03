@@ -22,15 +22,15 @@ W, H = 720, 420
 def main() -> None:
     xs = [50 + i * (W - 100) / 10 for i, _, _ in DATA]
     ys = [H - 40 - (s / N) * (H - 80) for _, s, _ in DATA]
-    pts = " ".join(f"{x:.1f},{y:.1f}" for x, y in zip(xs, ys))
+    pts = " ".join(f"{x:.1f},{y:.1f}" for x, y in zip(xs, ys, strict=True))
     bars = "".join(
         f'<rect x="{x - 12:.1f}" y="{y:.1f}" width="24" height="{H - 40 - y:.1f}" '
-        f'fill="#6ab0e8"/>' for x, y in zip(xs, ys)
+        f'fill="#6ab0e8"/>' for x, y in zip(xs, ys, strict=True)
     )
     labels = "".join(
         f'<text x="{x:.1f}" y="{y - 6:.1f}" font-size="11" text-anchor="middle">{s}</text>'
         f'<text x="{x:.1f}" y="{H - 25:.1f}" font-size="9" text-anchor="middle">{i}</text>'
-        for (i, s, _), x, y in zip(DATA, xs, ys)
+        for (i, s, _), x, y in zip(DATA, xs, ys, strict=True)
     )
     yt = "".join(
         f'<line x1="46" y1="{H - 40 - (k / N) * (H - 80):.1f}" x2="50" '
