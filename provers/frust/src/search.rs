@@ -40,20 +40,85 @@ pub struct Output {
 
 struct Db {
     clauses: Vec<Clause>,
+    dead: Vec<bool>,
     seen: HashSet<Clause>,
     proof: Proof,
     idx: HashMap<Clause, usize>,
     occ: HashMap<Lit, Vec<usize>>,
 }
 
+fn subsumes(a: &Clause, b: &Clause) -> bool {
+    // a ⊆ b for sorted vecs
+    let (mut i, mut j) = (0, 0);
+    while i < a.len() {
+        if j >= b.len() {
+            return false;
+        }
+        match a[i].cmp(&b[j]) {
+            std::cmp::Ordering::Less => return false,
+            std::cmp::Ordering::Equal => {
+                i += 1;
+                j += 1;
+            }
+            std::cmp::Ordering::Greater => j += 1,
+        }
+    }
+    true
+}
+
 impl Db {
     fn new() -> Self {
         Self {
             clauses: Vec::new(),
+            dead: Vec::new(),
             seen: HashSet::new(),
             proof: Proof::default(),
             idx: HashMap::new(),
             occ: HashMap::new(),
+        }
+    }
+    /// True if some live clause subsumes `c`.
+    fn forward_subsumed(&self, c: &Clause) -> bool {
+        if c.is_empty() {
+            return false;
+        }
+        // Pick the literal with the shortest occurrence list.
+        let best = c
+            .iter()
+            .min_by_key(|&&l| self.occ.get(&l).map(|v| v.len()).unwrap_or(0))
+            .copied()
+            .unwrap();
+        if let Some(cands) = self.occ.get(&best) {
+            for &di in cands {
+                if !self.dead[di]
+                    && self.clauses[di].len() <= c.len()
+                    && subsumes(&self.clauses[di], c)
+                {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+    /// Kill every live clause that `c` subsumes.
+    fn backward_subsume(&mut self, c: &Clause, self_ci: usize) {
+        if c.is_empty() {
+            return;
+        }
+        let best = c
+            .iter()
+            .min_by_key(|&&l| self.occ.get(&l).map(|v| v.len()).unwrap_or(0))
+            .copied()
+            .unwrap();
+        let cands: Vec<usize> = self.occ.get(&best).cloned().unwrap_or_default();
+        for di in cands {
+            if di != self_ci
+                && !self.dead[di]
+                && self.clauses[di].len() >= c.len()
+                && subsumes(c, &self.clauses[di])
+            {
+                self.dead[di] = true;
+            }
         }
     }
     fn record(&mut self, c: &Clause, s: Step) -> usize {
@@ -65,13 +130,19 @@ impl Db {
         i
     }
     fn activate(&mut self, c: Clause) {
-        if self.seen.insert(c.clone()) {
-            let ci = self.clauses.len();
-            for &l in &c {
-                self.occ.entry(l).or_default().push(ci);
-            }
-            self.clauses.push(c);
+        if !self.seen.insert(c.clone()) {
+            return;
         }
+        if self.forward_subsumed(&c) {
+            return;
+        }
+        let ci = self.clauses.len();
+        for &l in &c {
+            self.occ.entry(l).or_default().push(ci);
+        }
+        self.clauses.push(c.clone());
+        self.dead.push(false);
+        self.backward_subsume(&c, ci);
     }
     fn admit(&mut self, c: Clause, s: Step) -> usize {
         let i = self.record(&c, s);
@@ -127,13 +198,22 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
             if start.elapsed().as_secs_f64() > cfg.timeout_s || db.clauses.len() > cfg.max_clauses {
                 return unknown(&db, forks);
             }
+            if db.dead[cursor] {
+                cursor += 1;
+                continue;
+            }
             let c = db.clauses[cursor].clone();
             let ci = db.idx[&c];
             'lits: for &l in &c {
                 let partners: Vec<usize> = db
                     .occ
                     .get(&(-l))
-                    .map(|v| v.iter().copied().filter(|&di| di < cursor).collect())
+                    .map(|v| {
+                        v.iter()
+                            .copied()
+                            .filter(|&di| di < cursor && !db.dead[di])
+                            .collect()
+                    })
                     .unwrap_or_default();
                 for di in partners {
                     if let Some(r) = resolve(&c, &db.clauses[di], var(l)) {
@@ -177,7 +257,7 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
             return unknown(&db, forks);
         }
         // saturated; try a fork
-        let mut order: Vec<usize> = (0..db.clauses.len()).collect();
+        let mut order: Vec<usize> = (0..db.clauses.len()).filter(|&i| !db.dead[i]).collect();
         order.sort_by_key(|&i| db.clauses[i].len());
         let mut forked = false;
         for &i in &order {

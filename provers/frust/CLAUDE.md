@@ -21,3 +21,4 @@ Exit codes 10/20/0 (sat/unsat/unknown).
 |---|---|---|---|---|
 | 0 | — | naive O(n²) saturation, BTreeSet clauses | baseline | 154/344, 0 invalid |
 | 1 | `2qbf_s0001` (9 vars, 10s) | 51% in `resolve`; whole-db clone per item | Vec\<i32\> clauses + occurrence lists | 194/344, 0 invalid; instance still 10s (clause-space explosion) |
+| 2 | same | 13270 clauses ≈ 2/3 of 3⁹ clause space | forward+backward subsumption via occ lists | 225/344, 0 invalid; instance now **7ms** (445 clauses) |
