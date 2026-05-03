@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -70,6 +71,20 @@ def _run_one(
         plain = sub / f"{stem}.in"
         plain.write_bytes(gzip.decompress(inst.read_bytes()))
         file_path = str(plain)
+    # Some solver templates (abc -q "...") embed {file} inside an interpreted
+    # command string; refuse paths that could break out of that.
+    if not re.fullmatch(r"[A-Za-z0-9_./+\-]+", file_path):
+        return RunRow(
+            solver=solver.name,
+            path=str(inst),
+            family=family,
+            expected=expected,
+            got="error",
+            wall_s=0.0,
+            cert_path=None,
+            cert_bytes=0,
+            cert_status="n/a",
+        )
     fmt = {"file": file_path, "timeout": str(timeout_s), "certdir": str(sub), "stem": stem}
     cmd = [t.format(**fmt) for t in solver.cmd]
     t0 = time.monotonic()
