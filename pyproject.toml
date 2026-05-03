@@ -47,6 +47,7 @@ packages = [
   "tools/verify",
   "tools/qbvf2dqbf",
   "tools/bmc2dqbf",
+  "tools/pec2dqbf",
   "tools/ltlsynth2dqbf",
   "benchmarks/runner",
 ]

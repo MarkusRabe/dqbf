@@ -120,7 +120,7 @@ the universal-free residue to a SAT solver.
 
 ## Relation to this repository
 
-- `tools/bmc2dqbf/` implements this encoding — the combinational case
+- `tools/pec2dqbf/` implements this encoding — the combinational case
   is exactly §III-A (PEC at unrolling depth `k = 0`); the sequential
   extension reuses the same black-box dependency set across time frames.
 - `benchmarks/test/dqbf_qbflib/scholl/` are the Freiburg PEC instances

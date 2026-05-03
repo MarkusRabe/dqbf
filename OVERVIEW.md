@@ -114,10 +114,11 @@ Whether `IR-calc` simulates Fork Resolution is open.
 
 ## Applications that motivate the encodings in `tools/`
 
-- **Partial Equivalence Checking / incomplete-circuit BMC** —
-  Gitina et al. 2013; Scholl et al. 2018. Each black-box output becomes an
-  existential whose dependency set is exactly that black box's inputs; PEC
-  and DQBF are polynomially equivalent. → `tools/bmc2dqbf/`.
+- **Partial Equivalence Checking** — Gitina et al. 2013; Scholl et al.
+  2018. Each black-box output becomes an existential whose dependency set
+  is exactly that black box's inputs; PEC and DQBF are polynomially
+  equivalent. → `tools/pec2dqbf/`. (Plain BMC without black boxes is in
+  `tools/bmc2dqbf/` and yields QBF.)
 - **Bounded reactive synthesis from LTL** — Faymonville, Finkbeiner,
   Tentrup (TACAS 2017; BoSy, CAV 2017). Universally quantify source state,
   target state, and environment input; existentially quantify the system's
