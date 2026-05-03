@@ -27,7 +27,8 @@ tools/
   eqfob/      EQFOB: a typed BV language with ∃-quantified functions → DQBF
   verify/     check AIGER Skolem functions against a (DQ)DIMACS formula
   qbvf2dqbf/  quantified bit-vector → DQBF
-  bmc2dqbf/   bounded model checking → DQBF
+  bmc2dqbf/   plain bounded model checking (no black boxes; emits QBF)
+  pec2dqbf/   partial equivalence checking (black-box gates) → DQBF
   ltlsynth2dqbf/  LTL bounded synthesis → DQBF
 benchmarks/   competition sets + EQFOB families + parallel runner
 tests/        e2e integration only (cadet-style SAT/UNSAT oracles)

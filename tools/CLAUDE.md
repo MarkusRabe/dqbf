@@ -8,7 +8,8 @@ and the certificate checker.
 | `eqfob/` | `.eqfob` | DQDIMACS + Python AST | Bit-vector modeling language with ∃-quantified functions |
 | `verify/` | DQDIMACS + AIGER (or `.frp`) | pass/fail | Independent solution / refutation checker |
 | `qbvf2dqbf/` | SMT-LIB2 BV/UFBV | DQDIMACS | Bit-blast quantified BV under its prefix |
-| `bmc2dqbf/` | AIGER circuit + black-box annotations + bound `k` | DQDIMACS | Incomplete-design BMC / PEC encoding |
+| `bmc2dqbf/` | sequential AIGER + bound `k` | DQDIMACS (QBF) | Plain BMC unrolling — no black boxes |
+| `pec2dqbf/` | AIGER + black-box gates + bound `k` | DQDIMACS | Partial-equivalence-checking encoding |
 | `ltlsynth2dqbf/` | TLSF / LTL + state bound `n` | DQDIMACS | Bounded reactive synthesis encoding |
 
 ## Shared conventions

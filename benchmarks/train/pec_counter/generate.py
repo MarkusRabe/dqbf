@@ -1,7 +1,7 @@
-"""BMC of a tiny counter at increasing bounds — structurally hard.
+"""PEC of a tiny counter at increasing bounds.
 
-The circuit is an n-bit counter with one black-box bit; the property is
-"counter never reaches all-ones". Unrolled at bound k.
+3-bit counter with one **black-box** carry gate; the property is
+"counter never reaches all-ones". Unrolled at bound k via pec2dqbf.
 """
 
 from __future__ import annotations
@@ -13,11 +13,11 @@ from pathlib import Path
 import click
 
 from core import dqdimacs
-from tools.bmc2dqbf.aiger_seq import parse_seq_aag
-from tools.bmc2dqbf.encode import encode_unrolled
+from tools.pec2dqbf.aiger_seq import parse_seq_aag
+from tools.pec2dqbf.encode import encode_unrolled
 
 # 3-bit counter: latches l0,l1,l2; l0' = ¬l0; l1' = l0⊕l1; l2' = (l0∧l1)⊕l2.
-# bad = l0 ∧ l1 ∧ l2. One blackbox: gate that ANDs l0,l1 (so l2's carry is unknown).
+# bad = l0 ∧ l1 ∧ l2. One blackbox: gate 8 = l0∧l1 (so l2's carry is unknown).
 COUNTER_AAG = """\
 aag 11 0 3 1 8
 2 11
@@ -36,7 +36,7 @@ aag 11 0 3 1 8
 
 
 @click.command()
-@click.option("--out", type=click.Path(), default="benchmarks/train/bmc_counter/instances")
+@click.option("--out", type=click.Path(), default="benchmarks/train/pec_counter/instances")
 @click.option("-D", "bounds", default="4,8,12,16,20,24,28,32")
 def main(out: str, bounds: str) -> None:
     outdir = Path(out)
@@ -48,13 +48,13 @@ def main(out: str, bounds: str) -> None:
         f = encode_unrolled(seq, k=k, blackboxes={8}, safe=False)
         name = f"counter_k{k:03d}"
         with gzip.open(outdir / f"{name}.dqdimacs.gz", "wt") as fp:
-            fp.write(f"c bmc2dqbf encode_unrolled k={k} blackbox=[8] source=counter.aag\n")
+            fp.write(f"c pec2dqbf encode_unrolled k={k} blackbox=[8] source=counter.aag\n")
             fp.write(dqdimacs.dumps(f))
         manifest.append(
             {
                 "path": f"{name}.dqdimacs.gz",
                 "expected": "unknown",
-                "tags": ["bmc_counter"],
+                "tags": ["pec_counter"],
                 "params": {"k": k},
             }
         )
