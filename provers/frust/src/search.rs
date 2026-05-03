@@ -38,13 +38,28 @@ pub struct Output {
     pub stats: String,
 }
 
+use std::cmp::Reverse;
+use std::collections::BinaryHeap;
+
 struct Db {
     clauses: Vec<Clause>,
+    sig: Vec<u64>,
     dead: Vec<bool>,
     seen: HashSet<Clause>,
     proof: Proof,
     idx: HashMap<Clause, usize>,
     occ: HashMap<Lit, Vec<usize>>,
+    queue: BinaryHeap<Reverse<(usize, usize)>>, // (len, ci)
+    processed: Vec<bool>,
+}
+
+#[inline]
+fn sig_of(c: &Clause) -> u64 {
+    let mut s = 0u64;
+    for &l in c {
+        s |= 1u64 << ((l as i64).rem_euclid(64) as u32);
+    }
+    s
 }
 
 fn subsumes(a: &Clause, b: &Clause) -> bool {
@@ -70,19 +85,20 @@ impl Db {
     fn new() -> Self {
         Self {
             clauses: Vec::new(),
+            sig: Vec::new(),
             dead: Vec::new(),
             seen: HashSet::new(),
             proof: Proof::default(),
             idx: HashMap::new(),
             occ: HashMap::new(),
+            queue: BinaryHeap::new(),
+            processed: Vec::new(),
         }
     }
-    /// True if some live clause subsumes `c`.
-    fn forward_subsumed(&self, c: &Clause) -> bool {
+    fn forward_subsumed(&self, c: &Clause, csig: u64) -> bool {
         if c.is_empty() {
             return false;
         }
-        // Pick the literal with the shortest occurrence list.
         let best = c
             .iter()
             .min_by_key(|&&l| self.occ.get(&l).map(|v| v.len()).unwrap_or(0))
@@ -91,6 +107,7 @@ impl Db {
         if let Some(cands) = self.occ.get(&best) {
             for &di in cands {
                 if !self.dead[di]
+                    && (self.sig[di] & !csig) == 0
                     && self.clauses[di].len() <= c.len()
                     && subsumes(&self.clauses[di], c)
                 {
@@ -100,8 +117,7 @@ impl Db {
         }
         false
     }
-    /// Kill every live clause that `c` subsumes.
-    fn backward_subsume(&mut self, c: &Clause, self_ci: usize) {
+    fn backward_subsume(&mut self, c: &Clause, csig: u64, self_ci: usize) {
         if c.is_empty() {
             return;
         }
@@ -110,14 +126,16 @@ impl Db {
             .min_by_key(|&&l| self.occ.get(&l).map(|v| v.len()).unwrap_or(0))
             .copied()
             .unwrap();
-        let cands: Vec<usize> = self.occ.get(&best).cloned().unwrap_or_default();
-        for di in cands {
-            if di != self_ci
-                && !self.dead[di]
-                && self.clauses[di].len() >= c.len()
-                && subsumes(c, &self.clauses[di])
-            {
-                self.dead[di] = true;
+        if let Some(cands) = self.occ.get(&best) {
+            for &di in cands {
+                if di != self_ci
+                    && !self.dead[di]
+                    && (csig & !self.sig[di]) == 0
+                    && self.clauses[di].len() >= c.len()
+                    && subsumes(c, &self.clauses[di])
+                {
+                    self.dead[di] = true;
+                }
             }
         }
     }
@@ -133,16 +151,20 @@ impl Db {
         if !self.seen.insert(c.clone()) {
             return;
         }
-        if self.forward_subsumed(&c) {
+        let csig = sig_of(&c);
+        if self.forward_subsumed(&c, csig) {
             return;
         }
         let ci = self.clauses.len();
         for &l in &c {
             self.occ.entry(l).or_default().push(ci);
         }
-        self.clauses.push(c.clone());
+        self.sig.push(csig);
         self.dead.push(false);
-        self.backward_subsume(&c, ci);
+        self.processed.push(false);
+        self.queue.push(Reverse((c.len(), ci)));
+        self.clauses.push(c.clone());
+        self.backward_subsume(&c, csig, ci);
     }
     fn admit(&mut self, c: Clause, s: Step) -> usize {
         let i = self.record(&c, s);
@@ -189,19 +211,17 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
         };
     }
 
-    let mut cursor = 0usize;
     let mut forks = 0usize;
     loop {
-        // given-clause: process db.clauses[cursor..] against db.clauses[0..cursor]
         let mut found_empty = false;
-        while cursor < db.clauses.len() {
+        while let Some(Reverse((_, cursor))) = db.queue.pop() {
             if start.elapsed().as_secs_f64() > cfg.timeout_s || db.clauses.len() > cfg.max_clauses {
                 return unknown(&db, forks);
             }
-            if db.dead[cursor] {
-                cursor += 1;
+            if db.dead[cursor] || db.processed[cursor] {
                 continue;
             }
+            db.processed[cursor] = true;
             let c = db.clauses[cursor].clone();
             let ci = db.idx[&c];
             'lits: for &l in &c {
@@ -211,7 +231,7 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                     .map(|v| {
                         v.iter()
                             .copied()
-                            .filter(|&di| di < cursor && !db.dead[di])
+                            .filter(|&di| db.processed[di] && !db.dead[di])
                             .collect()
                     })
                     .unwrap_or_default();
@@ -240,7 +260,6 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                     }
                 }
             }
-            cursor += 1;
             if found_empty {
                 break;
             }
