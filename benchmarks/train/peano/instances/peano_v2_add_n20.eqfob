@@ -1,0 +1,8 @@
+param N = 20
+fun s : bv[N] -> bv[N]
+fun add : bv[N], bv[N] -> bv[N]
+forall a : bv[N]
+forall b : bv[N]
+(a + 1) == s(a)
+a == add(a, 0)
+s(add(a, b)) == add(a, s(b))

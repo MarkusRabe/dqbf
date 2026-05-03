@@ -1,0 +1,8 @@
+param N = 20
+fun s : bv[N] -> bv[N]
+fun mul : bv[N], bv[N] -> bv[N]
+forall a : bv[N]
+forall b : bv[N]
+(a + 1) == s(a)
+0 == mul(a, 0)
+(mul(a, b) + a) == mul(a, s(b))

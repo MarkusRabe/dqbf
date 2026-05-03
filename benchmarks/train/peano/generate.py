@@ -105,7 +105,7 @@ PROBLEMS = {
 
 @click.command()
 @click.option("--out", type=click.Path(), default="benchmarks/train/peano/instances")
-@click.option("-D", "widths", default="2,3,4,5,6,8")
+@click.option("-D", "widths", default="2,3,4,5,6,8,10,16,20,24,32")
 def main(out: str, widths: str) -> None:
     outdir = Path(out)
     outdir.mkdir(parents=True, exist_ok=True)
