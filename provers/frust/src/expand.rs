@@ -36,7 +36,7 @@ pub fn try_expand(f: &Formula, deadline: f64, start: &std::time::Instant) -> Opt
         .map(|ds| ds.iter().map(|d| 1u32 << u_idx[d]).sum())
         .collect();
     let rows = 1u32 << nu;
-    let row_budget: u32 = (1_000_000 / rows.max(1)).clamp(100, 50_000);
+    let row_budget: u32 = (200_000 / rows.max(1)).max(50);
 
     // ---- Free pass --------------------------------------------------
     // votes[i][k] tallies polarity; first_seen[i][k] holds the first
