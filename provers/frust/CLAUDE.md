@@ -30,3 +30,6 @@ Exit codes 10/20/0 (sat/unsat/unknown).
 | 8 | `peano_v2_mul_n2` (84v, partial deps) | greedy pin causes cross-row conflict | retry expand with opposite first-branch polarity | 291/344, 0 invalid; instance still UNKNOWN (need real inter-row search) |
 | 9 | same; `universal_reduce` 5% (BTreeSet ops) | tried vote-mode expand (no help on this instance); pivoted to bitmask `universal_reduce` (u64 dep_mask) | 291/344, 0 invalid; saturation ~15% faster |
 | 10 | `activate` 46% (subsumption) | length-gating fwd subsumption hurt (junk slips in); kept backward-only gate at len≤5 | 291/344, 0 invalid. **Full bench: frust 490/819 vs forkres 132/819 vs hqs 705**; 476 verified certs |
+| 11 | `add_n12` (\|U\|=24) | Tseitin auxes have no unit/pure | HQSpre unit/pure prep (existentials only) | 291/344; finds 0 on bottlenecks |
+| 12 | `peano_v2_mul_n2` | EQFOB emits XOR (4-clause), not AND | static AND-gate detection; skip in pin loop | 291/344; pattern doesn't match |
+| 13 | same | "ever_decided" heuristic UNSOUND (`fork_unsat` → SAT) | replaced with per-key conflict detection + pinned-pass `row_conflict` guard | 291/344, sound again |

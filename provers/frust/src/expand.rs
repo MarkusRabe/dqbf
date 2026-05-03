@@ -1,10 +1,11 @@
 //! Universal expansion + per-row DPLL for small |U|.
 //!
-//! For each of the 2^|U| universal assignments, substitute and SAT-solve
-//! the resulting propositional formula. An existential y with deps D may
-//! take a different value per assignment, but assignments that agree on
-//! D must give y the same value — enforced by fixing y from earlier rows
-//! that share its D-projection.
+//! Two-pass: a free pass solves every row unconstrained, recording (a)
+//! which existentials were ever DECIDED (vs unit-propagated) — those are
+//! the only ones that need cross-row consistency — and (b) per-key vote
+//! tallies. The pinned pass seeds the *constrained* partial-dep
+//! existentials from the votes and re-solves; defined / full-dep vars
+//! are left to unit-prop. Only emits SAT (cert is checkable).
 
 use crate::aiger::Skolem;
 use crate::formula::{var, Clause, Formula, Var};
@@ -13,23 +14,12 @@ use std::collections::HashMap;
 pub const MAX_U: usize = 16;
 
 pub fn try_expand(f: &Formula, deadline: f64, start: &std::time::Instant) -> Option<Skolem> {
-    for &(first, vote) in &[(1i8, false), (-1, false), (1, true), (-1, true)] {
-        if start.elapsed().as_secs_f64() > deadline * 0.5 {
-            return None;
-        }
-        if let Some(sk) = try_expand_with(f, first, vote) {
-            return Some(sk);
-        }
-    }
-    None
-}
-
-fn try_expand_with(f: &Formula, first_branch: i8, vote_mode: bool) -> Option<Skolem> {
     let nu = f.universals.len();
     if nu > MAX_U {
         return None;
     }
-    let defined = crate::preprocess::detect_defined(f);
+    let n = f.n_vars as usize + 1;
+    let occ = build_occ(&f.clauses, n);
     let exs: Vec<Var> = f.deps.keys().copied().collect();
     let dep_lists: Vec<Vec<Var>> = exs
         .iter()
@@ -45,115 +35,140 @@ fn try_expand_with(f: &Formula, first_branch: i8, vote_mode: bool) -> Option<Sko
         .iter()
         .map(|ds| ds.iter().map(|d| 1u32 << u_idx[d]).sum())
         .collect();
-    // tables[i][key] = 0 unset / 1 true / -1 false
-    let mut tables: Vec<Vec<i8>> = (0..exs.len())
-        .map(|i| vec![0i8; 1usize << dep_lists[i].len()])
-        .collect();
-    // Compact dep-key: pext-style extract of ub bits at dep positions.
-    let extract = |ub: u32, mask: u32| -> u32 {
-        let mut out = 0u32;
-        let mut b = 0;
-        let mut m = mask;
-        while m != 0 {
-            let i = m.trailing_zeros();
-            if (ub >> i) & 1 == 1 {
-                out |= 1 << b;
-            }
-            b += 1;
-            m &= m - 1;
-        }
-        out
-    };
-
-    let n = f.n_vars as usize + 1;
-    let mut polarity = vec![0i8; n];
-    let occ = build_occ(&f.clauses, n);
     let rows = 1u32 << nu;
 
-    // Vote mode: solve all rows free, tally votes, then a second greedy pass.
-    let mut votes: Vec<Vec<i32>> = if vote_mode {
-        (0..exs.len())
-            .map(|i| vec![0i32; 1usize << dep_lists[i].len()])
-            .collect()
-    } else {
-        Vec::new()
-    };
-    let passes: &[bool] = if vote_mode { &[false, true] } else { &[true] };
+    // ---- Free pass --------------------------------------------------
+    // votes[i][k] tallies polarity; first_seen[i][k] holds the first
+    // value; conflict[i] marks existentials whose free-pass value
+    // differed across rows with the same dep-key.
+    let mut votes: Vec<Vec<i32>> = (0..exs.len())
+        .map(|i| vec![0i32; 1usize << dep_lists[i].len()])
+        .collect();
+    let mut first_seen: Vec<Vec<i8>> = (0..exs.len())
+        .map(|i| vec![0i8; 1usize << dep_lists[i].len()])
+        .collect();
+    let mut conflict = vec![false; exs.len()];
+    let mut polarity = vec![0i8; n];
+    for ub in 0..rows {
+        if start.elapsed().as_secs_f64() > deadline * 0.4 {
+            return None;
+        }
+        reset_row(f, &mut polarity, ub);
+        let mut decided: Vec<usize> = Vec::new();
+        if !dpll(&f.clauses, &occ, &mut polarity, 1, &mut decided) {
+            return None;
+        }
+        for (i, &y) in exs.iter().enumerate() {
+            let key = extract(ub, dep_mask[i]) as usize;
+            let v: i8 = if polarity[y as usize] > 0 { 1 } else { -1 };
+            votes[i][key] += v as i32;
+            if first_seen[i][key] == 0 {
+                first_seen[i][key] = v;
+            } else if first_seen[i][key] != v {
+                conflict[i] = true;
+            }
+        }
+    }
+    // If no conflicts at all, the free pass IS a valid Skolem.
+    // constrained = vars with a conflict (regardless of dep width — a
+    // full-dep var has one row per key so never conflicts).
+    let constrained = conflict;
 
-    for &use_pins in passes {
-        if use_pins && vote_mode {
+    // ---- Pinned passes (4 polarity strategies) ----------------------
+    for &(first, use_votes) in &[(1i8, true), (-1, true), (1, false), (-1, false)] {
+        if start.elapsed().as_secs_f64() > deadline * 0.6 {
+            return None;
+        }
+        let mut tables: Vec<Vec<i8>> = (0..exs.len())
+            .map(|i| vec![0i8; 1usize << dep_lists[i].len()])
+            .collect();
+        if use_votes {
             for (i, t) in tables.iter_mut().enumerate() {
-                if dep_lists[i].len() == nu || defined.contains(&exs[i]) {
-                    continue; // full deps or defined: free per row
+                if !constrained[i] {
+                    continue;
                 }
                 for (k, slot) in t.iter_mut().enumerate() {
-                    *slot = if votes[i][k] > 0 {
-                        1
-                    } else if votes[i][k] < 0 {
-                        -1
-                    } else {
-                        first_branch
+                    *slot = match votes[i][k].signum() {
+                        1 => 1,
+                        -1 => -1,
+                        _ => 0,
                     };
                 }
             }
         }
+        let mut ok = true;
+        let mut row_conflict = vec![false; exs.len()];
         for ub in 0..rows {
-            for p in polarity.iter_mut() {
-                *p = 0;
-            }
-            for (i, &u) in f.universals.iter().enumerate() {
-                polarity[u as usize] = if (ub >> i) & 1 == 1 { 1 } else { -1 };
-            }
-            if use_pins {
-                for (i, &y) in exs.iter().enumerate() {
-                    if defined.contains(&y) {
-                        continue; // unit-prop will set it
-                    }
-                    let key = extract(ub, dep_mask[i]) as usize;
-                    let t = tables[i][key];
-                    if t != 0 {
-                        polarity[y as usize] = t;
-                    }
+            reset_row(f, &mut polarity, ub);
+            for (i, &y) in exs.iter().enumerate() {
+                let key = extract(ub, dep_mask[i]) as usize;
+                let t = tables[i][key];
+                if t != 0 {
+                    polarity[y as usize] = t;
                 }
             }
-            if !dpll(&f.clauses, &occ, &mut polarity, first_branch) {
-                if use_pins {
-                    return None;
-                }
-                continue;
+            let mut decided: Vec<usize> = Vec::new();
+            if !dpll(&f.clauses, &occ, &mut polarity, first, &mut decided) {
+                ok = false;
+                break;
             }
             for (i, &y) in exs.iter().enumerate() {
                 let key = extract(ub, dep_mask[i]) as usize;
-                let v = if polarity[y as usize] > 0 { 1 } else { -1 };
-                if use_pins {
-                    if tables[i][key] == 0 {
-                        tables[i][key] = v;
-                    }
-                } else {
-                    votes[i][key] += v as i32;
+                let v: i8 = if polarity[y as usize] > 0 { 1 } else { -1 };
+                if tables[i][key] == 0 {
+                    tables[i][key] = v;
+                } else if tables[i][key] != v {
+                    row_conflict[i] = true;
                 }
             }
         }
-        if use_pins {
-            break;
+        if !ok || row_conflict.iter().any(|&c| c) {
+            continue;
         }
-    }
-    let mut sk = Skolem::new();
-    for (i, &y) in exs.iter().enumerate() {
-        let nd = dep_lists[i].len();
-        let size = 1usize << nd;
-        let mut bits = vec![0u64; (size + 63) / 64];
-        for j in 0..size {
-            if tables[i][j] == 1 {
-                bits[j / 64] |= 1u64 << (j % 64);
+        // Build cert.
+        let mut sk = Skolem::new();
+        for (i, &y) in exs.iter().enumerate() {
+            let nd = dep_lists[i].len();
+            let size = 1usize << nd;
+            let mut bits = vec![0u64; (size + 63) / 64];
+            for j in 0..size {
+                if tables[i][j] == 1 {
+                    bits[j / 64] |= 1u64 << (j % 64);
+                }
             }
+            sk.insert(y, (bits, nd));
         }
-        sk.insert(y, (bits, nd));
+        return Some(sk);
     }
-    Some(sk)
+    None
 }
 
-/// occ[2*v] = clause indices containing +v; occ[2*v+1] = containing -v.
+#[inline]
+fn reset_row(f: &Formula, pol: &mut [i8], ub: u32) {
+    for p in pol.iter_mut() {
+        *p = 0;
+    }
+    for (i, &u) in f.universals.iter().enumerate() {
+        pol[u as usize] = if (ub >> i) & 1 == 1 { 1 } else { -1 };
+    }
+}
+
+#[inline]
+fn extract(ub: u32, mask: u32) -> u32 {
+    let mut out = 0u32;
+    let mut b = 0;
+    let mut m = mask;
+    while m != 0 {
+        let i = m.trailing_zeros();
+        if (ub >> i) & 1 == 1 {
+            out |= 1 << b;
+        }
+        b += 1;
+        m &= m - 1;
+    }
+    out
+}
+
 fn build_occ(clauses: &[Clause], n: usize) -> Vec<Vec<u32>> {
     let mut occ = vec![Vec::new(); 2 * n];
     for (ci, c) in clauses.iter().enumerate() {
@@ -165,7 +180,13 @@ fn build_occ(clauses: &[Clause], n: usize) -> Vec<Vec<u32>> {
     occ
 }
 
-fn dpll(clauses: &[Clause], occ: &[Vec<u32>], pol: &mut [i8], first: i8) -> bool {
+fn dpll(
+    clauses: &[Clause],
+    occ: &[Vec<u32>],
+    pol: &mut [i8],
+    first: i8,
+    decided: &mut Vec<usize>,
+) -> bool {
     let mut trail: Vec<usize> = Vec::new();
     let mut decisions: Vec<(usize, usize, bool)> = Vec::new();
     let mut prop_from = 0usize;
@@ -195,6 +216,7 @@ fn dpll(clauses: &[Clause], occ: &[Vec<u32>], pol: &mut [i8], first: i8) -> bool
         match pick_var(clauses, pol) {
             None => return true,
             Some(v) => {
+                decided.push(v);
                 decisions.push((v, trail.len(), false));
                 pol[v] = first;
                 trail.push(v);
@@ -203,7 +225,6 @@ fn dpll(clauses: &[Clause], occ: &[Vec<u32>], pol: &mut [i8], first: i8) -> bool
     }
 }
 
-/// One initial linear scan (handles units present in input under fixed pol).
 fn scan_all(clauses: &[Clause], pol: &mut [i8], trail: &mut Vec<usize>) -> bool {
     loop {
         let mut changed = false;
@@ -227,8 +248,6 @@ fn scan_all(clauses: &[Clause], pol: &mut [i8], trail: &mut Vec<usize>) -> bool 
     }
 }
 
-/// Occurrence-driven propagation: only re-check clauses containing the
-/// negation of newly-assigned literals.
 fn propagate(
     clauses: &[Clause],
     occ: &[Vec<u32>],
