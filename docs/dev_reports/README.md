@@ -2,6 +2,7 @@
 
 | date | label | view |
 |---|---|---|
+| 2026-05-03_2005 | frust-iter30-vs-all | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-03_2005_frust-iter30-vs-all.html) · [source](2026-05-03_2005_frust-iter30-vs-all.html) |
 | 2026-05-03_1711 | frust-iter20-vs-all | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-03_1711_frust-iter20-vs-all.html) · [source](2026-05-03_1711_frust-iter20-vs-all.html) |
 | 2026-05-03_1629 | train819-with-frust | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-03_1629_train819-with-frust.html) · [source](2026-05-03_1629_train819-with-frust.html) |
 | 2026-05-03_0557 | train819-hwmc-clean | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-03_0557_train819-hwmc-clean.html) · [source](2026-05-03_0557_train819-hwmc-clean.html) |
