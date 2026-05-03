@@ -9,10 +9,12 @@ disagreement, write the minimal repro under scripts/minrepro/, and stop.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
 import tempfile
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -121,13 +123,17 @@ def main() -> None:
                 src = next((a for a in aags if p.name.startswith(a.stem)), None)
                 if src:
                     insts.append((src, fam, k))
-    print(f"checking {len(insts)} (aag,k) pairs...")
+    jobs = max(1, (os.cpu_count() or 8) * 3 // 4)
+    print(f"checking {len(insts)} (aag,k) pairs with j={jobs}...")
     bad: list[tuple[Path, int, str, str]] = []
-    for src, fam, k in insts:
-        d = disagrees(src.read_text(), k)
-        if d:
-            bad.append((src, k, *d))
-            print(f"  DISAGREE {fam}/{src.name} k={k}: abc={d[0]} hqs={d[1]}")
+    with ProcessPoolExecutor(max_workers=jobs) as ex:
+        futs = {ex.submit(disagrees, src.read_text(), k): (src, fam, k) for src, fam, k in insts}
+        for fut in as_completed(futs):
+            src, fam, k = futs[fut]
+            d = fut.result()
+            if d:
+                bad.append((src, k, *d))
+                print(f"  DISAGREE {fam}/{src.name} k={k}: abc={d[0]} hqs={d[1]}")
     if not bad:
         print("✓ abc-bmc and hqs agree on all", len(insts), "instances")
         return
