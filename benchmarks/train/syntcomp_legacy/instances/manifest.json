@@ -1,142 +1,722 @@
 [
   {
-    "path": "Assumptions_a50cadd7_6.tlsf",
+    "path": "Assumptions_a50cadd7_6_n02.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "Assumptions_a50cadd7_6"
+    }
   },
   {
-    "path": "CheckAlarm_88f351a6.tlsf",
+    "path": "Assumptions_a50cadd7_6_n04.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "Assumptions_a50cadd7_6"
+    }
   },
   {
-    "path": "CheckRoom_88c5c1c3.tlsf",
+    "path": "Assumptions_a50cadd7_6_n08.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "Assumptions_a50cadd7_6"
+    }
   },
   {
-    "path": "CheckTime_6479ef9a.tlsf",
+    "path": "CheckAlarm_88f351a6_n02.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "CheckAlarm_88f351a6"
+    }
   },
   {
-    "path": "CheckWindows_2418b67e.tlsf",
+    "path": "CheckAlarm_88f351a6_n04.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "CheckAlarm_88f351a6"
+    }
   },
   {
-    "path": "Morning2s_06cf2373_1.tlsf",
+    "path": "CheckAlarm_88f351a6_n08.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "CheckAlarm_88f351a6"
+    }
   },
   {
-    "path": "Morning2s_06e9cad4_1.tlsf",
+    "path": "CheckRoom_88c5c1c3_n02.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "CheckRoom_88c5c1c3"
+    }
   },
   {
-    "path": "Morning2s_42dc4fff_1.tlsf",
+    "path": "CheckRoom_88c5c1c3_n04.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "CheckRoom_88c5c1c3"
+    }
   },
   {
-    "path": "Morning2s_9cbf2546_1.tlsf",
+    "path": "CheckRoom_88c5c1c3_n08.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "CheckRoom_88c5c1c3"
+    }
   },
   {
-    "path": "Morning2s_d6c5ac79_1.tlsf",
+    "path": "CheckTime_6479ef9a_n02.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "CheckTime_6479ef9a"
+    }
   },
   {
-    "path": "OneCounterInRangeA0.tlsf",
+    "path": "CheckTime_6479ef9a_n04.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "CheckTime_6479ef9a"
+    }
   },
   {
-    "path": "PlugDeviceModel_b0840146.tlsf",
+    "path": "CheckTime_6479ef9a_n08.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "CheckTime_6479ef9a"
+    }
   },
   {
-    "path": "UnderapproxDemo.tlsf",
+    "path": "CheckWindows_2418b67e_n02.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "CheckWindows_2418b67e"
+    }
   },
   {
-    "path": "Window2_9cac58d3_1.tlsf",
+    "path": "CheckWindows_2418b67e_n04.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "CheckWindows_2418b67e"
+    }
   },
   {
-    "path": "detector.tlsf",
+    "path": "CheckWindows_2418b67e_n08.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "CheckWindows_2418b67e"
+    }
   },
   {
-    "path": "detector_unreal.tlsf",
+    "path": "Morning2s_06cf2373_1_n02.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "Morning2s_06cf2373_1"
+    }
   },
   {
-    "path": "jarvis_gideon_a02758ea_7.tlsf",
+    "path": "Morning2s_06cf2373_1_n04.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "Morning2s_06cf2373_1"
+    }
   },
   {
-    "path": "lilydemo24.tlsf",
+    "path": "Morning2s_06cf2373_1_n08.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "Morning2s_06cf2373_1"
+    }
   },
   {
-    "path": "ltl2dba24.tlsf",
+    "path": "Morning2s_06e9cad4_1_n02.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "Morning2s_06e9cad4_1"
+    }
   },
   {
-    "path": "ltl2dpa21.tlsf",
+    "path": "Morning2s_06e9cad4_1_n04.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
-      "syntcomp23"
-    ]
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "Morning2s_06e9cad4_1"
+    }
+  },
+  {
+    "path": "Morning2s_06e9cad4_1_n08.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "Morning2s_06e9cad4_1"
+    }
+  },
+  {
+    "path": "Morning2s_42dc4fff_1_n02.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "Morning2s_42dc4fff_1"
+    }
+  },
+  {
+    "path": "Morning2s_42dc4fff_1_n04.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "Morning2s_42dc4fff_1"
+    }
+  },
+  {
+    "path": "Morning2s_42dc4fff_1_n08.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "Morning2s_42dc4fff_1"
+    }
+  },
+  {
+    "path": "Morning2s_9cbf2546_1_n02.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "Morning2s_9cbf2546_1"
+    }
+  },
+  {
+    "path": "Morning2s_9cbf2546_1_n04.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "Morning2s_9cbf2546_1"
+    }
+  },
+  {
+    "path": "Morning2s_9cbf2546_1_n08.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "Morning2s_9cbf2546_1"
+    }
+  },
+  {
+    "path": "Morning2s_d6c5ac79_1_n02.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "Morning2s_d6c5ac79_1"
+    }
+  },
+  {
+    "path": "Morning2s_d6c5ac79_1_n04.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "Morning2s_d6c5ac79_1"
+    }
+  },
+  {
+    "path": "Morning2s_d6c5ac79_1_n08.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "Morning2s_d6c5ac79_1"
+    }
+  },
+  {
+    "path": "OneCounterInRangeA0_n02.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "OneCounterInRangeA0"
+    }
+  },
+  {
+    "path": "OneCounterInRangeA0_n04.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "OneCounterInRangeA0"
+    }
+  },
+  {
+    "path": "OneCounterInRangeA0_n08.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "OneCounterInRangeA0"
+    }
+  },
+  {
+    "path": "PlugDeviceModel_b0840146_n02.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "PlugDeviceModel_b0840146"
+    }
+  },
+  {
+    "path": "PlugDeviceModel_b0840146_n04.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "PlugDeviceModel_b0840146"
+    }
+  },
+  {
+    "path": "PlugDeviceModel_b0840146_n08.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "PlugDeviceModel_b0840146"
+    }
+  },
+  {
+    "path": "UnderapproxDemo_n02.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "UnderapproxDemo"
+    }
+  },
+  {
+    "path": "UnderapproxDemo_n04.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "UnderapproxDemo"
+    }
+  },
+  {
+    "path": "UnderapproxDemo_n08.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "UnderapproxDemo"
+    }
+  },
+  {
+    "path": "Window2_9cac58d3_1_n02.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "Window2_9cac58d3_1"
+    }
+  },
+  {
+    "path": "Window2_9cac58d3_1_n04.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "Window2_9cac58d3_1"
+    }
+  },
+  {
+    "path": "Window2_9cac58d3_1_n08.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "Window2_9cac58d3_1"
+    }
+  },
+  {
+    "path": "detector_n02.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "detector"
+    }
+  },
+  {
+    "path": "detector_n04.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "detector"
+    }
+  },
+  {
+    "path": "detector_n08.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "detector"
+    }
+  },
+  {
+    "path": "detector_unreal_n02.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "detector_unreal"
+    }
+  },
+  {
+    "path": "detector_unreal_n04.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "detector_unreal"
+    }
+  },
+  {
+    "path": "detector_unreal_n08.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "detector_unreal"
+    }
+  },
+  {
+    "path": "jarvis_gideon_a02758ea_7_n02.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "jarvis_gideon_a02758ea_7"
+    }
+  },
+  {
+    "path": "jarvis_gideon_a02758ea_7_n04.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "jarvis_gideon_a02758ea_7"
+    }
+  },
+  {
+    "path": "jarvis_gideon_a02758ea_7_n08.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "jarvis_gideon_a02758ea_7"
+    }
+  },
+  {
+    "path": "lilydemo24_n02.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "lilydemo24"
+    }
+  },
+  {
+    "path": "lilydemo24_n04.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "lilydemo24"
+    }
+  },
+  {
+    "path": "lilydemo24_n08.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "lilydemo24"
+    }
+  },
+  {
+    "path": "ltl2dba24_n02.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "ltl2dba24"
+    }
+  },
+  {
+    "path": "ltl2dba24_n04.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "ltl2dba24"
+    }
+  },
+  {
+    "path": "ltl2dba24_n08.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "ltl2dba24"
+    }
+  },
+  {
+    "path": "ltl2dpa21_n02.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 2,
+      "k": 6,
+      "spec": "ltl2dpa21"
+    }
+  },
+  {
+    "path": "ltl2dpa21_n04.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 4,
+      "k": 6,
+      "spec": "ltl2dpa21"
+    }
+  },
+  {
+    "path": "ltl2dpa21_n08.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "syntcomp_legacy"
+    ],
+    "params": {
+      "n": 8,
+      "k": 6,
+      "spec": "ltl2dpa21"
+    }
   }
 ]

@@ -71,3 +71,10 @@ safe_extract "$DL/smtlib_BV.tar.zst" "$ROOT/benchmarks/test/qbvf/bv" --zstd
 "$ROOT/benchmarks/test/syntcomp/download.sh"
 
 echo "done. Large sets unpacked under benchmarks/test/{qbf,qbvf,hwmcc,syntcomp}/."
+
+# --- Strix (synthesis tool, for syntcomp comparison) ---
+if [ ! -f "$ROOT/third_party/strix/strix" ]; then
+  mkdir -p "$ROOT/third_party/strix" && cd "$ROOT/third_party/strix"
+  gh release download -R meyerphi/strix 21.0.0 -p '*x86_64-linux.tar.gz'
+  tar xzf strix-*-linux.tar.gz && rm -f *.tar.gz
+fi

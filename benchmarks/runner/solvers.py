@@ -142,4 +142,25 @@ def registry() -> dict[str, Solver]:
             input_format="aag",
             domain="hwmc",
         ),
+        # --- Reactive synthesis (consume TLSF, not DQDIMACS) ---
+        "strix": Solver(
+            name="strix",
+            cmd=[
+                sys.executable,
+                str(ROOT / "scripts/run_strix_tlsf.py"),
+                "{file}",
+            ],
+            certs={},
+            available=_exists(str(ROOT / "third_party/strix/strix")),
+            input_format="tlsf",
+            domain="syntcomp",
+        ),
+        "bosy": Solver(
+            name="bosy",
+            cmd=[str(ROOT / "third_party/bosy/bosy"), "{file}"],
+            certs={},
+            available=_exists(str(ROOT / "third_party/bosy/bosy")),
+            input_format="tlsf",
+            domain="syntcomp",
+        ),
     }
