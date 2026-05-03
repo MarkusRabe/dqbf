@@ -180,7 +180,7 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
 
     // Phase 0: greedy universal expansion (SAT-only, cert-producing).
     if cfg.extract_cert {
-        if let Some(sk) = crate::expand::try_expand(f) {
+        if let Some(sk) = crate::expand::try_expand(f, cfg.timeout_s, &start) {
             return Output {
                 verdict: Verdict::Sat,
                 proof: None,

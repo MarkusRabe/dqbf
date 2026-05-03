@@ -12,16 +12,19 @@ use std::collections::HashMap;
 
 pub const MAX_U: usize = 16;
 
-pub fn try_expand(f: &Formula) -> Option<Skolem> {
-    for &first in &[1i8, -1i8] {
-        if let Some(sk) = try_expand_with(f, first) {
+pub fn try_expand(f: &Formula, deadline: f64, start: &std::time::Instant) -> Option<Skolem> {
+    for &(first, vote) in &[(1i8, false), (-1, false), (1, true), (-1, true)] {
+        if start.elapsed().as_secs_f64() > deadline * 0.5 {
+            return None;
+        }
+        if let Some(sk) = try_expand_with(f, first, vote) {
             return Some(sk);
         }
     }
     None
 }
 
-fn try_expand_with(f: &Formula, first_branch: i8) -> Option<Skolem> {
+fn try_expand_with(f: &Formula, first_branch: i8, vote_mode: bool) -> Option<Skolem> {
     let nu = f.universals.len();
     if nu > MAX_U {
         return None;
@@ -64,32 +67,71 @@ fn try_expand_with(f: &Formula, first_branch: i8) -> Option<Skolem> {
     let n = f.n_vars as usize + 1;
     let mut polarity = vec![0i8; n];
     let occ = build_occ(&f.clauses, n);
+    let rows = 1u32 << nu;
 
-    for ub in 0..(1u32 << nu) {
-        for p in polarity.iter_mut() {
-            *p = 0;
-        }
-        for (i, &u) in f.universals.iter().enumerate() {
-            polarity[u as usize] = if (ub >> i) & 1 == 1 { 1 } else { -1 };
-        }
-        for (i, &y) in exs.iter().enumerate() {
-            let key = extract(ub, dep_mask[i]) as usize;
-            let t = tables[i][key];
-            if t != 0 {
-                polarity[y as usize] = t;
-            }
-        }
-        if !dpll(&f.clauses, &occ, &mut polarity, first_branch) {
-            return None;
-        }
-        for (i, &y) in exs.iter().enumerate() {
-            let key = extract(ub, dep_mask[i]) as usize;
-            if tables[i][key] == 0 {
-                tables[i][key] = polarity[y as usize].max(-1).min(1);
-                if tables[i][key] == 0 {
-                    tables[i][key] = -1;
+    // Vote mode: solve all rows free, tally votes, then a second greedy pass.
+    let mut votes: Vec<Vec<i32>> = if vote_mode {
+        (0..exs.len())
+            .map(|i| vec![0i32; 1usize << dep_lists[i].len()])
+            .collect()
+    } else {
+        Vec::new()
+    };
+    let passes: &[bool] = if vote_mode { &[false, true] } else { &[true] };
+
+    for &use_pins in passes {
+        if use_pins && vote_mode {
+            for (i, t) in tables.iter_mut().enumerate() {
+                if dep_lists[i].len() == nu {
+                    continue; // full deps: free per row
+                }
+                for (k, slot) in t.iter_mut().enumerate() {
+                    *slot = if votes[i][k] > 0 {
+                        1
+                    } else if votes[i][k] < 0 {
+                        -1
+                    } else {
+                        first_branch
+                    };
                 }
             }
+        }
+        for ub in 0..rows {
+            for p in polarity.iter_mut() {
+                *p = 0;
+            }
+            for (i, &u) in f.universals.iter().enumerate() {
+                polarity[u as usize] = if (ub >> i) & 1 == 1 { 1 } else { -1 };
+            }
+            if use_pins {
+                for (i, &y) in exs.iter().enumerate() {
+                    let key = extract(ub, dep_mask[i]) as usize;
+                    let t = tables[i][key];
+                    if t != 0 {
+                        polarity[y as usize] = t;
+                    }
+                }
+            }
+            if !dpll(&f.clauses, &occ, &mut polarity, first_branch) {
+                if use_pins {
+                    return None;
+                }
+                continue;
+            }
+            for (i, &y) in exs.iter().enumerate() {
+                let key = extract(ub, dep_mask[i]) as usize;
+                let v = if polarity[y as usize] > 0 { 1 } else { -1 };
+                if use_pins {
+                    if tables[i][key] == 0 {
+                        tables[i][key] = v;
+                    }
+                } else {
+                    votes[i][key] += v as i32;
+                }
+            }
+        }
+        if use_pins {
+            break;
         }
     }
     let mut sk = Skolem::new();

@@ -28,6 +28,8 @@ pub struct Formula {
     pub deps: BTreeMap<Var, BTreeSet<Var>>,
     pub clauses: Vec<Clause>,
     is_universal: Vec<bool>,
+    /// dep_mask[y] bit u set iff existential y depends on universals[u].
+    dep_mask: Vec<u64>,
 }
 
 impl Formula {
@@ -38,8 +40,23 @@ impl Formula {
         clauses: Vec<Clause>,
     ) -> Self {
         let mut is_universal = vec![false; n_vars as usize + 1];
-        for &u in &universals {
+        let mut u_bit = vec![0u64; n_vars as usize + 1];
+        for (i, &u) in universals.iter().enumerate() {
             is_universal[u as usize] = true;
+            if i < 64 {
+                u_bit[u as usize] = 1u64 << i;
+            }
+        }
+        let mut dep_mask = vec![0u64; n_vars as usize + 1];
+        for (&y, ds) in &deps {
+            let mut m = 0u64;
+            for &d in ds {
+                m |= u_bit[d as usize];
+            }
+            dep_mask[y as usize] = m;
+        }
+        for &u in &universals {
+            dep_mask[u as usize] = u_bit[u as usize];
         }
         Self {
             n_vars,
@@ -47,7 +64,13 @@ impl Formula {
             deps,
             clauses,
             is_universal,
+            dep_mask,
         }
+    }
+
+    #[inline]
+    pub fn dep_mask(&self, v: Var) -> u64 {
+        self.dep_mask.get(v as usize).copied().unwrap_or(0)
     }
 
     #[inline]
@@ -81,8 +104,16 @@ impl Formula {
     pub fn add_existential(&mut self, y: Var, d: BTreeSet<Var>) {
         if y > self.n_vars {
             self.is_universal.resize(y as usize + 1, false);
+            self.dep_mask.resize(y as usize + 1, 0);
             self.n_vars = y;
         }
+        let mut m = 0u64;
+        for (i, &u) in self.universals.iter().enumerate() {
+            if i < 64 && d.contains(&u) {
+                m |= 1u64 << i;
+            }
+        }
+        self.dep_mask[y as usize] = m;
         self.deps.insert(y, d);
     }
 }

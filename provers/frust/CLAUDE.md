@@ -28,3 +28,4 @@ Exit codes 10/20/0 (sat/unsat/unknown).
 | 6 | `peano_add_n8` (292v, 9.6s) | 32% in DPLL (clones `pol` per branch), 11% BTreeMap Skolem | trail-based DPLL (fixed backtrack bug); bitmap Skolem repr | 289/344, 0 invalid; instance 5.4s |
 | 7 | same, 5.4s | 78% try_expand: 19M HashMap hashes + linear-scan unit-prop | flat-array tables + occurrence-driven propagation | 290/344, 0 invalid; instance **1.8s** |
 | 8 | `peano_v2_mul_n2` (84v, partial deps) | greedy pin causes cross-row conflict | retry expand with opposite first-branch polarity | 291/344, 0 invalid; instance still UNKNOWN (need real inter-row search) |
+| 9 | same; `universal_reduce` 5% (BTreeSet ops) | tried vote-mode expand (no help on this instance); pivoted to bitmask `universal_reduce` (u64 dep_mask) | 291/344, 0 invalid; saturation ~15% faster |

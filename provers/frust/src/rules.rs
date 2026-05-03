@@ -74,6 +74,31 @@ pub fn resolve(c1: &Clause, c2: &Clause, pivot: Var) -> Option<Clause> {
 }
 
 pub fn universal_reduce(f: &Formula, c: &Clause) -> Clause {
+    if f.universals.len() > 64 {
+        return universal_reduce_set(f, c);
+    }
+    let mut ex_mask = 0u64;
+    for &l in c {
+        let v = var(l);
+        if f.is_existential(v) {
+            ex_mask |= f.dep_mask(v);
+        }
+    }
+    let out: Clause = c
+        .iter()
+        .copied()
+        .filter(|&l| {
+            let v = var(l);
+            !f.is_universal(v) || (f.dep_mask(v) & ex_mask) != 0
+        })
+        .collect();
+    if out.len() != c.len() {
+        return universal_reduce(f, &out);
+    }
+    out
+}
+
+fn universal_reduce_set(f: &Formula, c: &Clause) -> Clause {
     let mut cur = c.to_vec();
     loop {
         let mut ex_deps: BTreeSet<Var> = BTreeSet::new();
