@@ -60,23 +60,21 @@ def _verdict_from_output(rc: int, stdout: str, k: int | None = None) -> str:
     return "unknown"
 
 
-def _find_source_aag(inst: Path) -> Path | None:
-    """For families that commit the .aag source alongside the compiled
-    .dqdimacs, find the matching source by stem prefix."""
+def _find_source(inst: Path, ext: str) -> Path | None:
+    """Find the source file (e.g. .aag/.tlsf) by stem prefix.
+    Prefer the LONGEST matching stem so 'detector_unreal_n02' picks
+    'detector_unreal.tlsf' not 'detector.tlsf'."""
     stem = inst.name.split(".")[0]
-    for cand in inst.parent.glob("*.aag"):
-        if stem.startswith(cand.stem):
-            return cand
-    return None
+    cands = [c for c in inst.parent.glob(f"*{ext}") if stem.startswith(c.stem)]
+    return max(cands, key=lambda c: len(c.stem), default=None)
+
+
+def _find_source_aag(inst: Path) -> Path | None:
+    return _find_source(inst, ".aag")
 
 
 def _find_source_tlsf(inst: Path) -> Path | None:
-    """For syntcomp families: find the .tlsf source by stem prefix."""
-    stem = inst.name.split(".")[0]
-    for cand in inst.parent.glob("*.tlsf"):
-        if stem.startswith(cand.stem):
-            return cand
-    return None
+    return _find_source(inst, ".tlsf")
 
 
 @dataclass
