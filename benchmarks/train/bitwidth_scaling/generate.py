@@ -45,7 +45,7 @@ def _src_binary(rhs: str, n: int) -> str:
 
 
 @click.command()
-@click.option("--out", type=click.Path(), default="benchmarks/train/bitwidth_scaling/build")
+@click.option("--out", type=click.Path(), default="benchmarks/train/bitwidth_scaling/v1/build")
 @click.option("-D", "widths", default="4,8,12,16")
 def main(out: str, widths: str) -> None:
     outdir = Path(out)

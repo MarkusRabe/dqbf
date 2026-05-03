@@ -1,4 +1,4 @@
-"""v3 bitwidth scaling: same op sweep as v1 but at widths 4,6,8."""
+"""v1 bitwidth scaling: original widths 4,8,12,16."""
 
 from __future__ import annotations
 
@@ -7,12 +7,12 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-GEN = HERE.parent / "bitwidth_scaling" / "generate.py"
+GEN = HERE.parent / "generate.py"
 
 
 def main() -> None:
     subprocess.run(
-        [sys.executable, str(GEN), "--out", str(HERE / "build"), "-D", "8,12,16"],
+        [sys.executable, str(GEN), "--out", str(HERE / "build"), "-D", "4,8,12,16"],
         check=True,
     )
 
