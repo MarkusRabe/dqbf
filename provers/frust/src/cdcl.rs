@@ -55,6 +55,7 @@ pub struct Cdcl {
     qhead: usize,
     n_vars: usize,
     ok: bool,
+    phase: Vec<i8>, // saved last-polarity per var
     pub conflicts: u64,
     pub n_learned: usize,
 }
@@ -74,6 +75,7 @@ impl Cdcl {
             qhead: 0,
             n_vars,
             ok: true,
+            phase: vec![1i8; n_vars + 1],
             conflicts: 0,
             n_learned: 0,
         };
@@ -160,6 +162,7 @@ impl Cdcl {
         let lim = self.trail_lim[lvl as usize];
         for &l in &self.trail[lim..] {
             let v = ivar(l);
+            self.phase[v] = self.value[v];
             self.value[v] = 0;
             self.reason[v] = UNDEF;
         }
@@ -333,7 +336,12 @@ impl Cdcl {
             }
             if !sat {
                 if let Some(l) = cand {
-                    return Some(l);
+                    let v = ivar(l);
+                    return Some(if self.phase[v] >= 0 {
+                        2 * v as ILit
+                    } else {
+                        2 * v as ILit + 1
+                    });
                 }
             }
         }
@@ -343,6 +351,12 @@ impl Cdcl {
     /// Incremental solve under `assumptions` (external Lit polarity).
     /// On SAT, fills `model[var]` ∈ {-1,0,1} (0 if don't-care). On
     /// UNSAT-under-assumptions or budget exhausted, returns false.
+    pub fn reset_phase(&mut self) {
+        for p in self.phase.iter_mut() {
+            *p = 1;
+        }
+    }
+
     pub fn solve(&mut self, assumptions: &[Lit], model: &mut [i8], max_conflicts: u64) -> bool {
         if !self.ok {
             return false;

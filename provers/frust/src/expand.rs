@@ -96,6 +96,7 @@ pub fn try_expand(
         if start.elapsed().as_secs_f64() > deadline * 0.4 {
             return None;
         }
+        cdcl.reset_phase();
         let assumps = row_assumps(f, ub, &[]);
         if !cdcl.solve(&assumps, &mut model, row_budget) {
             dbg_ex!(
@@ -216,124 +217,165 @@ pub fn try_expand(
         dbg_ex!(debug, "no slots — falling through");
         return None; // no slots but heuristics failed → not expand-SAT
     }
-    dbg_ex!(debug, "slot-DPLL on {} slots", slots.len());
-    // ---- Slot-level DPLL (CEGAR-ish) -------------------------------
-    // Order slots by |vote| descending — most-determined first.
-    slots.sort_by_key(|&(i, k)| -(votes[i][k].abs()));
-    // Precompute: for each row, which slots are pinned in it.
-    let row_slots: Vec<Vec<usize>> = (0..rows)
-        .map(|ub| {
-            slots
-                .iter()
-                .enumerate()
-                .filter(|&(_, &(i, k))| extract(ub, dep_mask[i]) as usize == k)
-                .map(|(p, _)| p)
-                .collect()
-        })
-        .collect();
-    // Cache: last (slot_val signature, model) per row.
-    let mut row_cache: Vec<Option<(u64, Vec<i8>)>> = vec![None; rows as usize];
-    let row_sig = |slot_val: &[i8], rs: &[usize]| -> u64 {
-        let mut h = 0u64;
-        for &p in rs {
-            h = h.wrapping_mul(3).wrapping_add(slot_val[p] as u64);
-        }
-        h
-    };
-    let mut slot_val: Vec<i8> = vec![0; slots.len()];
-    let mut decisions: Vec<(usize, bool)> = Vec::new(); // (slot_idx, flipped)
-    let mut next_slot = 0usize;
-    let mut iters = 0u64;
-    loop {
-        iters += 1;
-        if iters & 0x3f == 0 && start.elapsed().as_secs_f64() > deadline * 0.7 {
-            return None;
-        }
-        // Decide next unset slot, prefer vote sign.
-        if next_slot < slots.len() {
-            let (i, k) = slots[next_slot];
-            let pref = if votes[i][k] >= 0 { 1i8 } else { -1 };
-            slot_val[next_slot] = pref;
-            decisions.push((next_slot, false));
-            next_slot += 1;
-        }
-        // Run all rows with current slot assignment + greedy fill.
-        let mut tables: Vec<Vec<i8>> = (0..exs.len())
-            .map(|i| vec![0i8; 1usize << dep_lists[i].len()])
-            .collect();
-        for (p, &(i, k)) in slots.iter().enumerate() {
-            tables[i][k] = slot_val[p];
-        }
-        let mut fail = false;
-        for ub in 0..rows {
-            let rs = &row_slots[ub as usize];
-            let sig = row_sig(&slot_val, rs);
-            let cached: Vec<i8> = if let Some((csig, m)) = &row_cache[ub as usize] {
-                if *csig == sig {
-                    m.clone()
-                } else {
-                    Vec::new()
-                }
-            } else {
-                Vec::new()
-            };
-            let row_model = if cached.is_empty() {
-                let pins: Vec<(Var, i8)> = exs
+    let mut in_slots: std::collections::HashSet<(usize, usize)> = slots.iter().copied().collect();
+    let mut cegar_round = 0;
+    'cegar: loop {
+        cegar_round += 1;
+        dbg_ex!(
+            debug,
+            "slot-DPLL round {} on {} slots",
+            cegar_round,
+            slots.len()
+        );
+        // ---- Slot-level DPLL (CEGAR-ish) -------------------------------
+        // Order slots by |vote| descending — most-determined first.
+        slots.sort_by_key(|&(i, k)| -(votes[i][k].abs()));
+        // Precompute: for each row, which slots are pinned in it.
+        let row_slots: Vec<Vec<usize>> = (0..rows)
+            .map(|ub| {
+                slots
                     .iter()
                     .enumerate()
-                    .map(|(i, &y)| (y, tables[i][extract(ub, dep_mask[i]) as usize]))
-                    .filter(|&(_, t)| t != 0)
-                    .collect();
-                let assumps = row_assumps(f, ub, &pins);
-                if !cdcl.solve(&assumps, &mut model, row_budget) {
-                    fail = true;
+                    .filter(|&(_, &(i, k))| extract(ub, dep_mask[i]) as usize == k)
+                    .map(|(p, _)| p)
+                    .collect()
+            })
+            .collect();
+        // Cache: last (slot_val signature, model) per row.
+        let mut row_cache: Vec<Option<(u64, Vec<i8>)>> = vec![None; rows as usize];
+        let row_sig = |slot_val: &[i8], rs: &[usize]| -> u64 {
+            let mut h = 0u64;
+            for &p in rs {
+                h = h.wrapping_mul(3).wrapping_add(slot_val[p] as u64);
+            }
+            h
+        };
+        let mut slot_val: Vec<i8> = vec![0; slots.len()];
+        let mut decisions: Vec<(usize, bool)> = Vec::new(); // (slot_idx, flipped)
+        let mut next_slot = 0usize;
+        let mut iters = 0u64;
+        let mut new_conflicts: std::collections::HashSet<(usize, usize)> =
+            std::collections::HashSet::new();
+        loop {
+            iters += 1;
+            if iters & 0x3f == 0 && start.elapsed().as_secs_f64() > deadline * 0.7 {
+                return None;
+            }
+            // Decide all remaining slots up front (vote-preferred); only
+            // check rows once the assignment is total.
+            while next_slot < slots.len() {
+                let (i, k) = slots[next_slot];
+                let pref = if votes[i][k] >= 0 { 1i8 } else { -1 };
+                slot_val[next_slot] = pref;
+                decisions.push((next_slot, false));
+                next_slot += 1;
+            }
+            // Run all rows with current slot assignment + greedy fill.
+            let mut tables: Vec<Vec<i8>> = (0..exs.len())
+                .map(|i| vec![0i8; 1usize << dep_lists[i].len()])
+                .collect();
+            for (p, &(i, k)) in slots.iter().enumerate() {
+                tables[i][k] = slot_val[p];
+            }
+            let mut fail = false;
+            for ub in 0..rows {
+                let rs = &row_slots[ub as usize];
+                let sig = row_sig(&slot_val, rs);
+                let cached: Vec<i8> = if let Some((csig, m)) = &row_cache[ub as usize] {
+                    if *csig == sig {
+                        m.clone()
+                    } else {
+                        Vec::new()
+                    }
+                } else {
+                    Vec::new()
+                };
+                let row_model = if cached.is_empty() {
+                    // Pin only slot entries — greedy fills are observed, not assumed.
+                    let pins: Vec<(Var, i8)> = rs
+                        .iter()
+                        .map(|&p| {
+                            let (i, _k) = slots[p];
+                            (exs[i], slot_val[p])
+                        })
+                        .collect();
+                    cdcl.reset_phase();
+                    let assumps = row_assumps(f, ub, &pins);
+                    if !cdcl.solve(&assumps, &mut model, row_budget) {
+                        fail = true;
+                        break;
+                    }
+                    row_cache[ub as usize] = Some((sig, model.clone()));
+                    model.clone()
+                } else {
+                    cached
+                };
+                for (i, &y) in exs.iter().enumerate() {
+                    let key = extract(ub, dep_mask[i]) as usize;
+                    let v: i8 = if row_model[y as usize] > 0 { 1 } else { -1 };
+                    if tables[i][key] == 0 {
+                        tables[i][key] = v;
+                    } else if tables[i][key] != v {
+                        fail = true;
+                        new_conflicts.insert((i, key));
+                    }
+                }
+                if fail {
                     break;
                 }
-                row_cache[ub as usize] = Some((sig, model.clone()));
-                model.clone()
-            } else {
-                cached
-            };
-            for (i, &y) in exs.iter().enumerate() {
-                let key = extract(ub, dep_mask[i]) as usize;
-                let v: i8 = if row_model[y as usize] > 0 { 1 } else { -1 };
-                if tables[i][key] == 0 {
-                    tables[i][key] = v;
-                } else if tables[i][key] != v {
-                    fail = true;
+            }
+            if !fail {
+                dbg_ex!(
+                    debug,
+                    "slot-DPLL: SAT after {} iters, {} learned",
+                    iters,
+                    cdcl.n_learned
+                );
+                return Some(build_skolem(&exs, &dep_lists, &tables));
+            }
+            // Backtrack.
+            loop {
+                let (si, flipped) = match decisions.pop() {
+                    Some(d) => d,
+                    None => {
+                        dbg_ex!(
+                            debug,
+                            "slot-DPLL exhausted after {} iters; {} new conflicts; cdcl {} learned",
+                            iters,
+                            new_conflicts.len(),
+                            cdcl.n_learned
+                        );
+                        let added: Vec<_> = new_conflicts
+                            .iter()
+                            .filter(|s| !in_slots.contains(s))
+                            .copied()
+                            .collect();
+                        if added.is_empty()
+                            || cegar_round >= 5
+                            || start.elapsed().as_secs_f64() > deadline * 0.7
+                        {
+                            return None;
+                        }
+                        for s in added {
+                            slots.push(s);
+                            in_slots.insert(s);
+                        }
+                        continue 'cegar;
+                    }
+                };
+                if !flipped {
+                    slot_val[si] = -slot_val[si];
+                    decisions.push((si, true));
+                    next_slot = si + 1;
+                    for j in next_slot..slots.len() {
+                        slot_val[j] = 0;
+                    }
+                    break;
                 }
-            }
-            if fail {
-                break;
+                slot_val[si] = 0;
             }
         }
-        if !fail {
-            dbg_ex!(
-                debug,
-                "slot-DPLL: SAT after {} iters, {} learned",
-                iters,
-                cdcl.n_learned
-            );
-            return Some(build_skolem(&exs, &dep_lists, &tables));
-        }
-        // Backtrack.
-        loop {
-            let (si, flipped) = match decisions.pop() {
-                Some(d) => d,
-                None => return None,
-            };
-            if !flipped {
-                slot_val[si] = -slot_val[si];
-                decisions.push((si, true));
-                next_slot = si + 1;
-                for j in next_slot..slots.len() {
-                    slot_val[j] = 0;
-                }
-                break;
-            }
-            slot_val[si] = 0;
-        }
-    }
+    } // 'cegar
 }
 
 fn build_skolem(exs: &[Var], dep_lists: &[Vec<Var>], tables: &[Vec<i8>]) -> Skolem {
