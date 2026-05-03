@@ -1,11 +1,18 @@
 """LTL bounded synthesis → DQBF (bounded-unrolling lasso encoding).
 
-The TACAS'17 annotation encoding (CLAUDE.md) needs an LTL→co-Büchi
-automaton, i.e. `spot`. Spot is not installed in this environment, so
-this module ships a **fallback** encoding that requires no automaton:
-unroll a single universally-quantified input trace of length `k`, build
-the system run via existential δ/λ functions, and assert the spec holds
-in **∃-loop bounded LTL semantics** (Biere et al., BMC).
+The correct encoding (Faymonville-Finkbeiner-Tentrup, arXiv:1803.09566
+§4) is per-transition over the **universal co-Büchi automaton of ¬φ**:
+∃δ,λ,θ. ∀s,s',q,q',i. (consistency ∧ θ-monotone on rejecting q). The
+ranking annotation θ is what makes the local check sufficient for all
+ω-words. That requires an LTL→UCW translator (`spot`, `ltl3ba`).
+
+This module ships an **automaton-free fallback** that unrolls one
+∀-quantified input trace of length k with a lasso loop. **It is sound
+only for the safety fragment** (G, X, R — no F, U, W): for liveness
+specs the system can choose state s_k = s_{k-1} so the loop is a
+single step, making any GF antecedent trivially false. `encode()`
+therefore raises `EncodingNotSound` on liveness specs unless
+`unsafe_liveness=True` is passed.
 
 Variables (allocated so the prefix is QBF-nested):
   ∀  i_{t,j}   t∈[0,k), j∈|I|   — environment input at step t
@@ -14,18 +21,9 @@ Variables (allocated so the prefix is QBF-nested):
   ∃  L_t       t∈[0,k)          deps = i_{0..k-1}      (loop selector)
   ∃  Tseitin auxiliaries        deps = i_{0..k-1}
 
-Functional consistency: for every pair t<t',
-  (s_t = s_{t'} ∧ i_t = i_{t'}) → (s_{t+1} = s_{t'+1} ∧ o_t = o_{t'}).
-This forces the strategy to be a function of (state, input) only, i.e.
-a 2^n-state Mealy machine.
-
-Semantics:
-  SAT   ⇒  REALIZABLE (sound: there is an n-state machine s.t. every
-           k-step lasso satisfies the spec).
-  UNSAT at given (n,k) is **not** UNREALIZABLE — need higher bounds or
-  the dual encoding. The runner therefore maps SAT↔REALIZABLE and
-  treats UNSAT as bounded-unknown when comparing against synthesis
-  tools (mirroring the bounded-k handling in the HWMC wiring).
+For safety specs:
+  SAT   ⇔  REALIZABLE with ≤ 2^n states (sound and complete for the
+           fragment, since safety violations have a finite bad prefix).
 """
 
 from __future__ import annotations
@@ -33,10 +31,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from core.formula import Formula, make_formula
-from tools.ltlsynth2dqbf.ltl import Node, atoms_of
+from tools.ltlsynth2dqbf.ltl import Node, atoms_of, has_liveness
 from tools.ltlsynth2dqbf.ltl import parse as parse_ltl
 from tools.ltlsynth2dqbf.tlsf import TlsfSpec
 from tools.ltlsynth2dqbf.tlsf import parse as parse_tlsf
+
+
+class EncodingNotSound(ValueError):
+    pass
 
 
 @dataclass
@@ -122,9 +124,16 @@ def encode(
     n_states: int,
     k: int,
     source: str = "<memory>",
+    unsafe_liveness: bool = False,
 ) -> Formula:
     if k < 1:
         raise ValueError("k must be ≥ 1")
+    if has_liveness(phi) and not unsafe_liveness:
+        raise EncodingNotSound(
+            "spec contains F/U/W; the unroll-lasso encoding is unsound for "
+            "liveness (system can pick a degenerate loop). Use spot-based "
+            "co-Büchi encoding or pass unsafe_liveness=True for experiments."
+        )
     used = atoms_of(phi)
     unknown = used - set(inputs) - set(outputs)
     if unknown:

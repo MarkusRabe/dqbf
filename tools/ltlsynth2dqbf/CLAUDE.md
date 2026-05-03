@@ -3,7 +3,11 @@
 Encode bounded reactive synthesis (find an `n`-state Mealy machine
 realizing an LTL spec) as a DQBF.
 
-## Current encoding (unroll-lasso, no automaton)
+> **Soundness restriction**: the current encoding is **safety-only**
+> (G, X, R). For specs containing F/U/W, `encode()` raises
+> `EncodingNotSound`. See the FFT'17 section below for why.
+
+## Current encoding (unroll-lasso, no automaton — **safety fragment only**)
 
 `spot`/`syfco` are not available in this environment, so the encoder
 ships an **automaton-free fallback**: unroll a single ∀-quantified
@@ -11,6 +15,23 @@ input trace of length `k`, build the system run via existential δ/λ
 functions (with Ackermann congruence enforcing they are functions of
 `(state, input)` only), and assert the spec holds in ∀-loop bounded
 LTL semantics.
+
+**Why safety-only**: the lasso closes on system-state equality
+(`s_k = s_L`), so the input word is `i_0..i_{k-1}(i_L..i_{k-1})^ω` —
+the system effectively only sees periodic traces. For any spec with a
+`GF p` antecedent the system can choose `s_k = s_{k-1}` (single-step
+loop), making the antecedent `p_{k-1} ∧ ¬p_{k-1} = false` and the
+implication vacuously true. This was observed as DQBF-SAT for the
+unrealizable `CheckAlarm`/`CheckTime` specs.
+
+## The correct encoding (FFT'17, arXiv:1803.09566 §4)
+
+`∃δ,λ,θ. ∀s,s',q,q',i. (consistency ∧ θ-monotone on rejecting q)`
+where `q` ranges over states of the **universal co-Büchi automaton of
+¬φ** and θ is a ranking annotation. The ranking is what collapses "all
+ω-words" into a per-transition well-foundedness check. Building the
+automaton requires `spot` or `ltl3ba` — install one and replace
+`encode()` with the §4 construction to lift the safety restriction.
 
 | Vars | Quant | Deps |
 |---|---|---|

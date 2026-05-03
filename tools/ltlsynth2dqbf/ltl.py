@@ -149,3 +149,12 @@ def is_temporal_free(n: Node) -> bool:
     if n[0] in ("G", "F", "X", "U", "W", "R"):
         return False
     return all(is_temporal_free(c) for c in n[1:] if isinstance(c, tuple))
+
+
+def has_liveness(n: Node) -> bool:
+    """True if the formula contains F, U, or W (which the unroll-lasso
+    encoding handles unsoundly — see arXiv:1803.09566 §4: a co-Büchi
+    automaton is required). G/X/R alone are safety."""
+    if n[0] in ("F", "U", "W"):
+        return True
+    return any(has_liveness(c) for c in n[1:] if isinstance(c, tuple))
