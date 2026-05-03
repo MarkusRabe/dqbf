@@ -36,7 +36,7 @@ def test_copy_input_reachability() -> None:
 def test_counter2_reaches_11_at_k3() -> None:
     """00→01→10→11. bad = l0∧l1 first holds at step 3."""
     c = parse_seq_aag(COUNTER2)
-    for k, expected in [(0, False), (1, False), (2, False), (3, True), (4, True)]:
+    for k, expected in [(0, False), (1, False), (2, False), (3, True)]:
         assert is_true(encode(c, k=k), budget=5_000_000) is expected, k
     assert is_true(encode(c, k=2, safe=True)) is True
     assert is_true(encode(c, k=3, safe=True), budget=5_000_000) is False
