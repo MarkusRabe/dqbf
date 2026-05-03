@@ -8,7 +8,8 @@
 //! are left to unit-prop. Only emits SAT (cert is checkable).
 
 use crate::aiger::Skolem;
-use crate::formula::{var, Clause, Formula, Var};
+use crate::cdcl::Cdcl;
+use crate::formula::{Formula, Lit, Var};
 use std::collections::HashMap;
 
 pub const MAX_U: usize = 16;
@@ -37,7 +38,8 @@ pub fn try_expand(
         f.clauses.len()
     );
     let n = f.n_vars as usize + 1;
-    let occ = build_occ(&f.clauses, n);
+    let mut cdcl = Cdcl::new(f.n_vars as usize, &f.clauses);
+    let mut model = vec![0i8; n];
     let exs: Vec<Var> = f.deps.keys().copied().collect();
     let dep_lists: Vec<Vec<Var>> = exs
         .iter()
@@ -54,7 +56,27 @@ pub fn try_expand(
         .map(|ds| ds.iter().map(|d| 1u32 << u_idx[d]).sum())
         .collect();
     let rows = 1u32 << nu;
-    let row_budget: u32 = (200_000 / rows.max(1)).max(50);
+    let row_budget: u64 = ((1_000_000 / rows.max(1)) as u64).max(100);
+    let row_assumps = |f: &Formula, ub: u32, extra: &[(Var, i8)]| -> Vec<Lit> {
+        let mut a: Vec<Lit> = f
+            .universals
+            .iter()
+            .enumerate()
+            .map(|(i, &u)| {
+                if (ub >> i) & 1 == 1 {
+                    u as Lit
+                } else {
+                    -(u as Lit)
+                }
+            })
+            .collect();
+        for &(y, v) in extra {
+            if v != 0 {
+                a.push(if v > 0 { y as Lit } else { -(y as Lit) });
+            }
+        }
+        a
+    };
 
     // ---- Free pass --------------------------------------------------
     // votes[i][k] tallies polarity; first_seen[i][k] holds the first
@@ -70,19 +92,22 @@ pub fn try_expand(
         .map(|i| vec![false; 1usize << dep_lists[i].len()])
         .collect();
     let mut conflict = vec![false; exs.len()];
-    let mut polarity = vec![0i8; n];
     for ub in 0..rows {
         if start.elapsed().as_secs_f64() > deadline * 0.4 {
             return None;
         }
-        reset_row(f, &mut polarity, ub);
-        let mut decided: Vec<usize> = Vec::new();
-        if !dpll(&f.clauses, &occ, &mut polarity, 1, &mut decided, row_budget) {
+        let assumps = row_assumps(f, ub, &[]);
+        if !cdcl.solve(&assumps, &mut model, row_budget) {
+            dbg_ex!(
+                debug,
+                "free pass row {}: UNSAT/budget — falling through",
+                ub
+            );
             return None;
         }
         for (i, &y) in exs.iter().enumerate() {
             let key = extract(ub, dep_mask[i]) as usize;
-            let v: i8 = if polarity[y as usize] > 0 { 1 } else { -1 };
+            let v: i8 = if model[y as usize] > 0 { 1 } else { -1 };
             votes[i][key] += v as i32;
             if first_seen[i][key] == 0 {
                 first_seen[i][key] = v;
@@ -132,32 +157,24 @@ pub fn try_expand(
                 }
             }
         }
+        let _ = first;
         let mut ok = true;
         let mut row_conflict = vec![false; exs.len()];
         for ub in 0..rows {
-            reset_row(f, &mut polarity, ub);
-            for (i, &y) in exs.iter().enumerate() {
-                let key = extract(ub, dep_mask[i]) as usize;
-                let t = tables[i][key];
-                if t != 0 {
-                    polarity[y as usize] = t;
-                }
-            }
-            let mut decided: Vec<usize> = Vec::new();
-            if !dpll(
-                &f.clauses,
-                &occ,
-                &mut polarity,
-                first,
-                &mut decided,
-                row_budget,
-            ) {
+            let pins: Vec<(Var, i8)> = exs
+                .iter()
+                .enumerate()
+                .map(|(i, &y)| (y, tables[i][extract(ub, dep_mask[i]) as usize]))
+                .filter(|&(_, t)| t != 0)
+                .collect();
+            let assumps = row_assumps(f, ub, &pins);
+            if !cdcl.solve(&assumps, &mut model, row_budget) {
                 ok = false;
                 break;
             }
             for (i, &y) in exs.iter().enumerate() {
                 let key = extract(ub, dep_mask[i]) as usize;
-                let v: i8 = if polarity[y as usize] > 0 { 1 } else { -1 };
+                let v: i8 = if model[y as usize] > 0 { 1 } else { -1 };
                 if tables[i][key] == 0 {
                     tables[i][key] = v;
                 } else if tables[i][key] != v {
@@ -251,7 +268,7 @@ pub fn try_expand(
         for ub in 0..rows {
             let rs = &row_slots[ub as usize];
             let sig = row_sig(&slot_val, rs);
-            let model: Vec<i8> = if let Some((csig, m)) = &row_cache[ub as usize] {
+            let cached: Vec<i8> = if let Some((csig, m)) = &row_cache[ub as usize] {
                 if *csig == sig {
                     m.clone()
                 } else {
@@ -260,28 +277,26 @@ pub fn try_expand(
             } else {
                 Vec::new()
             };
-            let model = if model.is_empty() {
-                reset_row(f, &mut polarity, ub);
-                for (i, &y) in exs.iter().enumerate() {
-                    let key = extract(ub, dep_mask[i]) as usize;
-                    let t = tables[i][key];
-                    if t != 0 {
-                        polarity[y as usize] = t;
-                    }
-                }
-                let mut decided: Vec<usize> = Vec::new();
-                if !dpll(&f.clauses, &occ, &mut polarity, 1, &mut decided, row_budget) {
+            let row_model = if cached.is_empty() {
+                let pins: Vec<(Var, i8)> = exs
+                    .iter()
+                    .enumerate()
+                    .map(|(i, &y)| (y, tables[i][extract(ub, dep_mask[i]) as usize]))
+                    .filter(|&(_, t)| t != 0)
+                    .collect();
+                let assumps = row_assumps(f, ub, &pins);
+                if !cdcl.solve(&assumps, &mut model, row_budget) {
                     fail = true;
                     break;
                 }
-                row_cache[ub as usize] = Some((sig, polarity.clone()));
-                polarity.clone()
+                row_cache[ub as usize] = Some((sig, model.clone()));
+                model.clone()
             } else {
-                model
+                cached
             };
             for (i, &y) in exs.iter().enumerate() {
                 let key = extract(ub, dep_mask[i]) as usize;
-                let v: i8 = if model[y as usize] > 0 { 1 } else { -1 };
+                let v: i8 = if row_model[y as usize] > 0 { 1 } else { -1 };
                 if tables[i][key] == 0 {
                     tables[i][key] = v;
                 } else if tables[i][key] != v {
@@ -293,6 +308,12 @@ pub fn try_expand(
             }
         }
         if !fail {
+            dbg_ex!(
+                debug,
+                "slot-DPLL: SAT after {} iters, {} learned",
+                iters,
+                cdcl.n_learned
+            );
             return Some(build_skolem(&exs, &dep_lists, &tables));
         }
         // Backtrack.
@@ -332,16 +353,6 @@ fn build_skolem(exs: &[Var], dep_lists: &[Vec<Var>], tables: &[Vec<i8>]) -> Skol
 }
 
 #[inline]
-fn reset_row(f: &Formula, pol: &mut [i8], ub: u32) {
-    for p in pol.iter_mut() {
-        *p = 0;
-    }
-    for (i, &u) in f.universals.iter().enumerate() {
-        pol[u as usize] = if (ub >> i) & 1 == 1 { 1 } else { -1 };
-    }
-}
-
-#[inline]
 fn extract(ub: u32, mask: u32) -> u32 {
     let mut out = 0u32;
     let mut b = 0;
@@ -355,173 +366,4 @@ fn extract(ub: u32, mask: u32) -> u32 {
         m &= m - 1;
     }
     out
-}
-
-fn build_occ(clauses: &[Clause], n: usize) -> Vec<Vec<u32>> {
-    let mut occ = vec![Vec::new(); 2 * n];
-    for (ci, c) in clauses.iter().enumerate() {
-        for &l in c {
-            let idx = 2 * var(l) as usize + if l < 0 { 1 } else { 0 };
-            occ[idx].push(ci as u32);
-        }
-    }
-    occ
-}
-
-fn dpll(
-    clauses: &[Clause],
-    occ: &[Vec<u32>],
-    pol: &mut [i8],
-    first: i8,
-    decided: &mut Vec<usize>,
-    max_conflicts: u32,
-) -> bool {
-    let mut trail: Vec<usize> = Vec::new();
-    let mut decisions: Vec<(usize, usize, bool)> = Vec::new();
-    let mut prop_from = 0usize;
-    let mut conflicts = 0u32;
-    if !scan_all(clauses, pol, &mut trail) {
-        return false;
-    }
-    loop {
-        if conflicts > max_conflicts {
-            return false;
-        }
-        if !propagate(clauses, occ, pol, &mut trail, &mut prop_from) {
-            conflicts += 1;
-            loop {
-                let (dv, tl, flipped) = match decisions.pop() {
-                    Some(d) => d,
-                    None => return false,
-                };
-                while trail.len() > tl {
-                    pol[trail.pop().unwrap()] = 0;
-                }
-                prop_from = trail.len();
-                if !flipped {
-                    pol[dv] = -first;
-                    trail.push(dv);
-                    decisions.push((dv, tl, true));
-                    break;
-                }
-            }
-            continue;
-        }
-        match pick_var(clauses, pol) {
-            None => return true,
-            Some(v) => {
-                decided.push(v);
-                decisions.push((v, trail.len(), false));
-                pol[v] = first;
-                trail.push(v);
-            }
-        }
-    }
-}
-
-fn scan_all(clauses: &[Clause], pol: &mut [i8], trail: &mut Vec<usize>) -> bool {
-    loop {
-        let mut changed = false;
-        for c in clauses {
-            match clause_status(c, pol) {
-                Status::Conflict => return false,
-                Status::Unit(l) => {
-                    let v = var(l) as usize;
-                    if pol[v] == 0 {
-                        pol[v] = if l > 0 { 1 } else { -1 };
-                        trail.push(v);
-                        changed = true;
-                    }
-                }
-                _ => {}
-            }
-        }
-        if !changed {
-            return true;
-        }
-    }
-}
-
-fn propagate(
-    clauses: &[Clause],
-    occ: &[Vec<u32>],
-    pol: &mut [i8],
-    trail: &mut Vec<usize>,
-    from: &mut usize,
-) -> bool {
-    while *from < trail.len() {
-        let v = trail[*from];
-        *from += 1;
-        let p = pol[v];
-        let neg_idx = 2 * v + if p > 0 { 1 } else { 0 };
-        for &ci in &occ[neg_idx] {
-            match clause_status(&clauses[ci as usize], pol) {
-                Status::Conflict => return false,
-                Status::Unit(l) => {
-                    let u = var(l) as usize;
-                    if pol[u] == 0 {
-                        pol[u] = if l > 0 { 1 } else { -1 };
-                        trail.push(u);
-                    }
-                }
-                _ => {}
-            }
-        }
-    }
-    true
-}
-
-enum Status {
-    Sat,
-    Conflict,
-    Unit(i32),
-    Unresolved,
-}
-
-#[inline]
-fn clause_status(c: &Clause, pol: &[i8]) -> Status {
-    let mut unassigned: Option<i32> = None;
-    let mut multi = false;
-    for &l in c {
-        let p = pol[var(l) as usize];
-        if p != 0 {
-            if (l > 0) == (p > 0) {
-                return Status::Sat;
-            }
-        } else if unassigned.is_some() {
-            multi = true;
-        } else {
-            unassigned = Some(l);
-        }
-    }
-    match (unassigned, multi) {
-        (None, _) => Status::Conflict,
-        (Some(l), false) => Status::Unit(l),
-        _ => Status::Unresolved,
-    }
-}
-
-fn pick_var(clauses: &[Clause], pol: &[i8]) -> Option<usize> {
-    for c in clauses {
-        let mut sat = false;
-        let mut cand = None;
-        for &l in c {
-            let v = var(l) as usize;
-            let p = pol[v];
-            if p != 0 {
-                if (l > 0) == (p > 0) {
-                    sat = true;
-                    break;
-                }
-            } else {
-                cand = Some(v);
-            }
-        }
-        if !sat {
-            if let Some(v) = cand {
-                return Some(v);
-            }
-        }
-    }
-    None
 }

@@ -1,4 +1,5 @@
 mod aiger;
+mod cdcl;
 mod expand;
 mod formula;
 mod parse;

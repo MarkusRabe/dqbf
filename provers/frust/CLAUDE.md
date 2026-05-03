@@ -176,3 +176,4 @@ start, and reading CAQE before iter 8.
   of fork pairs, not just the dep-greedy one).
 - `add_n12+` (|U|>16): Shannon-per-output-bit instead of
   whole-table expansion (each output bit's cone is small).
+| 21 | `mutex_n4_k008` (DPLL exponential) | studied minisat/picosat/satch | 2-watched-lit + 1-UIP CDCL with assumption-based incremental solve; learned clauses persist across rows | ? |
