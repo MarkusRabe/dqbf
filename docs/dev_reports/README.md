@@ -2,6 +2,7 @@
 
 | date | label | view |
 |---|---|---|
+| 2026-05-03_0045 | train585-bmc-circuits | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-03_0045_train585-bmc-circuits.html) · [source](2026-05-03_0045_train585-bmc-circuits.html) |
 | 2026-05-03_0020 | train-v3-tree-selector | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-03_0020_train-v3-tree-selector.html) · [source](2026-05-03_0020_train-v3-tree-selector.html) |
 | 2026-05-03_0000 | train420-v2-families | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-03_0000_train420-v2-families.html) · [source](2026-05-03_0000_train420-v2-families.html) |
 | 2026-05-02_2321 | train-suite-dqbf-solvers | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-02_2321_train-suite-dqbf-solvers.html) · [source](2026-05-02_2321_train-suite-dqbf-solvers.html) |
