@@ -118,7 +118,7 @@ def _run_one(
     slot: int,
 ) -> RunRow:
     stem = Path(inst.stem.replace(".dqdimacs", "").replace(".qdimacs", "")).name
-    sub = certdir / solver.name
+    sub = certdir / solver.name / family.replace("/", "_")
     sub.mkdir(parents=True, exist_ok=True)
     file_path = str(inst)
     inst_ext = inst.name.replace(".gz", "").rsplit(".", 1)[-1]
