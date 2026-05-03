@@ -2,6 +2,7 @@
 
 | date | label | view |
 |---|---|---|
+| 2026-05-03_0526 | train744-multi-domain | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-03_0526_train744-multi-domain.html) · [source](2026-05-03_0526_train744-multi-domain.html) |
 | 2026-05-03_0509 | domain-selector | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-03_0509_domain-selector.html) · [source](2026-05-03_0509_domain-selector.html) |
 | 2026-05-03_0502 | bmc-encoding-fixed-abc-vs-dqbf | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-03_0502_bmc-encoding-fixed-abc-vs-dqbf.html) · [source](2026-05-03_0502_bmc-encoding-fixed-abc-vs-dqbf.html) |
 | 2026-05-03_0446 | abc-vs-hqs-bmc-circuits | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-03_0446_abc-vs-hqs-bmc-circuits.html) · [source](2026-05-03_0446_abc-vs-hqs-bmc-circuits.html) |
