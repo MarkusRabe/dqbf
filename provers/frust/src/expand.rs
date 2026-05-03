@@ -13,6 +13,15 @@ use std::collections::HashMap;
 pub const MAX_U: usize = 16;
 
 pub fn try_expand(f: &Formula) -> Option<Skolem> {
+    for &first in &[1i8, -1i8] {
+        if let Some(sk) = try_expand_with(f, first) {
+            return Some(sk);
+        }
+    }
+    None
+}
+
+fn try_expand_with(f: &Formula, first_branch: i8) -> Option<Skolem> {
     let nu = f.universals.len();
     if nu > MAX_U {
         return None;
@@ -70,7 +79,7 @@ pub fn try_expand(f: &Formula) -> Option<Skolem> {
                 polarity[y as usize] = t;
             }
         }
-        if !dpll(&f.clauses, &occ, &mut polarity) {
+        if !dpll(&f.clauses, &occ, &mut polarity, first_branch) {
             return None;
         }
         for (i, &y) in exs.iter().enumerate() {
@@ -110,18 +119,17 @@ fn build_occ(clauses: &[Clause], n: usize) -> Vec<Vec<u32>> {
     occ
 }
 
-fn dpll(clauses: &[Clause], occ: &[Vec<u32>], pol: &mut [i8]) -> bool {
+fn dpll(clauses: &[Clause], occ: &[Vec<u32>], pol: &mut [i8], first: i8) -> bool {
     let mut trail: Vec<usize> = Vec::new();
     let mut decisions: Vec<(usize, usize, bool)> = Vec::new();
     let mut prop_from = 0usize;
-    // Seed: enqueue all initially-set vars by pretending a "full scan" once.
     if !scan_all(clauses, pol, &mut trail) {
         return false;
     }
     loop {
         if !propagate(clauses, occ, pol, &mut trail, &mut prop_from) {
             loop {
-                let (dv, tl, tried_neg) = match decisions.pop() {
+                let (dv, tl, flipped) = match decisions.pop() {
                     Some(d) => d,
                     None => return false,
                 };
@@ -129,8 +137,8 @@ fn dpll(clauses: &[Clause], occ: &[Vec<u32>], pol: &mut [i8]) -> bool {
                     pol[trail.pop().unwrap()] = 0;
                 }
                 prop_from = trail.len();
-                if !tried_neg {
-                    pol[dv] = -1;
+                if !flipped {
+                    pol[dv] = -first;
                     trail.push(dv);
                     decisions.push((dv, tl, true));
                     break;
@@ -142,7 +150,7 @@ fn dpll(clauses: &[Clause], occ: &[Vec<u32>], pol: &mut [i8]) -> bool {
             None => return true,
             Some(v) => {
                 decisions.push((v, trail.len(), false));
-                pol[v] = 1;
+                pol[v] = first;
                 trail.push(v);
             }
         }
