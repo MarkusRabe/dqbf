@@ -101,6 +101,19 @@ def _run_one(
     sub = certdir / solver.name
     sub.mkdir(parents=True, exist_ok=True)
     file_path = str(inst)
+    inst_ext = inst.name.replace(".gz", "").rsplit(".", 1)[-1]
+    if solver.input_format == "qdimacs" and inst_ext != "qdimacs":
+        return RunRow(
+            solver=solver.name,
+            path=str(inst),
+            family=family,
+            expected=expected,
+            got="n/a",
+            wall_s=0.0,
+            cert_path=None,
+            cert_bytes=0,
+            cert_status="n/a",
+        )
     if solver.input_format == "aag":
         src = _find_source_aag(inst)
         if src is None:

@@ -580,17 +580,19 @@ function wireFamTree(tree, render){
   syncInterior();
 }
 
+// "ran" = solver attempted the format (not n/a / not error).
+const RAN = new Set(["sat","unsat","unknown","timeout"]);
 // Domain → families: families where at least one *native* solver of that
-// domain produced a non-"n/a" result. Then domain → solvers: every solver
-// (native or not) with a non-"n/a" result on at least one of those families.
+// domain produced a result. Then domain → solvers: every solver (native or
+// not) with a result on at least one of those families.
 const FAMS_FOR = {}, SOLVERS_FOR = {};
 for(const d of DOMAIN_NAMES){
   const native = new Set(SOLVERS.filter(s=>DOMAINS[s]===d));
   const fams = new Set(
-    DATA.filter(r=>native.has(r.solver) && r.got!=="n/a").map(r=>r.family));
+    DATA.filter(r=>native.has(r.solver) && RAN.has(r.got)).map(r=>r.family));
   FAMS_FOR[d] = fams;
   SOLVERS_FOR[d] = SOLVERS.filter(s=>
-    DATA.some(r=>r.solver===s && fams.has(r.family) && r.got!=="n/a"));
+    DATA.some(r=>r.solver===s && fams.has(r.family) && RAN.has(r.got)));
 }
 
 function applyDomain(){

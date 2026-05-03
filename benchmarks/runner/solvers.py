@@ -58,6 +58,7 @@ def registry() -> dict[str, Solver]:
             certs={"sat": "{certdir}/{stem}.aag"},
             available=_exists(cadet),
             domain="qbf",
+            input_format="qdimacs",
         ),
         "caqe": Solver(
             name="caqe",
@@ -65,6 +66,7 @@ def registry() -> dict[str, Solver]:
             certs={},
             available=_exists(caqe),
             domain="qbf",
+            input_format="qdimacs",
         ),
         "rareqs": Solver(
             name="rareqs",
@@ -72,6 +74,7 @@ def registry() -> dict[str, Solver]:
             certs={},
             available=_exists(rareqs),
             domain="qbf",
+            input_format="qdimacs",
         ),
         "dqbdd": Solver(
             name="dqbdd",
