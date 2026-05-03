@@ -204,15 +204,14 @@ function tbl(headers, rows){
 
 function activeDomain(){
   const r = $$("input[name=domain]").find(x=>x.checked);
-  return r ? r.value : "all";
+  return r ? r.value : DOMAIN_NAMES[0];
 }
 function dSolvers(){
   const d = activeDomain();
-  return SOLVERS.filter(s => d==="all" || DOMAINS[s]===d);
+  return SOLVERS.filter(s => DOMAINS[s]===d);
 }
 function dFams(){
-  const d = activeDomain();
-  return d==="all" ? new Set(FAMILIES) : (FAMS_FOR[d]||new Set());
+  return FAMS_FOR[activeDomain()] || new Set();
 }
 function state(scope){
   const fams = new Set($$(".famchk-"+scope).filter(c=>c.checked).map(c=>c.value));
@@ -622,12 +621,14 @@ document.addEventListener("DOMContentLoaded",()=>{
 
 def _domain_selector(domains: dict[str, str]) -> str:
     counts = {d: sum(1 for v in domains.values() if v == d) for d in DOMAIN_ORDER}
-    pills = ['<label><input type="radio" name="domain" value="all" checked> All</label>']
+    default = next((d for d in DOMAIN_ORDER if counts.get(d)), DOMAIN_ORDER[0])
+    pills = []
     for d in DOMAIN_ORDER:
         n = counts.get(d, 0)
         dis = "" if n else " disabled"
+        chk = " checked" if d == default else ""
         pills.append(
-            f'<label><input type="radio" name="domain" value="{_esc(d)}"{dis}> '
+            f'<label><input type="radio" name="domain" value="{_esc(d)}"{dis}{chk}> '
             f"{_esc(d.upper())}{f' ({n})' if n else ''}</label>"
         )
     return f'<div id="domain"><b>Domain:</b>{"".join(pills)}</div>'
