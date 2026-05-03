@@ -1,4 +1,5 @@
 mod aiger;
+mod expand;
 mod formula;
 mod parse;
 mod proof;

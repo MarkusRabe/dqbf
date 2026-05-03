@@ -177,6 +177,19 @@ use crate::formula::Lit;
 
 pub fn solve(f: &Formula, cfg: &Config) -> Output {
     let start = Instant::now();
+
+    // Phase 0: greedy universal expansion (SAT-only, cert-producing).
+    if cfg.extract_cert {
+        if let Some(sk) = crate::expand::try_expand(f) {
+            return Output {
+                verdict: Verdict::Sat,
+                proof: None,
+                skolem: Some(sk),
+                stats: "expand".into(),
+            };
+        }
+    }
+
     let mut g = f.clone();
     let mut db = Db::new();
 
