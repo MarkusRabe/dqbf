@@ -313,6 +313,8 @@ fn build_occ(clauses: &[Clause], n: usize) -> Vec<Vec<u32>> {
     occ
 }
 
+const DPLL_MAX_CONFLICTS: u32 = 200_000;
+
 fn dpll(
     clauses: &[Clause],
     occ: &[Vec<u32>],
@@ -323,11 +325,16 @@ fn dpll(
     let mut trail: Vec<usize> = Vec::new();
     let mut decisions: Vec<(usize, usize, bool)> = Vec::new();
     let mut prop_from = 0usize;
+    let mut conflicts = 0u32;
     if !scan_all(clauses, pol, &mut trail) {
         return false;
     }
     loop {
+        if conflicts > DPLL_MAX_CONFLICTS {
+            return false;
+        }
         if !propagate(clauses, occ, pol, &mut trail, &mut prop_from) {
+            conflicts += 1;
             loop {
                 let (dv, tl, flipped) = match decisions.pop() {
                     Some(d) => d,

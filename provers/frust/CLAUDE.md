@@ -37,3 +37,5 @@ Exit codes 10/20/0 (sat/unsat/unknown).
 | 15 | `peano_v2_mul_n3` | enumerating ALL keys of conflicting vars (>16 slots) | enumerate only the (i,k) pairs that actually disagreed; cap 20 | 296/344, n3/both_n2 solved |
 | 16 | `peano_v2_mul_n4` (32 slots) | 2^32 enumeration hopeless | DPLL-over-slots: vote-ordered, backtrack on row fail | 305/344, n4-6 solved |
 | 17 | `v2_mul_n8` (192 slots) | 53% in DPLL — re-runs all rows per slot decision | cache row models keyed by row-local slot-signature | 306/344, marginal (slots overlap most rows) |
+| 18 | `dep_cycle_n1` (11v, 12s) — needs SFEx | also `mutex_n2_k016` ignores --timeout (74s on 3s) | SFEx wired into choose_fork | 513/804; dep_cycle still UNKNOWN (partition heuristic) |
+| 19 | `mutex_n2_k016` (\|U\|=0, 74s on --timeout 3!) | DPLL has no conflict bound; saturation inner loop no timeout check | DPLL_MAX_CONFLICTS=200k; tick-based inner check | 513/804; mutex_n2 16ms |

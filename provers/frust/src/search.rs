@@ -3,7 +3,7 @@
 use crate::aiger::Skolem;
 use crate::formula::{var, Clause, Formula, Var};
 use crate::proof::{Proof, Step};
-use crate::rules::{find_information_fork, fork_extend, is_tautology, resolve, universal_reduce};
+use crate::rules::{is_tautology, resolve, universal_reduce};
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
@@ -238,6 +238,7 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
     }
 
     let mut forks = 0usize;
+    let mut tick = 0u64;
     loop {
         let mut found_empty = false;
         while let Some(Reverse((_, cursor))) = db.queue.pop() {
@@ -262,6 +263,13 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                     })
                     .unwrap_or_default();
                 for di in partners {
+                    tick += 1;
+                    if tick & 0xffff == 0
+                        && (start.elapsed().as_secs_f64() > cfg.timeout_s
+                            || db.clauses.len() > cfg.max_clauses)
+                    {
+                        return unknown(&db, forks);
+                    }
                     if let Some(r) = resolve(&c, &db.clauses[di], var(l)) {
                         let rr = universal_reduce(&g, &r);
                         if db.seen.contains(&rr) {
@@ -307,29 +315,20 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
         let mut forked = false;
         for &i in &order {
             let c = db.clauses[i].clone();
-            if let Some((a, _b)) = find_information_fork(&g, &c) {
-                let da = g.deps[&a].clone();
-                let part: Clause = c
-                    .iter()
-                    .copied()
-                    .filter(|&l| {
-                        let v = var(l);
-                        v == a || g.dep(v).is_subset(&da)
-                    })
-                    .collect();
+            if let Some((part, fr)) = crate::rules::choose_fork(&mut g, &c) {
                 let src = db.idx[&c];
-                let fr = fork_extend(&mut g, &c, &part);
                 let part_v = part.clone();
+                let rule = if fr.c3.is_some() { "sfex" } else { "fex" };
                 for (cl, _half) in [(&fr.left, "l"), (&fr.right, "r")] {
                     db.record(
                         cl,
                         Step {
                             clause: cl.clone(),
-                            rule: "fex",
+                            rule,
                             premises: vec![src],
                             pivot: None,
                             part: Some(part_v.clone()),
-                            c3: None,
+                            c3: fr.c3.clone(),
                             fresh: Some(fr.fresh),
                         },
                     );

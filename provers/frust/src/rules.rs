@@ -123,6 +123,38 @@ pub struct ForkResult {
     pub fresh: Var,
     pub left: Clause,
     pub right: Clause,
+    pub c3: Option<Clause>,
+}
+
+pub fn strong_fork_extend(f: &mut Formula, c: &Clause, part: &Clause, c3: &Clause) -> ForkResult {
+    let part_set: BTreeSet<Lit> = part.iter().copied().collect();
+    let c1 = part.clone();
+    let c2: Clause = c
+        .iter()
+        .copied()
+        .filter(|l| !part_set.contains(l))
+        .collect();
+    let d1 = f.clause_dep(&c1);
+    let d2 = f.clause_dep(&c2);
+    let drop: BTreeSet<Var> = c3.iter().map(|&l| var(l)).collect();
+    let mut deps: BTreeSet<Var> = d1.intersection(&d2).copied().collect();
+    deps.retain(|u| !drop.contains(u));
+    let x = f.n_vars + 1;
+    f.add_existential(x, deps);
+    let mut left: Clause = c1.iter().chain(c3.iter()).copied().collect();
+    left.push(x as Lit);
+    left.sort_unstable();
+    left.dedup();
+    let mut right: Clause = c2.iter().chain(c3.iter()).copied().collect();
+    right.push(-(x as Lit));
+    right.sort_unstable();
+    right.dedup();
+    ForkResult {
+        fresh: x,
+        left,
+        right,
+        c3: Some(c3.clone()),
+    }
 }
 
 pub fn fork_extend(f: &mut Formula, c: &Clause, part: &Clause) -> ForkResult {
@@ -147,7 +179,43 @@ pub fn fork_extend(f: &mut Formula, c: &Clause, part: &Clause) -> ForkResult {
         fresh: x,
         left,
         right,
+        c3: None,
     }
+}
+
+/// Choose a fork (FEx or SFEx) for clause `c`. Returns None if no
+/// information fork exists. Uses SFEx when plain FEx wouldn't shrink
+/// the fresh var's dep set below either side.
+pub fn choose_fork(f: &mut Formula, c: &Clause) -> Option<(Clause, ForkResult)> {
+    let (a, _b) = find_information_fork(f, c)?;
+    let da = f.deps[&a].clone();
+    let part: Clause = c
+        .iter()
+        .copied()
+        .filter(|&l| {
+            let v = var(l);
+            v == a || f.dep(v).is_subset(&da)
+        })
+        .collect();
+    let part_set: BTreeSet<Lit> = part.iter().copied().collect();
+    let c2: Clause = c
+        .iter()
+        .copied()
+        .filter(|l| !part_set.contains(l))
+        .collect();
+    let d1 = f.clause_dep(&part);
+    let d2 = f.clause_dep(&c2);
+    let inter: BTreeSet<Var> = d1.intersection(&d2).copied().collect();
+    if inter.len() < d1.len().min(d2.len()) {
+        // FEx makes progress.
+        return Some((part.clone(), fork_extend(f, c, &part)));
+    }
+    // SFEx: drop one universal from the intersection.
+    if let Some(&u) = inter.iter().next() {
+        let c3 = vec![u as Lit];
+        return Some((part.clone(), strong_fork_extend(f, c, &part, &c3)));
+    }
+    Some((part.clone(), fork_extend(f, c, &part)))
 }
 
 pub fn find_information_fork(f: &Formula, c: &Clause) -> Option<(Var, Var)> {
