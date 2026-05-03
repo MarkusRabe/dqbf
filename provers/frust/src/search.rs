@@ -214,7 +214,15 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
         }
     }
 
-    let _ = unsat_row; // TODO: emit Q-resolution from CDCL trace
+    // If expand proved UNSAT (row ub), still give saturation a short
+    // window so easy cases get a verified .frp; fall back to the
+    // uncertified UNSAT verdict if it doesn't finish.
+    let known_unsat = unsat_row.is_some();
+    let sat_deadline = if known_unsat {
+        (cfg.timeout_s).min(start.elapsed().as_secs_f64() + 1.0)
+    } else {
+        cfg.timeout_s
+    };
     let mut g = f.clone();
     let mut db = Db::new();
 
@@ -254,8 +262,8 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
     loop {
         let mut found_empty = false;
         while let Some(Reverse((_, cursor))) = db.queue.pop() {
-            if start.elapsed().as_secs_f64() > cfg.timeout_s || db.clauses.len() > cfg.max_clauses {
-                return unknown(&db, forks);
+            if start.elapsed().as_secs_f64() > sat_deadline || db.clauses.len() > cfg.max_clauses {
+                return bail(&db, forks, known_unsat);
             }
             if db.dead[cursor] || db.processed[cursor] {
                 continue;
@@ -280,10 +288,10 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                 for di in partners {
                     tick += 1;
                     if tick & 0xffff == 0
-                        && (start.elapsed().as_secs_f64() > cfg.timeout_s
+                        && (start.elapsed().as_secs_f64() > sat_deadline
                             || db.clauses.len() > cfg.max_clauses)
                     {
-                        return unknown(&db, forks);
+                        return bail(&db, forks, known_unsat);
                     }
                     if let Some(r) = resolve(&c, &db.clauses[di], var(l)) {
                         let rr = universal_reduce(&g, &r);
@@ -321,8 +329,8 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                 stats: format!("⊥ after {} clauses, {} forks", db.clauses.len(), forks),
             };
         }
-        if start.elapsed().as_secs_f64() > cfg.timeout_s || db.clauses.len() > cfg.max_clauses {
-            return unknown(&db, forks);
+        if start.elapsed().as_secs_f64() > sat_deadline || db.clauses.len() > cfg.max_clauses {
+            return bail(&db, forks, known_unsat);
         }
         // saturated; try a fork
         let mut order: Vec<usize> = (0..db.clauses.len()).filter(|&i| !db.dead[i]).collect();
@@ -371,6 +379,17 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
             }
         }
         if !forked {
+            if known_unsat {
+                // Expand says UNSAT, saturation says SAT — contradiction.
+                // Don't trust either; bail UNKNOWN.
+                eprintln!("c WARNING: expand-UNSAT vs saturation-SAT");
+                return Output {
+                    verdict: Verdict::Unknown,
+                    proof: None,
+                    skolem: None,
+                    stats: "expand/saturation contradiction".into(),
+                };
+            }
             let sk = if cfg.extract_cert {
                 find_skolem_brute(f, &start, cfg.timeout_s)
             } else {
@@ -384,17 +403,30 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
             };
         }
         if forks >= cfg.max_forks {
-            return unknown(&db, forks);
+            return bail(&db, forks, known_unsat);
         }
     }
 }
 
-fn unknown(db: &Db, forks: usize) -> Output {
+fn bail(db: &Db, forks: usize, known_unsat: bool) -> Output {
     Output {
-        verdict: Verdict::Unknown,
+        verdict: if known_unsat {
+            Verdict::Unsat
+        } else {
+            Verdict::Unknown
+        },
         proof: None,
         skolem: None,
-        stats: format!("budget: {} clauses, {} forks", db.clauses.len(), forks),
+        stats: format!(
+            "{}: {} clauses, {} forks",
+            if known_unsat {
+                "expand-UNSAT (no .frp)"
+            } else {
+                "budget"
+            },
+            db.clauses.len(),
+            forks
+        ),
     }
 }
 

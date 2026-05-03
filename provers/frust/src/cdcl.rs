@@ -61,6 +61,7 @@ pub struct Cdcl {
     var_inc: f64,
     pub conflicts: u64,
     pub n_learned: usize,
+    pub budget_hit: bool,
 }
 
 impl Cdcl {
@@ -84,6 +85,7 @@ impl Cdcl {
             var_inc: 1.0,
             conflicts: 0,
             n_learned: 0,
+            budget_hit: false,
         };
         for c in clauses {
             let lits: Vec<ILit> = c.iter().map(|&l| ilit(l)).collect();
@@ -406,6 +408,7 @@ impl Cdcl {
 
     pub fn solve(&mut self, assumptions: &[Lit], model: &mut [i8], max_conflicts: u64) -> bool {
         self.core.clear();
+        self.budget_hit = false;
         if !self.ok {
             return false;
         }
@@ -422,6 +425,7 @@ impl Cdcl {
                     return false;
                 }
                 if self.conflicts - start_conflicts > max_conflicts {
+                    self.budget_hit = true;
                     self.cancel_until(0);
                     return false;
                 }

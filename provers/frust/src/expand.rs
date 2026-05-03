@@ -105,13 +105,9 @@ pub fn try_expand(
                 "free pass row {}: UNSAT/budget — falling through",
                 ub
             );
-            // If the core is empty or only universals, the row is
-            // genuinely UNSAT under universals → DQBF UNSAT.
-            if cdcl
-                .last_core()
-                .iter()
-                .all(|&l| f.is_universal(l.unsigned_abs()))
-            {
+            // Genuine UNSAT (not budget) under universals-only
+            // assumptions → DQBF is UNSAT.
+            if !cdcl.budget_hit {
                 *unsat_row = Some(ub);
             }
             return None;
