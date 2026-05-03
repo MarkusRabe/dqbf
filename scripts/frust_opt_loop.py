@@ -50,7 +50,11 @@ def run_one(path: Path) -> dict:
         vc = [sys.executable, "-m", "tools.verify.cli", "sat", str(path), str(cert)]
         vc += ["-o", "/tmp/v.cnf", "--solve"]
         v = subprocess.run(vc, capture_output=True, text=True, cwd=ROOT)
-        cert_status = "valid" if "VALID" in v.stdout else "INVALID"
+        cert_status = (
+            "valid"
+            if v.stdout.strip().endswith("VALID") and "INVALID" not in v.stdout
+            else "INVALID"
+        )
     elif rc == 20 and frp.exists():
         v = subprocess.run(
             [sys.executable, "-m", "tools.verify.cli", "unsat", str(path), str(frp)],
@@ -58,7 +62,11 @@ def run_one(path: Path) -> dict:
             text=True,
             cwd=ROOT,
         )
-        cert_status = "valid" if "VALID" in v.stdout else "INVALID"
+        cert_status = (
+            "valid"
+            if v.stdout.strip().endswith("VALID") and "INVALID" not in v.stdout
+            else "INVALID"
+        )
     return {
         "path": str(path.relative_to(ROOT)),
         "n_vars": nv,

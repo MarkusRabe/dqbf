@@ -33,27 +33,92 @@ impl Aig {
     }
 }
 
+use std::collections::HashMap;
+
+/// Shannon synthesis with cofactor memoization (BDD-style sharing).
 fn shannon(aig: &mut Aig, tbl: &BTreeMap<Vec<bool>, bool>, inputs: &[u32]) -> u32 {
-    fn rec(
-        aig: &mut Aig,
-        tbl: &BTreeMap<Vec<bool>, bool>,
-        ins: &[u32],
-        pre: &mut Vec<bool>,
-    ) -> u32 {
-        if pre.len() == ins.len() {
-            return if tbl[pre] { 1 } else { 0 };
+    let n = inputs.len();
+    // Pack truth table into a bitvec indexed by minterm.
+    let size = 1usize << n;
+    let mut bits = vec![0u64; (size + 63) / 64];
+    for (k, v) in tbl {
+        if *v {
+            let mut idx = 0usize;
+            for (b, &kb) in k.iter().enumerate() {
+                if kb {
+                    idx |= 1 << b;
+                }
+            }
+            bits[idx / 64] |= 1u64 << (idx % 64);
         }
-        let sel = ins[pre.len()];
-        pre.push(true);
-        let t = rec(aig, tbl, ins, pre);
-        pre.pop();
-        pre.push(false);
-        let e = rec(aig, tbl, ins, pre);
-        pre.pop();
-        aig.mk_ite(sel, t, e)
     }
-    let mut pre = Vec::new();
-    rec(aig, tbl, inputs, &mut pre)
+    let mut memo: HashMap<(usize, Vec<u64>), u32> = HashMap::new();
+    rec(aig, &bits, 0, n, inputs, &mut memo)
+}
+
+fn rec(
+    aig: &mut Aig,
+    bits: &[u64],
+    depth: usize,
+    n: usize,
+    ins: &[u32],
+    memo: &mut HashMap<(usize, Vec<u64>), u32>,
+) -> u32 {
+    let span = 1usize << (n - depth);
+    if span == 1 {
+        return (bits[0] & 1) as u32;
+    }
+    // Check constant.
+    let words = (span + 63) / 64;
+    let all_zero = bits[..words].iter().all(|&w| w == 0);
+    if all_zero {
+        return 0;
+    }
+    let mask_last = if span % 64 == 0 {
+        u64::MAX
+    } else {
+        (1u64 << (span % 64)) - 1
+    };
+    let all_one = bits[..words.saturating_sub(1)]
+        .iter()
+        .all(|&w| w == u64::MAX)
+        && (words == 0 || bits[words - 1] & mask_last == mask_last);
+    if all_one {
+        return 1;
+    }
+    let key = (depth, bits[..words].to_vec());
+    if let Some(&g) = memo.get(&key) {
+        return g;
+    }
+    // Cofactor on input[depth]: low half (bit=0) and high half (bit=1).
+    let half = span / 2;
+    let hw = (half + 63) / 64;
+    let mut lo = vec![0u64; hw];
+    let mut hi = vec![0u64; hw];
+    for i in 0..half {
+        if bits[i / 64] >> (i % 64) & 1 == 1 {
+            lo[i / 64] |= 1 << (i % 64);
+        }
+        let j = i + half;
+        if bits[j / 64] >> (j % 64) & 1 == 1 {
+            hi[i / 64] |= 1 << (i % 64);
+        }
+    }
+    let e = rec(aig, &lo, depth + 1, n, ins, memo);
+    let t = rec(aig, &hi, depth + 1, n, ins, memo);
+    // Halving the bitmap splits on the highest remaining index bit.
+    let sel = ins[n - 1 - depth];
+    let out = if t == e {
+        t
+    } else if t == 1 && e == 0 {
+        sel
+    } else if t == 0 && e == 1 {
+        sel ^ 1
+    } else {
+        aig.mk_ite(sel, t, e)
+    };
+    memo.insert(key, out);
+    out
 }
 
 pub fn write_skolem_aag<W: Write>(w: &mut W, f: &Formula, sk: &Skolem) -> std::io::Result<()> {

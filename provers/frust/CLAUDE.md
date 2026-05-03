@@ -24,3 +24,4 @@ Exit codes 10/20/0 (sat/unsat/unknown).
 | 2 | same | 13270 clauses ≈ 2/3 of 3⁹ clause space | forward+backward subsumption via occ lists | 225/344, 0 invalid; instance now **7ms** (445 clauses) |
 | 3 | `inc_n4` (36v, 95cl, 10s) | 48% in `activate` (subsumption); long occ lists | u64 signature fast-reject + shortest-first priority queue | 261/344, 0 invalid; instance still 10s (Tseitin saturation explodes) |
 | 4 | same | only 4 universals → saturation is wrong tool | greedy ∀-expansion + per-row DPLL (SAT-only, cert-producing); fall back on failure | 279/344, 0 invalid; instance now **7ms** with VALID cert; missing-certs 70→6 |
+| 5 | `and_n8` (47v, \|U\|=16, 12s) | 115 MB cert (Shannon = 3·2¹⁶ gates/output) | bitmap-packed BDD-style memoized Shannon (fixed cofactor-bit bug); probe substring fix | 289/344, 0 invalid; cert **925 B**, 0.93s |
