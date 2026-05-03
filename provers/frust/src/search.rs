@@ -151,6 +151,7 @@ impl Db {
         if !self.seen.insert(c.clone()) {
             return;
         }
+        let clen = c.len();
         let csig = sig_of(&c);
         if self.forward_subsumed(&c, csig) {
             return;
@@ -162,9 +163,11 @@ impl Db {
         self.sig.push(csig);
         self.dead.push(false);
         self.processed.push(false);
-        self.queue.push(Reverse((c.len(), ci)));
+        self.queue.push(Reverse((clen, ci)));
         self.clauses.push(c.clone());
-        self.backward_subsume(&c, csig, ci);
+        if clen <= 5 {
+            self.backward_subsume(&c, csig, ci);
+        }
     }
     fn admit(&mut self, c: Clause, s: Step) -> usize {
         let i = self.record(&c, s);

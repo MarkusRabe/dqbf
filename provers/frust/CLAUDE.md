@@ -29,3 +29,4 @@ Exit codes 10/20/0 (sat/unsat/unknown).
 | 7 | same, 5.4s | 78% try_expand: 19M HashMap hashes + linear-scan unit-prop | flat-array tables + occurrence-driven propagation | 290/344, 0 invalid; instance **1.8s** |
 | 8 | `peano_v2_mul_n2` (84v, partial deps) | greedy pin causes cross-row conflict | retry expand with opposite first-branch polarity | 291/344, 0 invalid; instance still UNKNOWN (need real inter-row search) |
 | 9 | same; `universal_reduce` 5% (BTreeSet ops) | tried vote-mode expand (no help on this instance); pivoted to bitmask `universal_reduce` (u64 dep_mask) | 291/344, 0 invalid; saturation ~15% faster |
+| 10 | `activate` 46% (subsumption) | length-gating fwd subsumption hurt (junk slips in); kept backward-only gate at len≤5 | 291/344, 0 invalid. **Full bench: frust 490/819 vs forkres 132/819 vs hqs 705**; 476 verified certs |
