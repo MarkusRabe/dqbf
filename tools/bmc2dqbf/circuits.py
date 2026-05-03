@@ -90,7 +90,16 @@ class B:
 
 
 def circuit_counter(n: int) -> tuple[str, str]:
-    """n-bit up-counter, no inputs. bad = all-ones (reached at step 2^n-1)."""
+    """n-bit synchronous up-counter (no primary inputs).
+
+    Latches: `l[0..n-1]` hold the counter value, LSB-first; reset = 0.
+    Transition: ripple-carry +1 each cycle.
+    Bad: `⋀ l[i]` — counter value is `2^n − 1`.
+
+    Reachability: deterministic — bad first holds at step `2^n − 1`.
+    BMC@k is SAT iff `k ≥ 2^n − 1` (so for N=2 SAT from k=3; N=4 from
+    k=15; N=8 from k=255).
+    """
     b = B(n_inputs=0, n_latches=n)
     carry = TRUE_L
     for i in range(n):
@@ -101,8 +110,18 @@ def circuit_counter(n: int) -> tuple[str, str]:
 
 
 def circuit_gray(n: int) -> tuple[str, str]:
-    """n-bit Gray-code output via internal binary counter. bad = Gray==all-ones,
-    i.e. binary value 2^(n-1) (step 2^(n-1))."""
+    """n-bit Gray-code generator backed by a binary counter (no inputs).
+
+    Latches: `l[0..n-1]` are the *binary* counter state; the Gray code
+    is the combinational output `g[n-1]=l[n-1]`, `g[i]=l[i+1]⊕l[i]`.
+    Transition: same ripple +1 as `counter`.
+    Bad: `⋀ g[i]` — Gray output is all-ones, which corresponds to
+    binary value `100…0 = 2^(n-1)`.
+
+    Reachability: deterministic — bad first holds at step `2^(n-1)`.
+    BMC@k is SAT iff `k ≥ 2^(n-1)` (N=2 from k=2; N=4 from k=8; N=8
+    from k=128).
+    """
     b = B(n_inputs=0, n_latches=n)
     carry = TRUE_L
     for i in range(n):
@@ -114,8 +133,17 @@ def circuit_gray(n: int) -> tuple[str, str]:
 
 
 def circuit_mutex(n: int) -> tuple[str, str]:
-    """n requesters, fixed-priority arbiter. grant_i' = req_i ∧ ¬⋁_{j<i} req_j.
-    bad = two grants simultaneously."""
+    """n-way fixed-priority arbiter (n request inputs, n grant latches).
+
+    Inputs: `req[0..n-1]` per cycle.
+    Latches: `grant[0..n-1]`; reset = 0.
+    Transition: `grant[i]' = req[i] ∧ ¬⋁_{j<i} req[j]` — at most one
+    grant is high, given to the lowest-index requester.
+    Bad: `⋁_{i<j} grant[i] ∧ grant[j]` — mutual exclusion violated.
+
+    Reachability: the arbiter is correct, so bad is unreachable.
+    BMC@k is UNSAT for every k. (Serves as an "easy safe" baseline.)
+    """
     b = B(n_inputs=n, n_latches=n)
     higher = FALSE_L
     for i in range(n):
@@ -128,8 +156,16 @@ def circuit_mutex(n: int) -> tuple[str, str]:
 
 
 def circuit_shift_reg(n: int) -> tuple[str, str]:
-    """n-stage 1-bit shift register. bad = last stage holds 1 (reachable at
-    step n iff input was 1 at step 0)."""
+    """n-stage 1-bit shift register (one serial input).
+
+    Input: `d` per cycle.
+    Latches: `s[0..n-1]`, reset = 0.
+    Transition: `s[0]'=d`, `s[i]'=s[i-1]` for `i>0`.
+    Bad: `s[n-1]` — the last stage holds 1.
+
+    Reachability: SAT iff `k ≥ n` (drive `d=1` at step 0; the 1 emerges
+    at stage n-1 after n cycles). UNSAT for `k < n` regardless of input.
+    """
     b = B(n_inputs=1, n_latches=n)
     for i in range(n):
         b.set_next(b.lats[i], b.ins[0] if i == 0 else b.lats[i - 1])
@@ -137,8 +173,18 @@ def circuit_shift_reg(n: int) -> tuple[str, str]:
 
 
 def circuit_fifo1(n: int) -> tuple[str, str]:
-    """1-slot n-bit register with write-enable. Shadows the last written
-    value; bad = stored ≠ shadow. Correct circuit → bad never fires."""
+    """Depth-1 n-bit register with write-enable, checked against a shadow.
+
+    Inputs: `we` (1 bit) + `d[0..n-1]` data.
+    Latches: `r[0..n-1]` (the register) and `sd[0..n-1]` (an identical
+    shadow); reset = 0.
+    Transition: both `r[i]` and `sd[i]` get `we ? d[i] : self`.
+    Bad: `⋁ (r[i] ⊕ sd[i])` — register and shadow differ.
+
+    Reachability: register and shadow are wired identically, so bad is
+    unreachable. BMC@k is UNSAT for every k. The interest is in the
+    Tseitin/encoding cost of the n-bit MUX + XOR trees as N grows.
+    """
     # inputs: we (1) + d[0..n-1]; latches: r[0..n-1] + sd[0..n-1]
     b = B(n_inputs=1 + n, n_latches=2 * n)
     we, d = b.ins[0], b.ins[1:]
@@ -152,8 +198,19 @@ def circuit_fifo1(n: int) -> tuple[str, str]:
 
 
 def circuit_alu_add(n: int) -> tuple[str, str]:
-    """1-stage pipelined n-bit adder vs reference computed from latched
-    operands. bad = out ≠ sa+sb."""
+    """Pipelined n-bit ripple-carry adder vs a one-cycle-delayed reference.
+
+    Inputs: `a[0..n-1]`, `c[0..n-1]` operands per cycle.
+    Latches: `out[0..n-1]` (registered sum), `sa[0..n-1]` and
+    `sc[0..n-1]` (registered copies of the operands).
+    Transition: `out' = a + c` (ripple); `sa' = a`; `sc' = c`.
+    Bad: `⋁ (out[i] ⊕ ref[i])` where `ref = sa + sc` (same ripple).
+
+    Reachability: `out` and `ref` are the same function applied at the
+    same cycle, so bad is unreachable. BMC@k is UNSAT for every k.
+    Stresses the encoder/solver with two n-bit ripple chains and an
+    n-way XOR-OR per step.
+    """
     b = B(n_inputs=2 * n, n_latches=3 * n)
     a, c = b.ins[:n], b.ins[n:]
     out, sa, sc = b.lats[:n], b.lats[n : 2 * n], b.lats[2 * n :]
