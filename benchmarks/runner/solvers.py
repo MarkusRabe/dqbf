@@ -93,7 +93,7 @@ def registry() -> dict[str, Solver]:
             cmd=[
                 shutil.which("berkeley-abc") or shutil.which("abc") or "abc",
                 "-q",
-                "read_aiger {file}; bmc3 -v -F 1000 -T {timeout}",
+                "read {file}; bmc3 -F 1000 -T {timeout}",
             ],
             certs={},
             available=_exists("berkeley-abc") or _exists("abc"),
@@ -104,7 +104,7 @@ def registry() -> dict[str, Solver]:
             cmd=[
                 shutil.which("berkeley-abc") or shutil.which("abc") or "abc",
                 "-q",
-                "read_aiger {file}; pdr -v -T {timeout}",
+                "read {file}; pdr -T {timeout}",
             ],
             certs={},
             available=_exists("berkeley-abc") or _exists("abc"),

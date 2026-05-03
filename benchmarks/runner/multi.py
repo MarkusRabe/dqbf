@@ -21,21 +21,37 @@ from benchmarks.runner.solvers import Solver, registry
 
 EXIT = {10: "sat", 20: "unsat", 0: "unknown", 30: "unknown"}
 
-_SAT_RE = re.compile(r"^(s SATISFIABLE|SATISFIABLE|SAT|\[RESULT\]\s+SAT)\s*$", re.MULTILINE)
-_UNSAT_RE = re.compile(
-    r"^(s UNSATISFIABLE|UNSATISFIABLE|UNSAT|\[RESULT\]\s+UNSAT)\s*$", re.MULTILINE
-)
+_SAT_PATTERNS = [
+    re.compile(r"^(s SATISFIABLE|SATISFIABLE|SAT|\[RESULT\]\s+SAT)\s*$", re.MULTILINE),
+    re.compile(r"was asserted in frame", re.IGNORECASE),  # abc bmc3
+]
+_UNSAT_PATTERNS = [
+    re.compile(r"^(s UNSATISFIABLE|UNSATISFIABLE|UNSAT|\[RESULT\]\s+UNSAT)\s*$", re.MULTILINE),
+    re.compile(r"Property proved|Invariant.*holds", re.IGNORECASE),  # abc pdr
+]
 
 
 def _verdict_from_output(rc: int, stdout: str) -> str:
     got = EXIT.get(rc, "error")
     if got != "unknown":
         return got
-    if _UNSAT_RE.search(stdout):
-        return "unsat"
-    if _SAT_RE.search(stdout):
-        return "sat"
+    for p in _UNSAT_PATTERNS:
+        if p.search(stdout):
+            return "unsat"
+    for p in _SAT_PATTERNS:
+        if p.search(stdout):
+            return "sat"
     return "unknown"
+
+
+def _find_source_aag(inst: Path) -> Path | None:
+    """For families that commit the .aag source alongside the compiled
+    .dqdimacs, find the matching source by stem prefix."""
+    stem = inst.name.split(".")[0]
+    for cand in inst.parent.glob("*.aag"):
+        if stem.startswith(cand.stem):
+            return cand
+    return None
 
 
 @dataclass
@@ -81,7 +97,26 @@ def _run_one(
     sub = certdir / solver.name
     sub.mkdir(parents=True, exist_ok=True)
     file_path = str(inst)
-    if inst.suffix == ".gz":
+    if solver.input_format == "aag":
+        src = _find_source_aag(inst)
+        if src is None:
+            return RunRow(
+                solver=solver.name,
+                path=str(inst),
+                family=family,
+                expected=expected,
+                got="n/a",
+                wall_s=0.0,
+                cert_path=None,
+                cert_bytes=0,
+                cert_status="n/a",
+            )
+        aig = sub / f"{src.stem}.aig"
+        if not aig.exists():
+            a2a = Path(__file__).resolve().parents[2] / "third_party/aigtoaig"
+            subprocess.run([str(a2a), str(src), str(aig)], check=True, capture_output=True)
+        file_path = str(aig)
+    elif inst.suffix == ".gz":
         import gzip
 
         plain = sub / f"{stem}.in"
