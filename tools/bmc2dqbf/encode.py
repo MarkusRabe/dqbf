@@ -1,14 +1,16 @@
 """Plain bounded model checking → (DQ)DIMACS.
 
-No black boxes. Per-step primary inputs are **universal**; latches and
-gate outputs at step `t` are existential with dependency set = every
-input universal at steps `0..t`. That is a linearly nested prefix, so
-the result is QBF (a DQDIMACS subset) and any QBF solver decides it.
+No black boxes. Input quantification depends on the question:
 
-The formula is TRUE iff, for **every** input trace of length `k+1`, the
-circuit (started from its reset state) reaches the bad output at step
-`k`. With `safe=True` the goal is `⋀_t ¬bad_t` instead, i.e. TRUE iff
-bad is unreachable within `k` steps under every input trace.
+- `safe=False` (reachability, default): inputs are **existential** —
+  TRUE iff *some* input trace makes bad hold at *some* step ≤ k. This
+  is the standard BMC question abc/avy answer; the result is
+  propositional SAT.
+- `safe=True` (bounded safety): inputs are **universal** — TRUE iff
+  *every* input trace avoids bad through step k. This is ∀∃-QBF.
+
+`forall_inputs` overrides the default if you want the non-standard
+combination.
 """
 
 from __future__ import annotations
@@ -25,7 +27,15 @@ def _map_lit(aiglit: int, alit: dict[int, int], true_var: int) -> int:
     return sgn * alit[v]
 
 
-def encode(circ: SeqAig, k: int, safe: bool = False, source: str = "<memory>") -> Formula:
+def encode(
+    circ: SeqAig,
+    k: int,
+    safe: bool = False,
+    forall_inputs: bool | None = None,
+    source: str = "<memory>",
+) -> Formula:
+    if forall_inputs is None:
+        forall_inputs = safe
     universals: list[int] = []
     deps: dict[int, frozenset[int]] = {}
     clauses: list[list[int]] = []
@@ -53,7 +63,7 @@ def encode(circ: SeqAig, k: int, safe: bool = False, source: str = "<memory>") -
         alit: dict[int, int] = {}
         prior_u = frozenset(universals)
         for ai in circ.inputs:
-            alit[ai] = fresh_u()
+            alit[ai] = fresh_u() if forall_inputs else fresh_e(prior_u)
         all_u = frozenset(universals)
         for lat in circ.latches:
             alit[lat.lit] = fresh_e(prior_u)
@@ -80,10 +90,10 @@ def encode(circ: SeqAig, k: int, safe: bool = False, source: str = "<memory>") -
         for b in bad_at:
             clauses.append([-b])
     else:
-        clauses.append([bad_at[k]])
+        clauses.append(list(bad_at))
 
     comments = (
-        f"bmc2dqbf source={source} bound={k} safe={safe}",
+        f"bmc2dqbf source={source} bound={k} safe={safe} forall_inputs={forall_inputs}",
         f"circuit: I={len(circ.inputs)} L={len(circ.latches)} A={len(circ.gates)}",
     )
     return make_formula(universals, deps, clauses, comments)

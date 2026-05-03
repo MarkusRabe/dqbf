@@ -49,10 +49,11 @@ def test_gray_semantics() -> None:
 
 
 def test_shift_reg_semantics() -> None:
-    """1 input, 2 stages: ∀-reach is False (input=0 trace avoids it);
-    safe at k<2 is True; safe at k≥2 is False (all-1 trace fills it)."""
+    """1 input, 2 stages: ∃-reach True at k≥2 (all-1 input fills it);
+    safe (∀) holds at k<2, fails at k≥2."""
     aag, _ = circuit_shift_reg(2)
-    assert is_true(_enc(aag, k=2), budget=2_000_000) is False
+    assert is_true(_enc(aag, k=1), budget=2_000_000) is False
+    assert is_true(_enc(aag, k=2), budget=2_000_000) is True
     assert is_true(_enc(aag, k=1, safe=True), budget=2_000_000) is True
     assert is_true(_enc(aag, k=2, safe=True), budget=2_000_000) is False
 
