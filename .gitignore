@@ -51,3 +51,5 @@ results/
 # Jupyter
 .ipynb_checkpoints/
 third_party/
+benchmarks/train/syntcomp_legacy/instances/*.dqdimacs.gz
+benchmarks/train/syntcomp_legacy/instances/manifest.json

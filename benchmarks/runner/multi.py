@@ -28,11 +28,13 @@ EXIT = {10: "sat", 20: "unsat", 0: "unknown", 30: "unknown"}
 _SAT_PATTERNS = [
     re.compile(r"^(s SATISFIABLE|SATISFIABLE|SAT|\[RESULT\]\s+SAT)\s*$", re.MULTILINE),
     re.compile(r"was asserted in frame", re.IGNORECASE),  # abc bmc3
+    re.compile(r"^REALIZABLE\s*$", re.MULTILINE),  # synthesis tools
 ]
 _UNSAT_PATTERNS = [
     re.compile(r"^(s UNSATISFIABLE|UNSATISFIABLE|UNSAT|\[RESULT\]\s+UNSAT)\s*$", re.MULTILINE),
     re.compile(r"Property proved|Invariant.*holds", re.IGNORECASE),  # abc pdr
     re.compile(r"No output asserted in \d+ frames"),  # abc bmc3 (bounded UNSAT)
+    re.compile(r"^UNREALIZABLE\s*$", re.MULTILINE),  # synthesis tools
 ]
 
 
@@ -63,6 +65,15 @@ def _find_source_aag(inst: Path) -> Path | None:
     .dqdimacs, find the matching source by stem prefix."""
     stem = inst.name.split(".")[0]
     for cand in inst.parent.glob("*.aag"):
+        if stem.startswith(cand.stem):
+            return cand
+    return None
+
+
+def _find_source_tlsf(inst: Path) -> Path | None:
+    """For syntcomp families: find the .tlsf source by stem prefix."""
+    stem = inst.name.split(".")[0]
+    for cand in inst.parent.glob("*.tlsf"):
         if stem.startswith(cand.stem):
             return cand
     return None
@@ -125,7 +136,22 @@ def _run_one(
             cert_bytes=0,
             cert_status="n/a",
         )
-    if solver.input_format == "aag":
+    if solver.input_format == "tlsf":
+        src = _find_source_tlsf(inst)
+        if src is None:
+            return RunRow(
+                solver=solver.name,
+                path=str(inst),
+                family=family,
+                expected=expected,
+                got="n/a",
+                wall_s=0.0,
+                cert_path=None,
+                cert_bytes=0,
+                cert_status="n/a",
+            )
+        file_path = str(src)
+    elif solver.input_format == "aag":
         src = _find_source_aag(inst)
         if src is None:
             return RunRow(
