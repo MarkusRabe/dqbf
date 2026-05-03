@@ -582,9 +582,15 @@ function wireFamTree(tree, render){
 
 // "ran" = solver attempted the format (not n/a / not error).
 const RAN = new Set(["sat","unsat","unknown","timeout"]);
-// Domain → families: families where at least one *native* solver of that
-// domain produced a result. Then domain → solvers: every solver (native or
-// not) with a result on at least one of those families.
+// Which problem domains can a solver of native-domain X handle? DQBF
+// solvers cover everything (via encodings); QBF/HWMC/SYNTCOMP tools
+// only their own.
+const HANDLES = {
+  dqbf:     new Set(["dqbf","qbf","hwmc","syntcomp"]),
+  qbf:      new Set(["qbf"]),
+  hwmc:     new Set(["hwmc"]),
+  syntcomp: new Set(["syntcomp"]),
+};
 const FAMS_FOR = {}, SOLVERS_FOR = {};
 for(const d of DOMAIN_NAMES){
   const native = new Set(SOLVERS.filter(s=>DOMAINS[s]===d));
@@ -592,6 +598,7 @@ for(const d of DOMAIN_NAMES){
     DATA.filter(r=>native.has(r.solver) && RAN.has(r.got)).map(r=>r.family));
   FAMS_FOR[d] = fams;
   SOLVERS_FOR[d] = SOLVERS.filter(s=>
+    (HANDLES[DOMAINS[s]]||new Set()).has(d) &&
     DATA.some(r=>r.solver===s && fams.has(r.family) && RAN.has(r.got)));
 }
 
