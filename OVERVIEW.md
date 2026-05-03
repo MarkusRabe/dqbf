@@ -165,6 +165,11 @@ Whether `IR-calc` simulates Fork Resolution is open.
   [doi:10.1007/978-3-030-80223-3_4](https://link.springer.com/chapter/10.1007/978-3-030-80223-3_4).
 - **Wimmer, R., Reimer, S., Scholl, C., Becker, B., et al.** *Skolem
   Functions for DQBF.* ATVA 2016. Certificate format we adopt.
+- **Wimmer, R., Scholl, C., Wimmer, K., Becker, B.** *HQSpre — An
+  Effective Preprocessor for QBF and DQBF.* TACAS 2017.
+  [PDF](https://ira.informatik.uni-freiburg.de/~wimmer/pubs/wimmer-et-al-tacas-2017.pdf).
+  Unit/pure-literal, BCE, gate detection, dependency schemes,
+  ∀-expansion as preprocessing.
 - **Sič, J.** *DQBDD: An Efficient BDD-Based DQBF Solver.* SAT 2021.
   [doi:10.1007/978-3-030-80223-3_36](https://link.springer.com/chapter/10.1007/978-3-030-80223-3_36).
 - **Slivovsky, F., et al.** *Pedant.* SAT 2022.
