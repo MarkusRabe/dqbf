@@ -17,7 +17,7 @@ pub struct Step {
 impl Step {
     pub fn axiom(c: &Clause) -> Self {
         Self {
-            clause: c.iter().copied().collect(),
+            clause: c.clone(),
             rule: "axiom",
             premises: vec![],
             pivot: None,

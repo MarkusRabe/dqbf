@@ -1,14 +1,24 @@
 //! DQBF formula IR. Standalone — no shared code with the rest of the repo.
 
+#![allow(dead_code)]
 use std::collections::{BTreeMap, BTreeSet};
 
 pub type Lit = i32;
 pub type Var = u32;
-pub type Clause = BTreeSet<Lit>;
+/// Sorted, dedup'd vector of literals.
+pub type Clause = Vec<Lit>;
 
 #[inline]
 pub fn var(l: Lit) -> Var {
     l.unsigned_abs()
+}
+
+#[inline]
+pub fn clause_from(iter: impl IntoIterator<Item = Lit>) -> Clause {
+    let mut v: Vec<Lit> = iter.into_iter().collect();
+    v.sort_unstable();
+    v.dedup();
+    v
 }
 
 #[derive(Debug, Clone)]
@@ -60,7 +70,7 @@ impl Formula {
         }
     }
 
-    pub fn clause_dep(&self, c: &Clause) -> BTreeSet<Var> {
+    pub fn clause_dep(&self, c: &[Lit]) -> BTreeSet<Var> {
         let mut out = BTreeSet::new();
         for &l in c {
             out.extend(self.dep(var(l)));

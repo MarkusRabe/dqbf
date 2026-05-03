@@ -19,4 +19,5 @@ Exit codes 10/20/0 (sat/unsat/unknown).
 
 | iter | bottleneck instance | observation | change | result |
 |---|---|---|---|---|
-| 0 | — | naive O(n²) saturation, BTreeSet clauses | baseline | — |
+| 0 | — | naive O(n²) saturation, BTreeSet clauses | baseline | 154/344, 0 invalid |
+| 1 | `2qbf_s0001` (9 vars, 10s) | 51% in `resolve`; whole-db clone per item | Vec\<i32\> clauses + occurrence lists | 194/344, 0 invalid; instance still 10s (clause-space explosion) |

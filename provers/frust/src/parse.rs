@@ -65,7 +65,10 @@ pub fn parse(text: &str) -> Result<Formula, String> {
                 if nums.last() != Some(&0) {
                     return Err(format!("line {}: not 0-terminated", lineno + 1));
                 }
-                clauses.push(nums[..nums.len() - 1].iter().copied().collect());
+                let mut cl: Clause = nums[..nums.len() - 1].to_vec();
+                cl.sort_unstable();
+                cl.dedup();
+                clauses.push(cl);
             }
         }
     }
