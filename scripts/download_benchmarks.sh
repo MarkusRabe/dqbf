@@ -64,6 +64,9 @@ fetch "$ZENODO/BV.tar.zst" smtlib_BV.tar.zst ""
 safe_extract "$DL/smtlib_BV.tar.zst" "$ROOT/benchmarks/test/qbvf/bv" --zstd
 
 # --- HWMCC + SYNTCOMP (delegated to per-dir scripts) -------------------
+# test/ = latest edition only (HWMCC'20, SYNTCOMP v2026).
+# Older-year subsets for training are *committed* under
+# benchmarks/train/{hwmcc_legacy,syntcomp_legacy}/ — no fetch needed.
 "$ROOT/benchmarks/test/hwmcc/download.sh"
 "$ROOT/benchmarks/test/syntcomp/download.sh"
 

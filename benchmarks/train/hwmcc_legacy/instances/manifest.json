@@ -1,0 +1,177 @@
+[
+  {
+    "path": "bj08aut82.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "bob2.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "bobcount.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "boblivear.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "cmudme2.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "counterp0.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "eijks344.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "eijks349.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "eijks444.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "intel001.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "mutexp0.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "ndista128.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "neclaftp5001.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "nusmvbrp.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "nusmvsyncarb5p2.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "pdtpmsarbiter.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "pdtvisgray0.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "power2bit128.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "ringp0.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "shift1add262144.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "srg5ptimo.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "texasifetch1p1.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "vis4arbitp1.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "visarbiter.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  },
+  {
+    "path": "visemodel.aag",
+    "expected": "unknown",
+    "tags": [
+      "hwmcc17"
+    ]
+  }
+]
