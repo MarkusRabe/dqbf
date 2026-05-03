@@ -47,6 +47,9 @@ pub fn try_expand(f: &Formula, deadline: f64, start: &std::time::Instant) -> Opt
     let mut first_seen: Vec<Vec<i8>> = (0..exs.len())
         .map(|i| vec![0i8; 1usize << dep_lists[i].len()])
         .collect();
+    let mut key_conflict: Vec<Vec<bool>> = (0..exs.len())
+        .map(|i| vec![false; 1usize << dep_lists[i].len()])
+        .collect();
     let mut conflict = vec![false; exs.len()];
     let mut polarity = vec![0i8; n];
     for ub in 0..rows {
@@ -66,6 +69,7 @@ pub fn try_expand(f: &Formula, deadline: f64, start: &std::time::Instant) -> Opt
                 first_seen[i][key] = v;
             } else if first_seen[i][key] != v {
                 conflict[i] = true;
+                key_conflict[i][key] = true;
             }
         }
     }
@@ -129,21 +133,16 @@ pub fn try_expand(f: &Formula, deadline: f64, start: &std::time::Instant) -> Opt
     }
 
     // ---- Enumeration fallback (iDQ-style) ---------------------------
-    // Slot list: every (i, k) where the free pass disagreed.
+    // Slot list: only the (i, k) pairs that actually disagreed.
     let mut slots: Vec<(usize, usize)> = Vec::new();
-    for (i, &c) in constrained.iter().enumerate() {
-        if !c {
-            continue;
-        }
-        for k in 0..(1usize << dep_lists[i].len()) {
-            slots.push((i, k));
+    for (i, kc) in key_conflict.iter().enumerate() {
+        for (k, &c) in kc.iter().enumerate() {
+            if c {
+                slots.push((i, k));
+            }
         }
     }
-    if slots.len() <= 16 {
-        let mut slot_idx = vec![usize::MAX; exs.len() << MAX_U];
-        for (p, &(i, k)) in slots.iter().enumerate() {
-            slot_idx[(i << MAX_U) | k] = p;
-        }
+    if slots.len() <= 20 {
         for bits in 0u32..(1u32 << slots.len()) {
             if start.elapsed().as_secs_f64() > deadline * 0.7 {
                 break;
@@ -187,7 +186,6 @@ pub fn try_expand(f: &Formula, deadline: f64, start: &std::time::Instant) -> Opt
                 return Some(build_skolem(&exs, &dep_lists, &tables));
             }
         }
-        let _ = slot_idx;
     }
     None
 }

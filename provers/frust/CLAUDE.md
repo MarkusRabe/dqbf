@@ -34,3 +34,4 @@ Exit codes 10/20/0 (sat/unsat/unknown).
 | 12 | `peano_v2_mul_n2` | EQFOB emits XOR (4-clause), not AND | static AND-gate detection; skip in pin loop | 291/344; pattern doesn't match |
 | 13 | same | "ever_decided" heuristic UNSOUND (`fork_unsat` → SAT) | replaced with per-key conflict detection + pinned-pass `row_conflict` guard | 291/344, sound again |
 | 14 | same | 4 heuristic seeds all fail; ≤16 conflicting slots | iDQ-style: enumerate 2^slots when slots≤16 | 294/344, instance **10ms VALID** |
+| 15 | `peano_v2_mul_n3` | enumerating ALL keys of conflicting vars (>16 slots) | enumerate only the (i,k) pairs that actually disagreed; cap 20 | 296/344, n3/both_n2 solved |
