@@ -79,15 +79,8 @@ def run_one(path: Path) -> dict:
 
 
 def main() -> None:
-    fams = [
-        "tests/integration/tiny",
-        "benchmarks/train/bitwidth_scaling",
-        "benchmarks/train/random_qbf/v1",
-        "benchmarks/train/random_bv/v1",
-        "benchmarks/train/peano/instances",
-    ]
     insts: list[Path] = []
-    for fam in fams:
+    for fam in ["tests/integration/tiny", "benchmarks/train"]:
         for ext in ("*.dqdimacs", "*.dqdimacs.gz", "*.qdimacs"):
             insts += sorted((ROOT / fam).rglob(ext))
     print(f"running {len(insts)} instances on {BIN.name}...")
