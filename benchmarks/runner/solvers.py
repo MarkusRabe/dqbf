@@ -17,6 +17,7 @@ class Solver:
     certs: dict[str, str]  # result -> path template, e.g. {"sat": "{certdir}/{stem}.aag"}
     available: bool
     input_format: str = "dqdimacs"  # "dqdimacs" | "aag" | "tlsf"
+    domain: str = "dqbf"  # "dqbf" | "qbf" | "hwmc" | "syntcomp"
 
 
 def _exists(p: str) -> bool:
@@ -56,18 +57,21 @@ def registry() -> dict[str, Solver]:
             cmd=[cadet, "-c", "{certdir}/{stem}.aag", "{file}"],
             certs={"sat": "{certdir}/{stem}.aag"},
             available=_exists(cadet),
+            domain="qbf",
         ),
         "caqe": Solver(
             name="caqe",
             cmd=[caqe, "{file}"],
             certs={},
             available=_exists(caqe),
+            domain="qbf",
         ),
         "rareqs": Solver(
             name="rareqs",
             cmd=[rareqs, "{file}"],
             certs={},
             available=_exists(rareqs),
+            domain="qbf",
         ),
         "dqbdd": Solver(
             name="dqbdd",
@@ -98,6 +102,7 @@ def registry() -> dict[str, Solver]:
             certs={},
             available=_exists("berkeley-abc") or _exists("abc"),
             input_format="aag",
+            domain="hwmc",
         ),
         "abc-pdr": Solver(
             name="abc-pdr",
@@ -109,6 +114,7 @@ def registry() -> dict[str, Solver]:
             certs={},
             available=_exists("berkeley-abc") or _exists("abc"),
             input_format="aag",
+            domain="hwmc",
         ),
         "avy": Solver(
             name="avy",
@@ -116,5 +122,6 @@ def registry() -> dict[str, Solver]:
             certs={},
             available=_exists(str(ROOT / "third_party/avy/build/avy/src/avy")),
             input_format="aag",
+            domain="hwmc",
         ),
     }

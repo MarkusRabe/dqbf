@@ -13,6 +13,10 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
+from benchmarks.runner.solvers import registry
+
+DOMAIN_ORDER = ["dqbf", "qbf", "hwmc", "syntcomp"]
+
 CSS = (
     "body{font-family:system-ui,sans-serif;max-width:1100px;margin:2em auto;padding:0 1em}"
     "table{border-collapse:collapse;margin:.5em 0}"
@@ -25,7 +29,11 @@ CSS = (
     "display:flex;flex-wrap:wrap;gap:1.2em;align-items:center;font-size:.9em}"
     ".ctl fieldset{border:1px solid #ddd;padding:.3em .5em}"
     ".ctl label{margin-right:.6em}"
-    "#tabs{position:sticky;top:0;background:#fff;padding:.4em 0;z-index:1}"
+    "#domain{position:sticky;top:0;background:#fff;padding:.4em 0 0;z-index:2;"
+    "font-size:.9em;border-bottom:1px solid #eee}"
+    "#domain label{margin-right:1em;cursor:pointer}"
+    "#domain b{margin-right:.6em}"
+    "#tabs{position:sticky;top:1.9em;background:#fff;padding:.4em 0;z-index:1}"
     ".panel{border:1px solid #ddd;padding:.6em;margin-bottom:1em}"
     ".scroll{max-height:14em;overflow:auto;border:1px solid #eee;padding:.3em;"
     "font-family:ui-monospace,monospace;font-size:.85em}"
@@ -194,13 +202,27 @@ function tbl(headers, rows){
   return t;
 }
 
+function activeDomain(){
+  const r = $$("input[name=domain]").find(x=>x.checked);
+  return r ? r.value : "all";
+}
+function dSolvers(){
+  const d = activeDomain();
+  return SOLVERS.filter(s => d==="all" || DOMAINS[s]===d);
+}
+function dFams(){
+  const d = activeDomain();
+  return d==="all" ? new Set(FAMILIES) : (FAMS_FOR[d]||new Set());
+}
 function state(scope){
   const fams = new Set($$(".famchk-"+scope).filter(c=>c.checked).map(c=>c.value));
   const resf = ($$("input[name=resf-"+scope+"]").find(r=>r.checked)||{}).value || "all";
   return {fams, resf};
 }
 function rowsAll(st){
+  const ds = new Set(dSolvers()), df = dFams();
   return DATA.filter(r =>
+    ds.has(r.solver) && df.has(r.family) &&
     st.fams.has(r.family) && (st.resf === "all" || r.expected === st.resf));
 }
 function rowsFor(solver, st){
@@ -222,8 +244,9 @@ function certRowFor(srows){
 
 function cactus(rs){
   const W=520,H=320;
+  const SV = dSolvers();
   const times = {};
-  for (const s of SOLVERS)
+  for (const s of SV)
     times[s] = rs.filter(r=>r.solver===s && SOLVED.has(r.got)).map(r=>r.wall_s).sort((a,b)=>a-b);
   const nMax = Math.max(1, ...Object.values(times).map(v=>v.length));
   const tMax = Math.max(1e-3, ...Object.values(times).map(v=>v.length?v[v.length-1]:1e-3));
@@ -247,7 +270,7 @@ function cactus(rs){
     s.appendChild(svgt({x:33,y:y+3,"font-size":9,"text-anchor":"end"}, e<0?`1e${e}`:String(Math.pow(10,e))));
   }
   // series
-  SOLVERS.forEach((sv,i)=>{
+  SV.forEach((sv,i)=>{
     const ts=times[sv]; if(!ts.length) return;
     const pts=ts.map((t,k)=>`${(40+(k+1)/nMax*(W-60)).toFixed(1)},${yof(t).toFixed(1)}`).join(" ");
     const c=COLORS[i%COLORS.length];
@@ -260,8 +283,9 @@ function cactus(rs){
 function renderOverview(){
   const st = state("overview");
   const rs = rowsAll(st);
+  const SV = dSolvers(), df = dFams();
   const root = $("#overview"); root.textContent = "";
-  const fams = FAMILIES.filter(f=>st.fams.has(f));
+  const fams = FAMILIES.filter(f=>st.fams.has(f) && df.has(f));
 
   // per-family % solved
   const nInst = {}; // family -> #unique paths
@@ -269,7 +293,7 @@ function renderOverview(){
     nInst[f] = new Set(rs.filter(r=>r.family===f).map(r=>r.path)).size;
   const famRows = fams.map(f=>{
     const cells=[f];
-    for (const s of SOLVERS){
+    for (const s of SV){
       const ok = rs.filter(r=>r.family===f && r.solver===s && SOLVED.has(r.got)).length;
       const n = nInst[f]||0;
       cells.push(n?`${ok}/${n} (${Math.round(100*ok/n)}%)`:"-");
@@ -277,7 +301,7 @@ function renderOverview(){
     return cells;
   });
   root.appendChild(el("h3",{text:"% solved per family"}));
-  root.appendChild(tbl(["family",...SOLVERS], famRows));
+  root.appendChild(tbl(["family",...SV], famRows));
 
   // SAT vs UNSAT by expected
   const suRows=[];
@@ -285,14 +309,14 @@ function renderOverview(){
     const n = new Set(rs.filter(r=>r.expected===exp).map(r=>r.path)).size;
     if(!n) continue;
     const cells=[exp,n];
-    for (const s of SOLVERS){
+    for (const s of SV){
       const ok = rs.filter(r=>r.expected===exp && r.solver===s && SOLVED.has(r.got)).length;
       cells.push(`${ok} (${Math.round(100*ok/n)}%)`);
     }
     suRows.push(cells);
   }
   root.appendChild(el("h3",{text:"SAT vs UNSAT (by expected)"}));
-  root.appendChild(tbl(["expected","n",...SOLVERS], suRows));
+  root.appendChild(tbl(["expected","n",...SV], suRows));
 
   // cactus
   root.appendChild(el("h3",{text:"Scaling (cactus)"}));
@@ -301,7 +325,7 @@ function renderOverview(){
   // cert tables
   for (const res of ["sat","unsat"]){
     const rows=[];
-    for (const s of SOLVERS){
+    for (const s of SV){
       const sr = rs.filter(r=>r.solver===s && r.got===res);
       if(!sr.length) continue;
       rows.push([s, ...certRowFor(sr)]);
@@ -316,10 +340,10 @@ function renderOverview(){
   const dis=[];
   for (const [p,d] of Object.entries(inst)){
     const ans=new Set(Object.values(d).filter(v=>SOLVED.has(v)));
-    if(ans.size>1) dis.push([p, ...SOLVERS.map(s=>d[s]||"-")]);
+    if(ans.size>1) dis.push([p, ...SV.map(s=>d[s]||"-")]);
   }
   root.appendChild(el("h3",{text:`Disagreements (${dis.length})`}));
-  root.appendChild(dis.length ? tbl(["path",...SOLVERS], dis) : el("p",{text:"none"}));
+  root.appendChild(dis.length ? tbl(["path",...SV], dis) : el("p",{text:"none"}));
 }
 
 function renderSingle(){
@@ -541,6 +565,39 @@ function wireFamTree(tree, render){
   syncInterior();
 }
 
+// Precompute: families that have at least one non-"n/a" row from a solver in each domain.
+const FAMS_FOR = {};
+for(const d of DOMAIN_NAMES){
+  const sv = new Set(SOLVERS.filter(s=>DOMAINS[s]===d));
+  FAMS_FOR[d] = new Set(DATA.filter(r=>sv.has(r.solver) && r.got!=="n/a").map(r=>r.family));
+}
+
+function applyDomain(){
+  const ds = new Set(dSolvers()), df = dFams();
+  // Restrict solver <select>s.
+  for(const sel of ["#solo","#cmpA","#cmpB"]){
+    const node=$(sel); if(!node) continue;
+    for(const o of node.options) o.hidden = !ds.has(o.value);
+    if(!ds.has(node.value)){
+      const first = [...node.options].find(o=>!o.hidden);
+      if(first) node.value = first.value;
+    }
+  }
+  // Restrict family trees: hide leaves outside df and interiors with no visible leaf.
+  for(const tree of $$("ul.famtree")){
+    const scope = tree.dataset.scope;
+    for(const cb of tree.querySelectorAll(".famchk-"+scope))
+      cb.closest("li").style.display = df.has(cb.value) ? "" : "none";
+    for(const li of [...tree.querySelectorAll("li")].reverse()){
+      if(li.querySelector(":scope > input.famchk-"+scope)) continue; // leaf handled
+      const vis = [...li.querySelectorAll(".famchk-"+scope)]
+        .some(l=>l.closest("li").style.display!=="none");
+      li.style.display = vis ? "" : "none";
+    }
+  }
+  renderOverview(); renderSingle(); renderPair();
+}
+
 document.addEventListener("DOMContentLoaded",()=>{
   const SCOPES = [
     ["overview","tab-overview",renderOverview],
@@ -556,15 +613,31 @@ document.addEventListener("DOMContentLoaded",()=>{
       n.addEventListener("change", render);
   }
   for(const b of $$("#tabs button")) b.addEventListener("click",()=>showTab(b.dataset.tab));
-  renderOverview(); renderSingle(); renderPair();
+  for(const r of $$("#domain input[name=domain]")) r.addEventListener("change", applyDomain);
+  applyDomain();
   showTab("tab-overview");
 });
 """
 
 
+def _domain_selector(domains: dict[str, str]) -> str:
+    counts = {d: sum(1 for v in domains.values() if v == d) for d in DOMAIN_ORDER}
+    pills = ['<label><input type="radio" name="domain" value="all" checked> All</label>']
+    for d in DOMAIN_ORDER:
+        n = counts.get(d, 0)
+        dis = "" if n else " disabled"
+        pills.append(
+            f'<label><input type="radio" name="domain" value="{_esc(d)}"{dis}> '
+            f"{_esc(d.upper())}{f' ({n})' if n else ''}</label>"
+        )
+    return f'<div id="domain"><b>Domain:</b>{"".join(pills)}</div>'
+
+
 def render(rows: list[dict], out: Path, timeout_s: float) -> None:
     solvers = sorted({r["solver"] for r in rows})
     families = sorted({r["family"] for r in rows})
+    reg = registry()
+    domains = {s: (reg[s].domain if s in reg else "dqbf") for s in solvers}
 
     slim = [{k: r.get(k) for k in _JS_FIELDS} for r in rows]
     data_block = (
@@ -572,6 +645,8 @@ def render(rows: list[dict], out: Path, timeout_s: float) -> None:
         f"const DATA={_js_json(slim)};"
         f"const SOLVERS={_js_json(solvers)};"
         f"const FAMILIES={_js_json(families)};"
+        f"const DOMAINS={_js_json(domains)};"
+        f"const DOMAIN_NAMES={_js_json(DOMAIN_ORDER)};"
         f"const TIMEOUT={timeout_s};"
         "</script>"
     )
@@ -604,6 +679,7 @@ def render(rows: list[dict], out: Path, timeout_s: float) -> None:
 <h1>Multi-solver report</h1>
 {_warnings(rows, solvers)}
 {data_block}
+{_domain_selector(domains)}
 {tabs_nav}
 <section id="tab-overview" class="tab panel">{overview_ctl}<div id="overview"></div></section>
 <section id="tab-single" class="tab panel">{single_ctl}<div id="single"></div></section>
