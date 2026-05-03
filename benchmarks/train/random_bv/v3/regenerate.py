@@ -20,7 +20,7 @@ def main() -> None:
             "--mode",
             "all",
             "--out",
-            str(HERE),
+            str(HERE.parent / HERE.name),
             "--n-instances",
             "10",
             "--seed",

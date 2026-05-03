@@ -161,7 +161,7 @@ def build_family(mode: str, base: Path, n_inst: int, width: int, seed0: int) -> 
 
 
 @click.command()
-@click.option("--out", type=click.Path(), default="benchmarks/train/random_bv")
+@click.option("--out", type=click.Path(), default="benchmarks/train/random_bv/v1")
 @click.option("--width", "-N", type=int, default=2)
 @click.option("--n-funs", type=int, default=2, help="(single-instance mode only)")
 @click.option("--n-forall", type=int, default=2, help="(single-instance mode only)")

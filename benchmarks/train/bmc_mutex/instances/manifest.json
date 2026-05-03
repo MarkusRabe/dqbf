@@ -1,0 +1,101 @@
+[
+  {
+    "path": "mutex_n4_k008.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "bmc_mutex"
+    ],
+    "params": {
+      "n": 4,
+      "k": 8
+    }
+  },
+  {
+    "path": "mutex_n4_k016.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "bmc_mutex"
+    ],
+    "params": {
+      "n": 4,
+      "k": 16
+    }
+  },
+  {
+    "path": "mutex_n4_k032.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "bmc_mutex"
+    ],
+    "params": {
+      "n": 4,
+      "k": 32
+    }
+  },
+  {
+    "path": "mutex_n8_k008.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "bmc_mutex"
+    ],
+    "params": {
+      "n": 8,
+      "k": 8
+    }
+  },
+  {
+    "path": "mutex_n8_k016.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "bmc_mutex"
+    ],
+    "params": {
+      "n": 8,
+      "k": 16
+    }
+  },
+  {
+    "path": "mutex_n8_k032.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "bmc_mutex"
+    ],
+    "params": {
+      "n": 8,
+      "k": 32
+    }
+  },
+  {
+    "path": "mutex_n16_k008.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "bmc_mutex"
+    ],
+    "params": {
+      "n": 16,
+      "k": 8
+    }
+  },
+  {
+    "path": "mutex_n16_k016.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "bmc_mutex"
+    ],
+    "params": {
+      "n": 16,
+      "k": 16
+    }
+  },
+  {
+    "path": "mutex_n16_k032.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "bmc_mutex"
+    ],
+    "params": {
+      "n": 16,
+      "k": 32
+    }
+  }
+]

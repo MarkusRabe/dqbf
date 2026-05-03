@@ -1,15 +1,5 @@
 [
   {
-    "path": "counter_k004.dqdimacs.gz",
-    "expected": "unknown",
-    "tags": [
-      "pec_counter"
-    ],
-    "params": {
-      "k": 4
-    }
-  },
-  {
     "path": "counter_k008.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
@@ -17,16 +7,6 @@
     ],
     "params": {
       "k": 8
-    }
-  },
-  {
-    "path": "counter_k012.dqdimacs.gz",
-    "expected": "unknown",
-    "tags": [
-      "pec_counter"
-    ],
-    "params": {
-      "k": 12
     }
   },
   {
@@ -40,16 +20,6 @@
     }
   },
   {
-    "path": "counter_k020.dqdimacs.gz",
-    "expected": "unknown",
-    "tags": [
-      "pec_counter"
-    ],
-    "params": {
-      "k": 20
-    }
-  },
-  {
     "path": "counter_k024.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
@@ -60,16 +30,6 @@
     }
   },
   {
-    "path": "counter_k028.dqdimacs.gz",
-    "expected": "unknown",
-    "tags": [
-      "pec_counter"
-    ],
-    "params": {
-      "k": 28
-    }
-  },
-  {
     "path": "counter_k032.dqdimacs.gz",
     "expected": "unknown",
     "tags": [
@@ -77,6 +37,46 @@
     ],
     "params": {
       "k": 32
+    }
+  },
+  {
+    "path": "counter_k040.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "pec_counter"
+    ],
+    "params": {
+      "k": 40
+    }
+  },
+  {
+    "path": "counter_k048.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "pec_counter"
+    ],
+    "params": {
+      "k": 48
+    }
+  },
+  {
+    "path": "counter_k056.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "pec_counter"
+    ],
+    "params": {
+      "k": 56
+    }
+  },
+  {
+    "path": "counter_k064.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "pec_counter"
+    ],
+    "params": {
+      "k": 64
     }
   }
 ]

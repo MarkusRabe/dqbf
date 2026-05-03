@@ -11,7 +11,7 @@ CAQE = HERE.parents[2] / "third_party/caqe/target/release/caqe"
 
 
 def main() -> None:
-    base = HERE / "instances"
+    base = HERE / "v1"
     for sub in sorted(base.iterdir()):
         mf = sub / "manifest.json"
         if not mf.exists():

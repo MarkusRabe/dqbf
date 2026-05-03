@@ -21,7 +21,7 @@ SET_3QBF = [
 
 
 @click.command()
-@click.option("--out", type=click.Path(), default="benchmarks/train/random_qbf_v2/instances")
+@click.option("--out", type=click.Path(), default="benchmarks/train/random_qbf/v2")
 def main(out: str) -> None:
     base = Path(out)
     for kind, specs in {"2qbf": SET_2QBF, "3qbf": SET_3QBF}.items():

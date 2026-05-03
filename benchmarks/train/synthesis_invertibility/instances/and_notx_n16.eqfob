@@ -1,0 +1,4 @@
+param N = 4
+fun f : bv[N] -> bv[N]
+forall x : bv[N]
+(f(x) & x) == ~x

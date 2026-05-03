@@ -76,7 +76,7 @@ SET_3QBF = [
 
 
 @click.command()
-@click.option("--out", type=click.Path(), default="benchmarks/train/random_qbf/instances")
+@click.option("--out", type=click.Path(), default="benchmarks/train/random_qbf/v1")
 @click.option("--two-qbf-only", is_flag=True, help="emit only the ∀∃ subset (cadet-compatible)")
 def main(out: str, two_qbf_only: bool) -> None:
     base = Path(out)
