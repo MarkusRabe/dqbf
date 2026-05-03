@@ -29,9 +29,24 @@ dqbf-verify sat /tmp/u7.dq /tmp/u7.aag.adapted --solve            # → VALID
 **Next step:** delta-minimize the `.dqdimacs` (and ideally the
 `.eqfob`) and report upstream.
 
+## 2026-05-03 — dqbdd & hqs incorrect UNSAT on `peano_v2_both` (N=2..8)
+
+| | |
+|---|---|
+| Instances | `benchmarks/train/peano/instances/peano_v2_both_n{2,3,4,5,6,8}.dqdimacs.gz` |
+| Source    | `peano_v2_both_n{N}.eqfob` (∃s,add,mul. successor + Peano add/mul axioms) |
+| dqbdd / hqs | **UNSAT** on all 6 |
+| pedant | **SAT** on all 6, emits Skolem AIG |
+| `dqbf-verify sat` | all 6 certs **VALID** (kissat: verification CNF UNSAT) |
+
+The formulas are SAT by construction (s=inc, add=+, mul=× over bv[N]).
+Same dqbdd+hqs failure mode as `under_s0007` above, now on a
+structurally simple, scalable family. At N≥10 pedant times out so the
+cert-based verdict is not yet available there.
+
+**This strengthens the HQSpre hypothesis** — 7 confirmed incorrect-UNSAT
+instances, 6 of which are parametric and minimal-ish already.
+
 ## Shelved
 
-- `peano_v2_both` flips from SAT (N≤8) to UNSAT (N=16) per hqs+dqbdd.
-  Should be SAT at every width by construction. Shelved until a solver
-  emits a checkable UNSAT certificate (or forkres reaches it with a
-  verified `.frp`).
+(nothing currently)
