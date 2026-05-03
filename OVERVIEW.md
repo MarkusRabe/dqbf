@@ -182,6 +182,17 @@ Whether `IR-calc` simulates Fork Resolution is open.
   NEXPTIME-completeness of DQBF.
 - **Finkbeiner, B., Schewe, S.** *Uniform Distributed Synthesis.* LICS
   2005. Origin of the term "information fork".
+- **Bradley, A. R.** *SAT-Based Model Checking without Unrolling.*
+  VMCAI 2011. **Eén, N., Mishchenko, A., Brayton, R.** *Efficient
+  Implementation of Property Directed Reachability.* FMCAD 2011.
+  IC3/PDR — the unbounded-safety counterpart to BMC; one-step SAT
+  queries plus relative-inductive lemma learning. See
+  `docs/references/ic3_pdr.md`.
+- **Luka, A., Vizel, Y.** *Property Directed Reachability with Extended
+  Resolution.* [arXiv:2505.18998](https://arxiv.org/abs/2505.18998),
+  2025. PDR with ER-style extension variables — propositional precedent
+  for driving FEx inside an invariant-synthesis loop. See
+  `docs/references/arxiv_2505_18998.md`.
 
 ## Primary source materials
 
