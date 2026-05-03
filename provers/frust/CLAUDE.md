@@ -33,3 +33,4 @@ Exit codes 10/20/0 (sat/unsat/unknown).
 | 11 | `add_n12` (\|U\|=24) | Tseitin auxes have no unit/pure | HQSpre unit/pure prep (existentials only) | 291/344; finds 0 on bottlenecks |
 | 12 | `peano_v2_mul_n2` | EQFOB emits XOR (4-clause), not AND | static AND-gate detection; skip in pin loop | 291/344; pattern doesn't match |
 | 13 | same | "ever_decided" heuristic UNSOUND (`fork_unsat` → SAT) | replaced with per-key conflict detection + pinned-pass `row_conflict` guard | 291/344, sound again |
+| 14 | same | 4 heuristic seeds all fail; ≤16 conflicting slots | iDQ-style: enumerate 2^slots when slots≤16 | 294/344, instance **10ms VALID** |

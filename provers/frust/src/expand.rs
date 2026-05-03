@@ -125,22 +125,87 @@ pub fn try_expand(f: &Formula, deadline: f64, start: &std::time::Instant) -> Opt
         if !ok || row_conflict.iter().any(|&c| c) {
             continue;
         }
-        // Build cert.
-        let mut sk = Skolem::new();
-        for (i, &y) in exs.iter().enumerate() {
-            let nd = dep_lists[i].len();
-            let size = 1usize << nd;
-            let mut bits = vec![0u64; (size + 63) / 64];
-            for j in 0..size {
-                if tables[i][j] == 1 {
-                    bits[j / 64] |= 1u64 << (j % 64);
+        return Some(build_skolem(&exs, &dep_lists, &tables));
+    }
+
+    // ---- Enumeration fallback (iDQ-style) ---------------------------
+    // Slot list: every (i, k) where the free pass disagreed.
+    let mut slots: Vec<(usize, usize)> = Vec::new();
+    for (i, &c) in constrained.iter().enumerate() {
+        if !c {
+            continue;
+        }
+        for k in 0..(1usize << dep_lists[i].len()) {
+            slots.push((i, k));
+        }
+    }
+    if slots.len() <= 16 {
+        let mut slot_idx = vec![usize::MAX; exs.len() << MAX_U];
+        for (p, &(i, k)) in slots.iter().enumerate() {
+            slot_idx[(i << MAX_U) | k] = p;
+        }
+        for bits in 0u32..(1u32 << slots.len()) {
+            if start.elapsed().as_secs_f64() > deadline * 0.7 {
+                break;
+            }
+            let mut tables: Vec<Vec<i8>> = (0..exs.len())
+                .map(|i| vec![0i8; 1usize << dep_lists[i].len()])
+                .collect();
+            for (p, &(i, k)) in slots.iter().enumerate() {
+                tables[i][k] = if (bits >> p) & 1 == 1 { 1 } else { -1 };
+            }
+            let mut ok = true;
+            let mut row_conflict = false;
+            for ub in 0..rows {
+                reset_row(f, &mut polarity, ub);
+                for (i, &y) in exs.iter().enumerate() {
+                    let key = extract(ub, dep_mask[i]) as usize;
+                    let t = tables[i][key];
+                    if t != 0 {
+                        polarity[y as usize] = t;
+                    }
+                }
+                let mut decided: Vec<usize> = Vec::new();
+                if !dpll(&f.clauses, &occ, &mut polarity, 1, &mut decided) {
+                    ok = false;
+                    break;
+                }
+                for (i, &y) in exs.iter().enumerate() {
+                    let key = extract(ub, dep_mask[i]) as usize;
+                    let v: i8 = if polarity[y as usize] > 0 { 1 } else { -1 };
+                    if tables[i][key] == 0 {
+                        tables[i][key] = v;
+                    } else if tables[i][key] != v {
+                        row_conflict = true;
+                    }
+                }
+                if row_conflict {
+                    break;
                 }
             }
-            sk.insert(y, (bits, nd));
+            if ok && !row_conflict {
+                return Some(build_skolem(&exs, &dep_lists, &tables));
+            }
         }
-        return Some(sk);
+        let _ = slot_idx;
     }
     None
+}
+
+fn build_skolem(exs: &[Var], dep_lists: &[Vec<Var>], tables: &[Vec<i8>]) -> Skolem {
+    let mut sk = Skolem::new();
+    for (i, &y) in exs.iter().enumerate() {
+        let nd = dep_lists[i].len();
+        let size = 1usize << nd;
+        let mut bits = vec![0u64; (size + 63) / 64];
+        for j in 0..size {
+            if tables[i][j] == 1 {
+                bits[j / 64] |= 1u64 << (j % 64);
+            }
+        }
+        sk.insert(y, (bits, nd));
+    }
+    sk
 }
 
 #[inline]
