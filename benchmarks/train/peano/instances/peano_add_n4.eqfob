@@ -1,0 +1,6 @@
+param N = 4
+fun add : bv[N], bv[N] -> bv[N]
+forall a : bv[N]
+forall b : bv[N]
+a == add(a, 0)
+(add(a, b) + 1) == add(a, b + 1)

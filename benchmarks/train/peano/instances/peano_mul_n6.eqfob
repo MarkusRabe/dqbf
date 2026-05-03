@@ -1,0 +1,6 @@
+param N = 6
+fun mul : bv[N], bv[N] -> bv[N]
+forall a : bv[N]
+forall b : bv[N]
+0 == mul(a, 0)
+(mul(a, b) + a) == mul(a, b + 1)

@@ -1,0 +1,218 @@
+[
+  {
+    "path": "peano_add_n2.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "peano",
+      "add"
+    ],
+    "params": {
+      "N": 2,
+      "kind": "add"
+    }
+  },
+  {
+    "path": "peano_add_n3.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "peano",
+      "add"
+    ],
+    "params": {
+      "N": 3,
+      "kind": "add"
+    }
+  },
+  {
+    "path": "peano_add_n4.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "peano",
+      "add"
+    ],
+    "params": {
+      "N": 4,
+      "kind": "add"
+    }
+  },
+  {
+    "path": "peano_add_n5.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "peano",
+      "add"
+    ],
+    "params": {
+      "N": 5,
+      "kind": "add"
+    }
+  },
+  {
+    "path": "peano_add_n6.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "peano",
+      "add"
+    ],
+    "params": {
+      "N": 6,
+      "kind": "add"
+    }
+  },
+  {
+    "path": "peano_add_n8.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "peano",
+      "add"
+    ],
+    "params": {
+      "N": 8,
+      "kind": "add"
+    }
+  },
+  {
+    "path": "peano_mul_n2.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "peano",
+      "mul"
+    ],
+    "params": {
+      "N": 2,
+      "kind": "mul"
+    }
+  },
+  {
+    "path": "peano_mul_n3.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "peano",
+      "mul"
+    ],
+    "params": {
+      "N": 3,
+      "kind": "mul"
+    }
+  },
+  {
+    "path": "peano_mul_n4.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "peano",
+      "mul"
+    ],
+    "params": {
+      "N": 4,
+      "kind": "mul"
+    }
+  },
+  {
+    "path": "peano_mul_n5.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "peano",
+      "mul"
+    ],
+    "params": {
+      "N": 5,
+      "kind": "mul"
+    }
+  },
+  {
+    "path": "peano_mul_n6.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "peano",
+      "mul"
+    ],
+    "params": {
+      "N": 6,
+      "kind": "mul"
+    }
+  },
+  {
+    "path": "peano_mul_n8.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "peano",
+      "mul"
+    ],
+    "params": {
+      "N": 8,
+      "kind": "mul"
+    }
+  },
+  {
+    "path": "peano_both_n2.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "peano",
+      "both"
+    ],
+    "params": {
+      "N": 2,
+      "kind": "both"
+    }
+  },
+  {
+    "path": "peano_both_n3.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "peano",
+      "both"
+    ],
+    "params": {
+      "N": 3,
+      "kind": "both"
+    }
+  },
+  {
+    "path": "peano_both_n4.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "peano",
+      "both"
+    ],
+    "params": {
+      "N": 4,
+      "kind": "both"
+    }
+  },
+  {
+    "path": "peano_both_n5.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "peano",
+      "both"
+    ],
+    "params": {
+      "N": 5,
+      "kind": "both"
+    }
+  },
+  {
+    "path": "peano_both_n6.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "peano",
+      "both"
+    ],
+    "params": {
+      "N": 6,
+      "kind": "both"
+    }
+  },
+  {
+    "path": "peano_both_n8.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "peano",
+      "both"
+    ],
+    "params": {
+      "N": 8,
+      "kind": "both"
+    }
+  }
+]
