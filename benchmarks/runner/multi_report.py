@@ -206,12 +206,11 @@ function activeDomain(){
   const r = $$("input[name=domain]").find(x=>x.checked);
   return r ? r.value : DOMAIN_NAMES[0];
 }
-function dSolvers(){
-  const d = activeDomain();
-  return SOLVERS.filter(s => DOMAINS[s]===d);
-}
 function dFams(){
   return FAMS_FOR[activeDomain()] || new Set();
+}
+function dSolvers(){
+  return SOLVERS_FOR[activeDomain()] || [];
 }
 function state(scope){
   const fams = new Set($$(".famchk-"+scope).filter(c=>c.checked).map(c=>c.value));
@@ -564,11 +563,17 @@ function wireFamTree(tree, render){
   syncInterior();
 }
 
-// Precompute: families that have at least one non-"n/a" row from a solver in each domain.
-const FAMS_FOR = {};
+// Domain → families: families where at least one *native* solver of that
+// domain produced a non-"n/a" result. Then domain → solvers: every solver
+// (native or not) with a non-"n/a" result on at least one of those families.
+const FAMS_FOR = {}, SOLVERS_FOR = {};
 for(const d of DOMAIN_NAMES){
-  const sv = new Set(SOLVERS.filter(s=>DOMAINS[s]===d));
-  FAMS_FOR[d] = new Set(DATA.filter(r=>sv.has(r.solver) && r.got!=="n/a").map(r=>r.family));
+  const native = new Set(SOLVERS.filter(s=>DOMAINS[s]===d));
+  const fams = new Set(
+    DATA.filter(r=>native.has(r.solver) && r.got!=="n/a").map(r=>r.family));
+  FAMS_FOR[d] = fams;
+  SOLVERS_FOR[d] = SOLVERS.filter(s=>
+    DATA.some(r=>r.solver===s && fams.has(r.family) && r.got!=="n/a"));
 }
 
 function applyDomain(){
