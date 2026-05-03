@@ -10,7 +10,7 @@ EQFOB-authored families use the `tools.eqfob` API; `random_qbf/`
 emits QDIMACS directly.
 
 Generated `.dqdimacs` files are **not** committed — except
-`random_qbf/instances/`, which is a fixed 100-instance static set
+`random_qbf/`, which is a fixed 100-instance static set
 (QDIMACS, labelled by `random_qbf/label.py` via caqe) used as a
 cross-solver correctness reference.
 

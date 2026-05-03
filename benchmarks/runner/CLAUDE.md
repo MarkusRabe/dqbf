@@ -33,7 +33,7 @@ cli.py           dqbf-bench {run,multi,table,compare}
 
 ```
 dqbf-bench run     --family test/dqbf_qbflib --prover forkres -j 64 --timeout 300
-dqbf-bench multi   --root benchmarks/train/random_qbf/instances \
+dqbf-bench multi   --root benchmarks/train/random_qbf \
                    --solvers forkres,cadet,caqe,rareqs --verify-certs \
                    -o results/r.jsonl --report results/r.html
 dqbf-bench table   results.jsonl --group-by family

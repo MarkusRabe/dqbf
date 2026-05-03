@@ -34,7 +34,7 @@ def main(out: str) -> None:
                 {
                     "path": f"{n}.qdimacs",
                     "expected": "unknown",
-                    "tags": ["random_qbf_v3", kind],
+                    "tags": ["random_qbf", "v3", kind],
                     "params": {"seed": sp.seed, "blocks": list(sp.blocks)},
                 }
             )
