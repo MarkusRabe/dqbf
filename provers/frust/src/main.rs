@@ -2,6 +2,7 @@ mod aiger;
 mod expand;
 mod formula;
 mod parse;
+mod preprocess;
 mod proof;
 mod rules;
 mod search;

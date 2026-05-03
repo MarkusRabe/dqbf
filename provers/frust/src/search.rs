@@ -181,14 +181,24 @@ use crate::formula::Lit;
 pub fn solve(f: &Formula, cfg: &Config) -> Output {
     let start = Instant::now();
 
-    // Phase 0: greedy universal expansion (SAT-only, cert-producing).
+    // Phase -1: light preprocessing (SAT path only — UNSAT proofs are
+    // derived over the original f to keep the .frp checkable without
+    // replaying eliminations).
+    let (fp, pre) = crate::preprocess::preprocess(f);
+
+    // Phase 0: greedy universal expansion on the simplified formula.
     if cfg.extract_cert {
-        if let Some(sk) = crate::expand::try_expand(f, cfg.timeout_s, &start) {
+        if let Some(mut sk) = crate::expand::try_expand(&fp, cfg.timeout_s, &start) {
+            crate::preprocess::extend_skolem(&mut sk, &pre);
             return Output {
                 verdict: Verdict::Sat,
                 proof: None,
                 skolem: Some(sk),
-                stats: "expand".into(),
+                stats: format!(
+                    "expand (pre: -{}e -{}u)",
+                    pre.fixed.len(),
+                    pre.dropped_universals.len()
+                ),
             };
         }
     }

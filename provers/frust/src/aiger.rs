@@ -119,9 +119,13 @@ pub fn write_skolem_aag<W: Write>(w: &mut W, f: &Formula, sk: &Skolem) -> std::i
         .collect();
     let mut outputs: Vec<(Var, u32)> = Vec::new();
     for (&y, (bits, ndeps)) in sk {
-        let deps: Vec<Var> = f.deps[&y].iter().copied().collect();
-        let ins: Vec<u32> = deps.iter().map(|d| u_lit[d]).collect();
-        let out = shannon(&mut aig, bits, *ndeps, &ins);
+        let deps: Vec<Var> = f
+            .deps
+            .get(&y)
+            .map(|d| d.iter().copied().collect())
+            .unwrap_or_default();
+        let ins: Vec<u32> = deps.iter().take(*ndeps).map(|d| u_lit[d]).collect();
+        let out = shannon(&mut aig, bits, ins.len(), &ins);
         outputs.push((y, out));
     }
     let m = aig.max_var();

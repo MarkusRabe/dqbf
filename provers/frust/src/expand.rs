@@ -29,6 +29,7 @@ fn try_expand_with(f: &Formula, first_branch: i8, vote_mode: bool) -> Option<Sko
     if nu > MAX_U {
         return None;
     }
+    let defined = crate::preprocess::detect_defined(f);
     let exs: Vec<Var> = f.deps.keys().copied().collect();
     let dep_lists: Vec<Vec<Var>> = exs
         .iter()
@@ -82,8 +83,8 @@ fn try_expand_with(f: &Formula, first_branch: i8, vote_mode: bool) -> Option<Sko
     for &use_pins in passes {
         if use_pins && vote_mode {
             for (i, t) in tables.iter_mut().enumerate() {
-                if dep_lists[i].len() == nu {
-                    continue; // full deps: free per row
+                if dep_lists[i].len() == nu || defined.contains(&exs[i]) {
+                    continue; // full deps or defined: free per row
                 }
                 for (k, slot) in t.iter_mut().enumerate() {
                     *slot = if votes[i][k] > 0 {
@@ -105,6 +106,9 @@ fn try_expand_with(f: &Formula, first_branch: i8, vote_mode: bool) -> Option<Sko
             }
             if use_pins {
                 for (i, &y) in exs.iter().enumerate() {
+                    if defined.contains(&y) {
+                        continue; // unit-prop will set it
+                    }
                     let key = extract(ub, dep_mask[i]) as usize;
                     let t = tables[i][key];
                     if t != 0 {

@@ -170,6 +170,15 @@ Whether `IR-calc` simulates Fork Resolution is open.
   [PDF](https://ira.informatik.uni-freiburg.de/~wimmer/pubs/wimmer-et-al-tacas-2017.pdf).
   Unit/pure-literal, BCE, gate detection, dependency schemes,
   ∀-expansion as preprocessing.
+- **Slivovsky, F., Szeider, S.** *Soundness of Q-resolution with
+  Dependency Schemes.* TCS 2016.
+  [doi:10.1016/j.tcs.2015.10.020](https://doi.org/10.1016/j.tcs.2015.10.020).
+  Reference only — we are not implementing dependency schemes.
+- **Tentrup, L.** *Non-prenex QBF Solving Using Abstraction.* SAT 2016
+  (and *CAQE: A Certifying QBF Solver*, FMCAD 2015).
+  [doi:10.1007/978-3-319-40970-2_24](https://doi.org/10.1007/978-3-319-40970-2_24).
+  Clausal abstraction / refinement; the loop our expand path is
+  approximating.
 - **Sič, J.** *DQBDD: An Efficient BDD-Based DQBF Solver.* SAT 2021.
   [doi:10.1007/978-3-030-80223-3_36](https://link.springer.com/chapter/10.1007/978-3-030-80223-3_36).
 - **Slivovsky, F., et al.** *Pedant.* SAT 2022.
