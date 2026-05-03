@@ -39,6 +39,10 @@ CSS = (
     "ul.famtree,ul.famtree ul{list-style:none;margin:0;padding-left:1em}"
     "ul.famtree>li{padding-left:0}"
     "ul.famtree li{line-height:1.5}"
+    ".famtree ul.folded{display:none}"
+    ".famfold{display:inline-block;width:1em;text-align:center;cursor:pointer;"
+    "font-family:ui-monospace,monospace;user-select:none;color:#666}"
+    ".famfold-none{cursor:default;color:transparent}"
     "a.famonly{font-size:.8em;color:#888;margin-left:.4em;cursor:pointer;"
     "text-decoration:none}a.famonly:hover{text-decoration:underline;color:#555}"
     ".ctl fieldset.families{max-height:16em;overflow:auto;min-width:14em}"
@@ -87,23 +91,27 @@ def _family_tree(scope: str, families: list[str]) -> str:
     def emit(label: str, node: dict) -> str:
         leaf = node["_leaf"]
         kids = node["ch"]
-        if leaf is not None and not kids:
-            cb = f'<input type="checkbox" class="famchk-{scope}" value="{_esc(leaf)}" checked>'
-        elif leaf is not None:
-            # Node is both a family and has sub-families: render as a leaf
-            # checkbox (so it's selectable) AND nest the children.
+        if leaf is not None:
             cb = f'<input type="checkbox" class="famchk-{scope}" value="{_esc(leaf)}" checked>'
         else:
             cb = f'<input type="checkbox" class="famint-{scope}" checked>'
-        sub = ""
         if kids:
-            sub = "<ul>" + "".join(emit(k, v) for k, v in sorted(kids.items())) + "</ul>"
-        return f'<li>{cb} {_esc(label)} <a class="famonly">only</a>{sub}</li>'
+            fold = '<span class="famfold">▸</span>'
+            sub = (
+                '<ul class="folded">'
+                + "".join(emit(k, v) for k, v in sorted(kids.items()))
+                + "</ul>"
+            )
+        else:
+            fold = '<span class="famfold famfold-none">·</span>'
+            sub = ""
+        return f'<li>{fold}{cb} {_esc(label)} <a class="famonly">only</a>{sub}</li>'
 
     inner = "".join(emit(k, v) for k, v in sorted(root["ch"].items()))
     return (
         f'<ul class="famtree" data-scope="{scope}">'
-        f'<li><input type="checkbox" class="famint-{scope}" checked> all '
+        f'<li><span class="famfold">▾</span>'
+        f'<input type="checkbox" class="famint-{scope}" checked> all '
         f'<a class="famonly">only</a><ul>{inner}</ul></li></ul>'
     )
 
@@ -503,13 +511,30 @@ function wireFamTree(tree, render){
   for(const cb of tree.querySelectorAll(".famchk-"+scope)){
     cb.addEventListener("change", ()=>{ syncInterior(); render(); });
   }
-  // 'only' => uncheck all leaves in scope, check leaves under this <li>
+  // fold/unfold toggle on interior nodes
+  function setFold(li, folded){
+    const ul = li.querySelector(":scope > ul");
+    const tg = li.querySelector(":scope > .famfold");
+    if(!ul || !tg || tg.classList.contains("famfold-none")) return;
+    ul.classList.toggle("folded", folded);
+    tg.textContent = folded ? "▸" : "▾";
+  }
+  for(const tg of tree.querySelectorAll(".famfold")){
+    if(tg.classList.contains("famfold-none")) continue;
+    tg.addEventListener("click", ()=>{
+      const li = tg.closest("li");
+      const ul = li.querySelector(":scope > ul");
+      setFold(li, !ul.classList.contains("folded"));
+    });
+  }
+  // 'only' => uncheck all leaves in scope, check leaves under this <li>, expand it
   for(const a of tree.querySelectorAll("a.famonly")){
     a.addEventListener("click", ev=>{
       ev.preventDefault();
       const li = a.closest("li");
       for(const l of tree.querySelectorAll(".famchk-"+scope)) l.checked=false;
       for(const l of leavesOf(li)) l.checked=true;
+      setFold(li, false);
       syncInterior(); render();
     });
   }
