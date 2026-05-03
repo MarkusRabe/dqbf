@@ -25,7 +25,7 @@ ABC = shutil.which("berkeley-abc") or shutil.which("abc") or "abc"
 A2A = str(ROOT / "third_party/aigtoaig")
 HQS = str(ROOT / "third_party/hqs/HQS/build/src/hqs/hqs2")
 PEDANT = str(ROOT / "third_party/pedant/build/src/pedant")
-TIMEOUT = 30
+TIMEOUT = 10
 MIN = ROOT / "scripts/minrepro"
 
 
