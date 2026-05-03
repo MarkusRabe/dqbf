@@ -1,7 +1,7 @@
 [
   {
     "path": "pec_mutex_n4_k2_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -17,7 +17,7 @@
   },
   {
     "path": "pec_mutex_n4_k2_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -33,7 +33,7 @@
   },
   {
     "path": "pec_mutex_n4_k2_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -49,7 +49,7 @@
   },
   {
     "path": "pec_mutex_n4_k2_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -65,7 +65,7 @@
   },
   {
     "path": "pec_mutex_n4_k2_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -81,7 +81,7 @@
   },
   {
     "path": "pec_mutex_n4_k2_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -97,7 +97,7 @@
   },
   {
     "path": "pec_mutex_n4_k4_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -113,7 +113,7 @@
   },
   {
     "path": "pec_mutex_n4_k4_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -129,7 +129,7 @@
   },
   {
     "path": "pec_mutex_n4_k4_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -145,7 +145,7 @@
   },
   {
     "path": "pec_mutex_n4_k4_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -161,7 +161,7 @@
   },
   {
     "path": "pec_mutex_n4_k4_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -177,7 +177,7 @@
   },
   {
     "path": "pec_mutex_n4_k4_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -193,7 +193,7 @@
   },
   {
     "path": "pec_mutex_n4_k8_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -209,7 +209,7 @@
   },
   {
     "path": "pec_mutex_n4_k8_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -225,7 +225,7 @@
   },
   {
     "path": "pec_mutex_n4_k8_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -241,7 +241,7 @@
   },
   {
     "path": "pec_mutex_n4_k8_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -257,7 +257,7 @@
   },
   {
     "path": "pec_mutex_n4_k8_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -273,7 +273,7 @@
   },
   {
     "path": "pec_mutex_n4_k8_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -289,7 +289,7 @@
   },
   {
     "path": "pec_mutex_n8_k2_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -305,7 +305,7 @@
   },
   {
     "path": "pec_mutex_n8_k2_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -321,7 +321,7 @@
   },
   {
     "path": "pec_mutex_n8_k2_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -337,7 +337,7 @@
   },
   {
     "path": "pec_mutex_n8_k2_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -353,7 +353,7 @@
   },
   {
     "path": "pec_mutex_n8_k2_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -369,7 +369,7 @@
   },
   {
     "path": "pec_mutex_n8_k2_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -385,7 +385,7 @@
   },
   {
     "path": "pec_mutex_n8_k4_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -401,7 +401,7 @@
   },
   {
     "path": "pec_mutex_n8_k4_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -417,7 +417,7 @@
   },
   {
     "path": "pec_mutex_n8_k4_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -433,7 +433,7 @@
   },
   {
     "path": "pec_mutex_n8_k4_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -449,7 +449,7 @@
   },
   {
     "path": "pec_mutex_n8_k4_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -465,7 +465,7 @@
   },
   {
     "path": "pec_mutex_n8_k4_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -481,7 +481,7 @@
   },
   {
     "path": "pec_mutex_n8_k8_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -497,7 +497,7 @@
   },
   {
     "path": "pec_mutex_n8_k8_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -513,7 +513,7 @@
   },
   {
     "path": "pec_mutex_n8_k8_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -529,7 +529,7 @@
   },
   {
     "path": "pec_mutex_n8_k8_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -545,7 +545,7 @@
   },
   {
     "path": "pec_mutex_n8_k8_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -561,7 +561,7 @@
   },
   {
     "path": "pec_mutex_n8_k8_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -577,7 +577,7 @@
   },
   {
     "path": "pec_mutex_n12_k2_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -593,7 +593,7 @@
   },
   {
     "path": "pec_mutex_n12_k2_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -609,7 +609,7 @@
   },
   {
     "path": "pec_mutex_n12_k2_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -625,7 +625,7 @@
   },
   {
     "path": "pec_mutex_n12_k2_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -641,7 +641,7 @@
   },
   {
     "path": "pec_mutex_n12_k2_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -657,7 +657,7 @@
   },
   {
     "path": "pec_mutex_n12_k2_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -673,7 +673,7 @@
   },
   {
     "path": "pec_mutex_n12_k4_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -689,7 +689,7 @@
   },
   {
     "path": "pec_mutex_n12_k4_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -705,7 +705,7 @@
   },
   {
     "path": "pec_mutex_n12_k4_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -721,7 +721,7 @@
   },
   {
     "path": "pec_mutex_n12_k4_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -737,7 +737,7 @@
   },
   {
     "path": "pec_mutex_n12_k4_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -753,7 +753,7 @@
   },
   {
     "path": "pec_mutex_n12_k4_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -769,7 +769,7 @@
   },
   {
     "path": "pec_mutex_n12_k8_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -785,7 +785,7 @@
   },
   {
     "path": "pec_mutex_n12_k8_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -801,7 +801,7 @@
   },
   {
     "path": "pec_mutex_n12_k8_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -817,7 +817,7 @@
   },
   {
     "path": "pec_mutex_n12_k8_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -833,7 +833,7 @@
   },
   {
     "path": "pec_mutex_n12_k8_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -849,7 +849,7 @@
   },
   {
     "path": "pec_mutex_n12_k8_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -865,7 +865,7 @@
   },
   {
     "path": "pec_mutex_n16_k2_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -881,7 +881,7 @@
   },
   {
     "path": "pec_mutex_n16_k2_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -897,7 +897,7 @@
   },
   {
     "path": "pec_mutex_n16_k2_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -913,7 +913,7 @@
   },
   {
     "path": "pec_mutex_n16_k2_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -929,7 +929,7 @@
   },
   {
     "path": "pec_mutex_n16_k2_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -945,7 +945,7 @@
   },
   {
     "path": "pec_mutex_n16_k2_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -961,7 +961,7 @@
   },
   {
     "path": "pec_mutex_n16_k4_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -977,7 +977,7 @@
   },
   {
     "path": "pec_mutex_n16_k4_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -993,7 +993,7 @@
   },
   {
     "path": "pec_mutex_n16_k4_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1009,7 +1009,7 @@
   },
   {
     "path": "pec_mutex_n16_k4_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1025,7 +1025,7 @@
   },
   {
     "path": "pec_mutex_n16_k4_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1041,7 +1041,7 @@
   },
   {
     "path": "pec_mutex_n16_k4_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1057,7 +1057,7 @@
   },
   {
     "path": "pec_mutex_n16_k8_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1073,7 +1073,7 @@
   },
   {
     "path": "pec_mutex_n16_k8_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1089,7 +1089,7 @@
   },
   {
     "path": "pec_mutex_n16_k8_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1105,7 +1105,7 @@
   },
   {
     "path": "pec_mutex_n16_k8_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1121,7 +1121,7 @@
   },
   {
     "path": "pec_mutex_n16_k8_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1137,7 +1137,7 @@
   },
   {
     "path": "pec_mutex_n16_k8_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1153,7 +1153,7 @@
   },
   {
     "path": "pec_mutex_n20_k2_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1169,7 +1169,7 @@
   },
   {
     "path": "pec_mutex_n20_k2_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1185,7 +1185,7 @@
   },
   {
     "path": "pec_mutex_n20_k2_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1201,7 +1201,7 @@
   },
   {
     "path": "pec_mutex_n20_k2_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1217,7 +1217,7 @@
   },
   {
     "path": "pec_mutex_n20_k2_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1233,7 +1233,7 @@
   },
   {
     "path": "pec_mutex_n20_k2_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1249,7 +1249,7 @@
   },
   {
     "path": "pec_mutex_n20_k4_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1265,7 +1265,7 @@
   },
   {
     "path": "pec_mutex_n20_k4_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1281,7 +1281,7 @@
   },
   {
     "path": "pec_mutex_n20_k4_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1297,7 +1297,7 @@
   },
   {
     "path": "pec_mutex_n20_k4_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1313,7 +1313,7 @@
   },
   {
     "path": "pec_mutex_n20_k4_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1329,7 +1329,7 @@
   },
   {
     "path": "pec_mutex_n20_k4_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1345,7 +1345,7 @@
   },
   {
     "path": "pec_mutex_n20_k8_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1361,7 +1361,7 @@
   },
   {
     "path": "pec_mutex_n20_k8_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1377,7 +1377,7 @@
   },
   {
     "path": "pec_mutex_n20_k8_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1393,7 +1393,7 @@
   },
   {
     "path": "pec_mutex_n20_k8_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1409,7 +1409,7 @@
   },
   {
     "path": "pec_mutex_n20_k8_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1425,7 +1425,7 @@
   },
   {
     "path": "pec_mutex_n20_k8_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1441,7 +1441,7 @@
   },
   {
     "path": "pec_mutex_n24_k2_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1457,7 +1457,7 @@
   },
   {
     "path": "pec_mutex_n24_k2_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1473,7 +1473,7 @@
   },
   {
     "path": "pec_mutex_n24_k2_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1489,7 +1489,7 @@
   },
   {
     "path": "pec_mutex_n24_k2_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1505,7 +1505,7 @@
   },
   {
     "path": "pec_mutex_n24_k2_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1521,7 +1521,7 @@
   },
   {
     "path": "pec_mutex_n24_k2_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1537,7 +1537,7 @@
   },
   {
     "path": "pec_mutex_n24_k4_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1553,7 +1553,7 @@
   },
   {
     "path": "pec_mutex_n24_k4_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1569,7 +1569,7 @@
   },
   {
     "path": "pec_mutex_n24_k4_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1585,7 +1585,7 @@
   },
   {
     "path": "pec_mutex_n24_k4_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1601,7 +1601,7 @@
   },
   {
     "path": "pec_mutex_n24_k4_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1617,7 +1617,7 @@
   },
   {
     "path": "pec_mutex_n24_k4_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1633,7 +1633,7 @@
   },
   {
     "path": "pec_mutex_n24_k8_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1649,7 +1649,7 @@
   },
   {
     "path": "pec_mutex_n24_k8_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1665,7 +1665,7 @@
   },
   {
     "path": "pec_mutex_n24_k8_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1681,7 +1681,7 @@
   },
   {
     "path": "pec_mutex_n24_k8_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1697,7 +1697,7 @@
   },
   {
     "path": "pec_mutex_n24_k8_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1713,7 +1713,7 @@
   },
   {
     "path": "pec_mutex_n24_k8_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "mutex",
@@ -1729,7 +1729,7 @@
   },
   {
     "path": "pec_fifo1_n4_k2_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -1745,7 +1745,7 @@
   },
   {
     "path": "pec_fifo1_n4_k2_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -1761,7 +1761,7 @@
   },
   {
     "path": "pec_fifo1_n4_k2_bb2_complete.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -1777,7 +1777,7 @@
   },
   {
     "path": "pec_fifo1_n4_k2_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -1793,7 +1793,7 @@
   },
   {
     "path": "pec_fifo1_n4_k2_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -1809,7 +1809,7 @@
   },
   {
     "path": "pec_fifo1_n4_k2_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -1825,7 +1825,7 @@
   },
   {
     "path": "pec_fifo1_n4_k4_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -1841,7 +1841,7 @@
   },
   {
     "path": "pec_fifo1_n4_k4_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -1857,7 +1857,7 @@
   },
   {
     "path": "pec_fifo1_n4_k4_bb2_complete.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -1873,7 +1873,7 @@
   },
   {
     "path": "pec_fifo1_n4_k4_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -1889,7 +1889,7 @@
   },
   {
     "path": "pec_fifo1_n4_k4_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -1905,7 +1905,7 @@
   },
   {
     "path": "pec_fifo1_n4_k4_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -1921,7 +1921,7 @@
   },
   {
     "path": "pec_fifo1_n4_k8_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -1937,7 +1937,7 @@
   },
   {
     "path": "pec_fifo1_n4_k8_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -1953,7 +1953,7 @@
   },
   {
     "path": "pec_fifo1_n4_k8_bb2_complete.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -1969,7 +1969,7 @@
   },
   {
     "path": "pec_fifo1_n4_k8_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -1985,7 +1985,7 @@
   },
   {
     "path": "pec_fifo1_n4_k8_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2001,7 +2001,7 @@
   },
   {
     "path": "pec_fifo1_n4_k8_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2017,7 +2017,7 @@
   },
   {
     "path": "pec_fifo1_n8_k2_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2033,7 +2033,7 @@
   },
   {
     "path": "pec_fifo1_n8_k2_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2049,7 +2049,7 @@
   },
   {
     "path": "pec_fifo1_n8_k2_bb2_complete.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2065,7 +2065,7 @@
   },
   {
     "path": "pec_fifo1_n8_k2_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2081,7 +2081,7 @@
   },
   {
     "path": "pec_fifo1_n8_k2_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2097,7 +2097,7 @@
   },
   {
     "path": "pec_fifo1_n8_k2_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2113,7 +2113,7 @@
   },
   {
     "path": "pec_fifo1_n8_k4_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2129,7 +2129,7 @@
   },
   {
     "path": "pec_fifo1_n8_k4_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2145,7 +2145,7 @@
   },
   {
     "path": "pec_fifo1_n8_k4_bb2_complete.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2161,7 +2161,7 @@
   },
   {
     "path": "pec_fifo1_n8_k4_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2177,7 +2177,7 @@
   },
   {
     "path": "pec_fifo1_n8_k4_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2193,7 +2193,7 @@
   },
   {
     "path": "pec_fifo1_n8_k4_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2209,7 +2209,7 @@
   },
   {
     "path": "pec_fifo1_n8_k8_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2225,7 +2225,7 @@
   },
   {
     "path": "pec_fifo1_n8_k8_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2241,7 +2241,7 @@
   },
   {
     "path": "pec_fifo1_n8_k8_bb2_complete.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2257,7 +2257,7 @@
   },
   {
     "path": "pec_fifo1_n8_k8_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2273,7 +2273,7 @@
   },
   {
     "path": "pec_fifo1_n8_k8_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2289,7 +2289,7 @@
   },
   {
     "path": "pec_fifo1_n8_k8_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2305,7 +2305,7 @@
   },
   {
     "path": "pec_fifo1_n12_k2_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2321,7 +2321,7 @@
   },
   {
     "path": "pec_fifo1_n12_k2_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2337,7 +2337,7 @@
   },
   {
     "path": "pec_fifo1_n12_k2_bb2_complete.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2353,7 +2353,7 @@
   },
   {
     "path": "pec_fifo1_n12_k2_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2369,7 +2369,7 @@
   },
   {
     "path": "pec_fifo1_n12_k2_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2385,7 +2385,7 @@
   },
   {
     "path": "pec_fifo1_n12_k2_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2401,7 +2401,7 @@
   },
   {
     "path": "pec_fifo1_n12_k4_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2417,7 +2417,7 @@
   },
   {
     "path": "pec_fifo1_n12_k4_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2433,7 +2433,7 @@
   },
   {
     "path": "pec_fifo1_n12_k4_bb2_complete.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2449,7 +2449,7 @@
   },
   {
     "path": "pec_fifo1_n12_k4_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2465,7 +2465,7 @@
   },
   {
     "path": "pec_fifo1_n12_k4_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2481,7 +2481,7 @@
   },
   {
     "path": "pec_fifo1_n12_k4_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2497,7 +2497,7 @@
   },
   {
     "path": "pec_fifo1_n12_k8_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2513,7 +2513,7 @@
   },
   {
     "path": "pec_fifo1_n12_k8_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2529,7 +2529,7 @@
   },
   {
     "path": "pec_fifo1_n12_k8_bb2_complete.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2545,7 +2545,7 @@
   },
   {
     "path": "pec_fifo1_n12_k8_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2561,7 +2561,7 @@
   },
   {
     "path": "pec_fifo1_n12_k8_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2577,7 +2577,7 @@
   },
   {
     "path": "pec_fifo1_n12_k8_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2593,7 +2593,7 @@
   },
   {
     "path": "pec_fifo1_n16_k2_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2609,7 +2609,7 @@
   },
   {
     "path": "pec_fifo1_n16_k2_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2625,7 +2625,7 @@
   },
   {
     "path": "pec_fifo1_n16_k2_bb2_complete.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2641,7 +2641,7 @@
   },
   {
     "path": "pec_fifo1_n16_k2_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2657,7 +2657,7 @@
   },
   {
     "path": "pec_fifo1_n16_k2_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2673,7 +2673,7 @@
   },
   {
     "path": "pec_fifo1_n16_k2_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2689,7 +2689,7 @@
   },
   {
     "path": "pec_fifo1_n16_k4_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2705,7 +2705,7 @@
   },
   {
     "path": "pec_fifo1_n16_k4_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2721,7 +2721,7 @@
   },
   {
     "path": "pec_fifo1_n16_k4_bb2_complete.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2737,7 +2737,7 @@
   },
   {
     "path": "pec_fifo1_n16_k4_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2753,7 +2753,7 @@
   },
   {
     "path": "pec_fifo1_n16_k4_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2769,7 +2769,7 @@
   },
   {
     "path": "pec_fifo1_n16_k4_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2785,7 +2785,7 @@
   },
   {
     "path": "pec_fifo1_n16_k8_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2801,7 +2801,7 @@
   },
   {
     "path": "pec_fifo1_n16_k8_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2817,7 +2817,7 @@
   },
   {
     "path": "pec_fifo1_n16_k8_bb2_complete.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2833,7 +2833,7 @@
   },
   {
     "path": "pec_fifo1_n16_k8_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2849,7 +2849,7 @@
   },
   {
     "path": "pec_fifo1_n16_k8_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2865,7 +2865,7 @@
   },
   {
     "path": "pec_fifo1_n16_k8_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2881,7 +2881,7 @@
   },
   {
     "path": "pec_fifo1_n20_k2_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2897,7 +2897,7 @@
   },
   {
     "path": "pec_fifo1_n20_k2_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2913,7 +2913,7 @@
   },
   {
     "path": "pec_fifo1_n20_k2_bb2_complete.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2929,7 +2929,7 @@
   },
   {
     "path": "pec_fifo1_n20_k2_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2945,7 +2945,7 @@
   },
   {
     "path": "pec_fifo1_n20_k2_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2961,7 +2961,7 @@
   },
   {
     "path": "pec_fifo1_n20_k2_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2977,7 +2977,7 @@
   },
   {
     "path": "pec_fifo1_n20_k4_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -2993,7 +2993,7 @@
   },
   {
     "path": "pec_fifo1_n20_k4_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3009,7 +3009,7 @@
   },
   {
     "path": "pec_fifo1_n20_k4_bb2_complete.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3025,7 +3025,7 @@
   },
   {
     "path": "pec_fifo1_n20_k4_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3041,7 +3041,7 @@
   },
   {
     "path": "pec_fifo1_n20_k4_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3057,7 +3057,7 @@
   },
   {
     "path": "pec_fifo1_n20_k4_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3073,7 +3073,7 @@
   },
   {
     "path": "pec_fifo1_n20_k8_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3089,7 +3089,7 @@
   },
   {
     "path": "pec_fifo1_n20_k8_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3105,7 +3105,7 @@
   },
   {
     "path": "pec_fifo1_n20_k8_bb2_complete.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3121,7 +3121,7 @@
   },
   {
     "path": "pec_fifo1_n20_k8_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3137,7 +3137,7 @@
   },
   {
     "path": "pec_fifo1_n20_k8_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3153,7 +3153,7 @@
   },
   {
     "path": "pec_fifo1_n20_k8_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3169,7 +3169,7 @@
   },
   {
     "path": "pec_fifo1_n24_k2_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3185,7 +3185,7 @@
   },
   {
     "path": "pec_fifo1_n24_k2_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3201,7 +3201,7 @@
   },
   {
     "path": "pec_fifo1_n24_k2_bb2_complete.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3217,7 +3217,7 @@
   },
   {
     "path": "pec_fifo1_n24_k2_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3233,7 +3233,7 @@
   },
   {
     "path": "pec_fifo1_n24_k2_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3249,7 +3249,7 @@
   },
   {
     "path": "pec_fifo1_n24_k2_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3265,7 +3265,7 @@
   },
   {
     "path": "pec_fifo1_n24_k4_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3281,7 +3281,7 @@
   },
   {
     "path": "pec_fifo1_n24_k4_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3297,7 +3297,7 @@
   },
   {
     "path": "pec_fifo1_n24_k4_bb2_complete.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3313,7 +3313,7 @@
   },
   {
     "path": "pec_fifo1_n24_k4_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3329,7 +3329,7 @@
   },
   {
     "path": "pec_fifo1_n24_k4_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3345,7 +3345,7 @@
   },
   {
     "path": "pec_fifo1_n24_k4_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3361,7 +3361,7 @@
   },
   {
     "path": "pec_fifo1_n24_k8_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3377,7 +3377,7 @@
   },
   {
     "path": "pec_fifo1_n24_k8_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3393,7 +3393,7 @@
   },
   {
     "path": "pec_fifo1_n24_k8_bb2_complete.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3409,7 +3409,7 @@
   },
   {
     "path": "pec_fifo1_n24_k8_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3425,7 +3425,7 @@
   },
   {
     "path": "pec_fifo1_n24_k8_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3441,7 +3441,7 @@
   },
   {
     "path": "pec_fifo1_n24_k8_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "fifo1",
@@ -3457,7 +3457,7 @@
   },
   {
     "path": "pec_alu_add_n4_k2_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3473,7 +3473,7 @@
   },
   {
     "path": "pec_alu_add_n4_k2_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3489,7 +3489,7 @@
   },
   {
     "path": "pec_alu_add_n4_k2_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3505,7 +3505,7 @@
   },
   {
     "path": "pec_alu_add_n4_k2_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3521,7 +3521,7 @@
   },
   {
     "path": "pec_alu_add_n4_k2_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3537,7 +3537,7 @@
   },
   {
     "path": "pec_alu_add_n4_k2_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3553,7 +3553,7 @@
   },
   {
     "path": "pec_alu_add_n4_k4_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3569,7 +3569,7 @@
   },
   {
     "path": "pec_alu_add_n4_k4_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3585,7 +3585,7 @@
   },
   {
     "path": "pec_alu_add_n4_k4_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3601,7 +3601,7 @@
   },
   {
     "path": "pec_alu_add_n4_k4_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3617,7 +3617,7 @@
   },
   {
     "path": "pec_alu_add_n4_k4_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3633,7 +3633,7 @@
   },
   {
     "path": "pec_alu_add_n4_k4_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3649,7 +3649,7 @@
   },
   {
     "path": "pec_alu_add_n4_k8_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3665,7 +3665,7 @@
   },
   {
     "path": "pec_alu_add_n4_k8_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3681,7 +3681,7 @@
   },
   {
     "path": "pec_alu_add_n4_k8_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3697,7 +3697,7 @@
   },
   {
     "path": "pec_alu_add_n4_k8_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3713,7 +3713,7 @@
   },
   {
     "path": "pec_alu_add_n4_k8_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3729,7 +3729,7 @@
   },
   {
     "path": "pec_alu_add_n4_k8_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3745,7 +3745,7 @@
   },
   {
     "path": "pec_alu_add_n8_k2_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3761,7 +3761,7 @@
   },
   {
     "path": "pec_alu_add_n8_k2_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3777,7 +3777,7 @@
   },
   {
     "path": "pec_alu_add_n8_k2_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3793,7 +3793,7 @@
   },
   {
     "path": "pec_alu_add_n8_k2_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3809,7 +3809,7 @@
   },
   {
     "path": "pec_alu_add_n8_k2_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3825,7 +3825,7 @@
   },
   {
     "path": "pec_alu_add_n8_k2_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3841,7 +3841,7 @@
   },
   {
     "path": "pec_alu_add_n8_k4_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3857,7 +3857,7 @@
   },
   {
     "path": "pec_alu_add_n8_k4_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3873,7 +3873,7 @@
   },
   {
     "path": "pec_alu_add_n8_k4_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3889,7 +3889,7 @@
   },
   {
     "path": "pec_alu_add_n8_k4_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3905,7 +3905,7 @@
   },
   {
     "path": "pec_alu_add_n8_k4_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3921,7 +3921,7 @@
   },
   {
     "path": "pec_alu_add_n8_k4_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3937,7 +3937,7 @@
   },
   {
     "path": "pec_alu_add_n8_k8_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3953,7 +3953,7 @@
   },
   {
     "path": "pec_alu_add_n8_k8_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3969,7 +3969,7 @@
   },
   {
     "path": "pec_alu_add_n8_k8_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -3985,7 +3985,7 @@
   },
   {
     "path": "pec_alu_add_n8_k8_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4001,7 +4001,7 @@
   },
   {
     "path": "pec_alu_add_n8_k8_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4017,7 +4017,7 @@
   },
   {
     "path": "pec_alu_add_n8_k8_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4033,7 +4033,7 @@
   },
   {
     "path": "pec_alu_add_n12_k2_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4049,7 +4049,7 @@
   },
   {
     "path": "pec_alu_add_n12_k2_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4065,7 +4065,7 @@
   },
   {
     "path": "pec_alu_add_n12_k2_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4081,7 +4081,7 @@
   },
   {
     "path": "pec_alu_add_n12_k2_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4097,7 +4097,7 @@
   },
   {
     "path": "pec_alu_add_n12_k2_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4113,7 +4113,7 @@
   },
   {
     "path": "pec_alu_add_n12_k2_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4129,7 +4129,7 @@
   },
   {
     "path": "pec_alu_add_n12_k4_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4145,7 +4145,7 @@
   },
   {
     "path": "pec_alu_add_n12_k4_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4161,7 +4161,7 @@
   },
   {
     "path": "pec_alu_add_n12_k4_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4177,7 +4177,7 @@
   },
   {
     "path": "pec_alu_add_n12_k4_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4193,7 +4193,7 @@
   },
   {
     "path": "pec_alu_add_n12_k4_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4209,7 +4209,7 @@
   },
   {
     "path": "pec_alu_add_n12_k4_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4225,7 +4225,7 @@
   },
   {
     "path": "pec_alu_add_n12_k8_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4241,7 +4241,7 @@
   },
   {
     "path": "pec_alu_add_n12_k8_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4257,7 +4257,7 @@
   },
   {
     "path": "pec_alu_add_n12_k8_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4273,7 +4273,7 @@
   },
   {
     "path": "pec_alu_add_n12_k8_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4289,7 +4289,7 @@
   },
   {
     "path": "pec_alu_add_n12_k8_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4305,7 +4305,7 @@
   },
   {
     "path": "pec_alu_add_n12_k8_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4321,7 +4321,7 @@
   },
   {
     "path": "pec_alu_add_n16_k2_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4337,7 +4337,7 @@
   },
   {
     "path": "pec_alu_add_n16_k2_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4353,7 +4353,7 @@
   },
   {
     "path": "pec_alu_add_n16_k2_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4369,7 +4369,7 @@
   },
   {
     "path": "pec_alu_add_n16_k2_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4385,7 +4385,7 @@
   },
   {
     "path": "pec_alu_add_n16_k2_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4401,7 +4401,7 @@
   },
   {
     "path": "pec_alu_add_n16_k2_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4417,7 +4417,7 @@
   },
   {
     "path": "pec_alu_add_n16_k4_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4433,7 +4433,7 @@
   },
   {
     "path": "pec_alu_add_n16_k4_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4449,7 +4449,7 @@
   },
   {
     "path": "pec_alu_add_n16_k4_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4465,7 +4465,7 @@
   },
   {
     "path": "pec_alu_add_n16_k4_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4481,7 +4481,7 @@
   },
   {
     "path": "pec_alu_add_n16_k4_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4497,7 +4497,7 @@
   },
   {
     "path": "pec_alu_add_n16_k4_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4513,7 +4513,7 @@
   },
   {
     "path": "pec_alu_add_n16_k8_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4529,7 +4529,7 @@
   },
   {
     "path": "pec_alu_add_n16_k8_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4545,7 +4545,7 @@
   },
   {
     "path": "pec_alu_add_n16_k8_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4561,7 +4561,7 @@
   },
   {
     "path": "pec_alu_add_n16_k8_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4577,7 +4577,7 @@
   },
   {
     "path": "pec_alu_add_n16_k8_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4593,7 +4593,7 @@
   },
   {
     "path": "pec_alu_add_n16_k8_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4609,7 +4609,7 @@
   },
   {
     "path": "pec_alu_add_n20_k2_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4625,7 +4625,7 @@
   },
   {
     "path": "pec_alu_add_n20_k2_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4641,7 +4641,7 @@
   },
   {
     "path": "pec_alu_add_n20_k2_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4657,7 +4657,7 @@
   },
   {
     "path": "pec_alu_add_n20_k2_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4673,7 +4673,7 @@
   },
   {
     "path": "pec_alu_add_n20_k2_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4689,7 +4689,7 @@
   },
   {
     "path": "pec_alu_add_n20_k2_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4705,7 +4705,7 @@
   },
   {
     "path": "pec_alu_add_n20_k4_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4721,7 +4721,7 @@
   },
   {
     "path": "pec_alu_add_n20_k4_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4737,7 +4737,7 @@
   },
   {
     "path": "pec_alu_add_n20_k4_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4753,7 +4753,7 @@
   },
   {
     "path": "pec_alu_add_n20_k4_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4769,7 +4769,7 @@
   },
   {
     "path": "pec_alu_add_n20_k4_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4785,7 +4785,7 @@
   },
   {
     "path": "pec_alu_add_n20_k4_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4801,7 +4801,7 @@
   },
   {
     "path": "pec_alu_add_n20_k8_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4817,7 +4817,7 @@
   },
   {
     "path": "pec_alu_add_n20_k8_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4833,7 +4833,7 @@
   },
   {
     "path": "pec_alu_add_n20_k8_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4849,7 +4849,7 @@
   },
   {
     "path": "pec_alu_add_n20_k8_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4865,7 +4865,7 @@
   },
   {
     "path": "pec_alu_add_n20_k8_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4881,7 +4881,7 @@
   },
   {
     "path": "pec_alu_add_n20_k8_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4897,7 +4897,7 @@
   },
   {
     "path": "pec_alu_add_n24_k2_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4913,7 +4913,7 @@
   },
   {
     "path": "pec_alu_add_n24_k2_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4929,7 +4929,7 @@
   },
   {
     "path": "pec_alu_add_n24_k2_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4945,7 +4945,7 @@
   },
   {
     "path": "pec_alu_add_n24_k2_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4961,7 +4961,7 @@
   },
   {
     "path": "pec_alu_add_n24_k2_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4977,7 +4977,7 @@
   },
   {
     "path": "pec_alu_add_n24_k2_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -4993,7 +4993,7 @@
   },
   {
     "path": "pec_alu_add_n24_k4_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -5009,7 +5009,7 @@
   },
   {
     "path": "pec_alu_add_n24_k4_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -5025,7 +5025,7 @@
   },
   {
     "path": "pec_alu_add_n24_k4_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -5041,7 +5041,7 @@
   },
   {
     "path": "pec_alu_add_n24_k4_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -5057,7 +5057,7 @@
   },
   {
     "path": "pec_alu_add_n24_k4_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -5073,7 +5073,7 @@
   },
   {
     "path": "pec_alu_add_n24_k4_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -5089,7 +5089,7 @@
   },
   {
     "path": "pec_alu_add_n24_k8_bb1_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -5105,7 +5105,7 @@
   },
   {
     "path": "pec_alu_add_n24_k8_bb1_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -5121,7 +5121,7 @@
   },
   {
     "path": "pec_alu_add_n24_k8_bb2_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -5137,7 +5137,7 @@
   },
   {
     "path": "pec_alu_add_n24_k8_bb2_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -5153,7 +5153,7 @@
   },
   {
     "path": "pec_alu_add_n24_k8_bb3_complete.dqdimacs.gz",
-    "expected": "sat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",
@@ -5169,7 +5169,7 @@
   },
   {
     "path": "pec_alu_add_n24_k8_bb3_mutant.dqdimacs.gz",
-    "expected": "unsat",
+    "expected": "unknown",
     "tags": [
       "pec_circuits",
       "alu_add",

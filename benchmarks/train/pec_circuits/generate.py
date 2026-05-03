@@ -16,9 +16,10 @@ Two kinds:
     bug introduced there is irreparable. Usually UNSAT, but a mutation
     that happens to preserve safety stays SAT.
 
-Because neither kind is SAT/UNSAT by construction, `expected` is set
-from an hqs probe (`--probe`, the default). Without hqs the manifest
-records `expected: "unknown"`.
+Neither kind is SAT/UNSAT by construction, so `expected="unknown"`.
+(`--probe` exists for one-off inspection but is **off by default** —
+hqs has known wrong-UNSAT cases, and probe-filtering would bias the
+family toward hqs-solvable instances.)
 """
 
 from __future__ import annotations
@@ -111,7 +112,11 @@ def _probe_hqs(f, hqs: Path | None) -> str:
 @click.option("-N", "widths", default="4,8,12,16,20,24")
 @click.option("-K", "bounds", default="2,4,8")
 @click.option("--n-blackboxes", default="1,2,3")
-@click.option("--probe/--no-probe", default=True, help="Set expected= from an hqs probe")
+@click.option(
+    "--probe/--no-probe",
+    default=False,
+    help="(Debug only) Set expected= from an hqs probe. Do NOT use for committed instances.",
+)
 def main(out: str, widths: str, bounds: str, n_blackboxes: str, probe: bool) -> None:
     outdir = Path(out)
     outdir.mkdir(parents=True, exist_ok=True)
