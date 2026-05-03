@@ -1,0 +1,110 @@
+[
+  {
+    "path": "alu_add_n2_k004.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "bmc_circuits",
+      "alu_add"
+    ],
+    "params": {
+      "N": 2,
+      "k": 4
+    }
+  },
+  {
+    "path": "alu_add_n2_k008.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "bmc_circuits",
+      "alu_add"
+    ],
+    "params": {
+      "N": 2,
+      "k": 8
+    }
+  },
+  {
+    "path": "alu_add_n2_k016.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "bmc_circuits",
+      "alu_add"
+    ],
+    "params": {
+      "N": 2,
+      "k": 16
+    }
+  },
+  {
+    "path": "alu_add_n4_k004.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "bmc_circuits",
+      "alu_add"
+    ],
+    "params": {
+      "N": 4,
+      "k": 4
+    }
+  },
+  {
+    "path": "alu_add_n4_k008.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "bmc_circuits",
+      "alu_add"
+    ],
+    "params": {
+      "N": 4,
+      "k": 8
+    }
+  },
+  {
+    "path": "alu_add_n4_k016.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "bmc_circuits",
+      "alu_add"
+    ],
+    "params": {
+      "N": 4,
+      "k": 16
+    }
+  },
+  {
+    "path": "alu_add_n8_k004.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "bmc_circuits",
+      "alu_add"
+    ],
+    "params": {
+      "N": 8,
+      "k": 4
+    }
+  },
+  {
+    "path": "alu_add_n8_k008.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "bmc_circuits",
+      "alu_add"
+    ],
+    "params": {
+      "N": 8,
+      "k": 8
+    }
+  },
+  {
+    "path": "alu_add_n8_k016.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "bmc_circuits",
+      "alu_add"
+    ],
+    "params": {
+      "N": 8,
+      "k": 16
+    }
+  }
+]
