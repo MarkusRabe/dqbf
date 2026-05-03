@@ -25,18 +25,18 @@ OPS_BINARY = {"add": "x + y", "and": "x & y", "or": "x | y", "xor": "x ^ y"}
 def instances(widths: list[int]) -> Iterator[tuple[str, dict[str, int], str]]:
     for n in widths:
         for name, rhs in OPS_UNARY.items():
-            yield f"{name}_n{n}", {"N": n}, _src_unary(rhs)
+            yield f"{name}_n{n}", {"N": n}, _src_unary(rhs, n)
         for name, rhs in OPS_BINARY.items():
-            yield f"{name}_n{n}", {"N": n}, _src_binary(rhs)
+            yield f"{name}_n{n}", {"N": n}, _src_binary(rhs, n)
 
 
-def _src_unary(rhs: str) -> str:
-    return f"param N = 2\nfun f : bv[N] -> bv[N]\nforall x : bv[N]\nf(x) == {rhs}\n"
+def _src_unary(rhs: str, n: int) -> str:
+    return f"param N = {n}\nfun f : bv[N] -> bv[N]\nforall x : bv[N]\nf(x) == {rhs}\n"
 
 
-def _src_binary(rhs: str) -> str:
+def _src_binary(rhs: str, n: int) -> str:
     return (
-        "param N = 2\n"
+        f"param N = {n}\n"
         "fun f : bv[N], bv[N] -> bv[N]\n"
         "forall x : bv[N]\n"
         "forall y : bv[N]\n"

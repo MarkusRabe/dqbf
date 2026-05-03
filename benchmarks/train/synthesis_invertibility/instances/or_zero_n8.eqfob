@@ -1,4 +1,4 @@
-param N = 4
+param N = 8
 fun f : bv[N] -> bv[N]
 forall x : bv[N]
 (f(x) | x) == 0

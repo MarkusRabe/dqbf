@@ -8,5 +8,35 @@
     "params": {
       "N": 1
     }
+  },
+  {
+    "path": "dep_cycle_n2.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "dep_cycle"
+    ],
+    "params": {
+      "N": 2
+    }
+  },
+  {
+    "path": "dep_cycle_n4.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "dep_cycle"
+    ],
+    "params": {
+      "N": 4
+    }
+  },
+  {
+    "path": "dep_cycle_n8.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "dep_cycle"
+    ],
+    "params": {
+      "N": 8
+    }
   }
 ]

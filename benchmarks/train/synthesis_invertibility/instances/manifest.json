@@ -286,5 +286,293 @@
       "N": 16,
       "template": "shl_x"
     }
+  },
+  {
+    "path": "add_zero_n20.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "synthesis_invertibility",
+      "add_zero"
+    ],
+    "params": {
+      "N": 20,
+      "template": "add_zero"
+    }
+  },
+  {
+    "path": "xor_const_n20.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "synthesis_invertibility",
+      "xor_const"
+    ],
+    "params": {
+      "N": 20,
+      "template": "xor_const"
+    }
+  },
+  {
+    "path": "and_x_n20.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "synthesis_invertibility",
+      "and_x"
+    ],
+    "params": {
+      "N": 20,
+      "template": "and_x"
+    }
+  },
+  {
+    "path": "or_x_n20.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "synthesis_invertibility",
+      "or_x"
+    ],
+    "params": {
+      "N": 20,
+      "template": "or_x"
+    }
+  },
+  {
+    "path": "or_zero_n20.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "synthesis_invertibility",
+      "or_zero"
+    ],
+    "params": {
+      "N": 20,
+      "template": "or_zero"
+    }
+  },
+  {
+    "path": "and_notx_n20.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "synthesis_invertibility",
+      "and_notx"
+    ],
+    "params": {
+      "N": 20,
+      "template": "and_notx"
+    }
+  },
+  {
+    "path": "and_one_n20.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "synthesis_invertibility",
+      "and_one"
+    ],
+    "params": {
+      "N": 20,
+      "template": "and_one"
+    }
+  },
+  {
+    "path": "shl_x_n20.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "synthesis_invertibility",
+      "shl_x"
+    ],
+    "params": {
+      "N": 20,
+      "template": "shl_x"
+    }
+  },
+  {
+    "path": "add_zero_n24.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "synthesis_invertibility",
+      "add_zero"
+    ],
+    "params": {
+      "N": 24,
+      "template": "add_zero"
+    }
+  },
+  {
+    "path": "xor_const_n24.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "synthesis_invertibility",
+      "xor_const"
+    ],
+    "params": {
+      "N": 24,
+      "template": "xor_const"
+    }
+  },
+  {
+    "path": "and_x_n24.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "synthesis_invertibility",
+      "and_x"
+    ],
+    "params": {
+      "N": 24,
+      "template": "and_x"
+    }
+  },
+  {
+    "path": "or_x_n24.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "synthesis_invertibility",
+      "or_x"
+    ],
+    "params": {
+      "N": 24,
+      "template": "or_x"
+    }
+  },
+  {
+    "path": "or_zero_n24.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "synthesis_invertibility",
+      "or_zero"
+    ],
+    "params": {
+      "N": 24,
+      "template": "or_zero"
+    }
+  },
+  {
+    "path": "and_notx_n24.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "synthesis_invertibility",
+      "and_notx"
+    ],
+    "params": {
+      "N": 24,
+      "template": "and_notx"
+    }
+  },
+  {
+    "path": "and_one_n24.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "synthesis_invertibility",
+      "and_one"
+    ],
+    "params": {
+      "N": 24,
+      "template": "and_one"
+    }
+  },
+  {
+    "path": "shl_x_n24.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "synthesis_invertibility",
+      "shl_x"
+    ],
+    "params": {
+      "N": 24,
+      "template": "shl_x"
+    }
+  },
+  {
+    "path": "add_zero_n32.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "synthesis_invertibility",
+      "add_zero"
+    ],
+    "params": {
+      "N": 32,
+      "template": "add_zero"
+    }
+  },
+  {
+    "path": "xor_const_n32.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "synthesis_invertibility",
+      "xor_const"
+    ],
+    "params": {
+      "N": 32,
+      "template": "xor_const"
+    }
+  },
+  {
+    "path": "and_x_n32.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "synthesis_invertibility",
+      "and_x"
+    ],
+    "params": {
+      "N": 32,
+      "template": "and_x"
+    }
+  },
+  {
+    "path": "or_x_n32.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "synthesis_invertibility",
+      "or_x"
+    ],
+    "params": {
+      "N": 32,
+      "template": "or_x"
+    }
+  },
+  {
+    "path": "or_zero_n32.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "synthesis_invertibility",
+      "or_zero"
+    ],
+    "params": {
+      "N": 32,
+      "template": "or_zero"
+    }
+  },
+  {
+    "path": "and_notx_n32.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "synthesis_invertibility",
+      "and_notx"
+    ],
+    "params": {
+      "N": 32,
+      "template": "and_notx"
+    }
+  },
+  {
+    "path": "and_one_n32.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "synthesis_invertibility",
+      "and_one"
+    ],
+    "params": {
+      "N": 32,
+      "template": "and_one"
+    }
+  },
+  {
+    "path": "shl_x_n32.dqdimacs.gz",
+    "expected": "unsat",
+    "tags": [
+      "synthesis_invertibility",
+      "shl_x"
+    ],
+    "params": {
+      "N": 32,
+      "template": "shl_x"
+    }
   }
 ]

@@ -33,15 +33,15 @@ TEMPLATES: list[tuple[str, str, str]] = [
 ]
 
 
-def _src(body: str) -> str:
-    return f"param N = 4\nfun f : bv[N] -> bv[N]\nforall x : bv[N]\n{body}\n"
+def _src(body: str, n: int) -> str:
+    return f"param N = {n}\nfun f : bv[N] -> bv[N]\nforall x : bv[N]\n{body}\n"
 
 
 @click.command()
 @click.option(
     "--out", type=click.Path(), default="benchmarks/train/synthesis_invertibility/instances"
 )
-@click.option("-D", "widths", default="4,8,16")
+@click.option("-D", "widths", default="4,8,16,20,24,32")
 def main(out: str, widths: str) -> None:
     outdir = Path(out)
     outdir.mkdir(parents=True, exist_ok=True)
@@ -50,9 +50,9 @@ def main(out: str, widths: str) -> None:
     for n in ws:
         for name, body, expected in TEMPLATES:
             stem = f"{name}_n{n}"
-            src = _src(body)
+            src = _src(body, n)
             (outdir / f"{stem}.eqfob").write_text(src)
-            f = bitblast(check(parse(src), overrides={"N": n}))
+            f = bitblast(check(parse(src)))
             with gzip.open(outdir / f"{stem}.dqdimacs.gz", "wt") as fp:
                 fp.write(
                     "c synthesis_invertibility/generate.py "

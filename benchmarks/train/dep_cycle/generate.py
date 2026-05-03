@@ -23,7 +23,7 @@ SRC = Path(__file__).resolve().parents[3] / "tools/eqfob/examples/dep_cycle.eqfo
 
 @click.command()
 @click.option("--out", type=click.Path(), default="benchmarks/train/dep_cycle/instances")
-@click.option("-D", "widths", default="1")
+@click.option("-D", "widths", default="1,2,4,8")
 def main(out: str, widths: str) -> None:
     outdir = Path(out)
     outdir.mkdir(parents=True, exist_ok=True)

@@ -1,4 +1,4 @@
-param N = 4
+param N = 16
 fun f : bv[N] -> bv[N]
 forall x : bv[N]
 (f(x) << 1) == x
