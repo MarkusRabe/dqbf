@@ -188,31 +188,6 @@ use crate::formula::Lit;
 
 pub fn solve(f: &Formula, cfg: &Config) -> Output {
     let start = Instant::now();
-
-    // Phase 0: universal expansion (SAT path) + UNSAT-row detection.
-    let mut unsat_row: Option<u32> = None;
-    if cfg.extract_cert {
-        if let Some(sk) =
-            crate::expand::try_expand(f, cfg.timeout_s, &start, cfg.debug_expand, &mut unsat_row)
-        {
-            return Output {
-                verdict: Verdict::Sat,
-                proof: None,
-                skolem: Some(sk),
-                stats: "expand".into(),
-            };
-        }
-    }
-
-    // If expand proved UNSAT (row ub), still give saturation a short
-    // window so easy cases get a verified .frp; fall back to the
-    // uncertified UNSAT verdict if it doesn't finish.
-    let known_unsat = unsat_row.is_some();
-    let sat_deadline = if known_unsat {
-        (cfg.timeout_s).min(start.elapsed().as_secs_f64() + 1.0)
-    } else {
-        cfg.timeout_s
-    };
     let mut g = f.clone();
     let mut db = Db::new();
 
@@ -242,14 +217,97 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
             stats: "empty in input".into(),
         };
     }
-
     let mut forks = 0usize;
+
+    // Phase A: short saturation window — only when |U| is too large for
+    // expand to decide SAT. Easy UNSAT proofs land here with a .frp;
+    // SAT-from-saturation is discarded (no Skolem cert).
+    let pre_deadline = if f.universals.len() > crate::expand::MAX_U {
+        (cfg.timeout_s * 0.1).min(1.0)
+    } else {
+        0.0
+    };
+    if let Some(out) = saturate(
+        &mut db,
+        &mut g,
+        &start,
+        pre_deadline,
+        cfg,
+        &mut forks,
+        false,
+    ) {
+        if out.verdict == Verdict::Unsat {
+            return out;
+        }
+    }
+
+    // Phase B: universal expansion (SAT path) + UNSAT-row detection.
+    // Caps are relative to remaining time, not the global start.
+    let mut unsat_row: Option<u32> = None;
+    let mut candidate: Vec<Lit> = Vec::new();
+    if cfg.extract_cert {
+        let ex_start = Instant::now();
+        let ex_budget = (cfg.timeout_s - start.elapsed().as_secs_f64()).max(0.0);
+        if let Some(sk) = crate::expand::try_expand(
+            f,
+            ex_budget,
+            &ex_start,
+            cfg.debug_expand,
+            &mut unsat_row,
+            &mut candidate,
+        ) {
+            return Output {
+                verdict: Verdict::Sat,
+                proof: None,
+                skolem: Some(sk),
+                stats: "expand".into(),
+            };
+        }
+    }
+
+    let _ = candidate; // reserved for future expand→saturate feedback
+                       // Phase C: full saturation. If expand proved UNSAT, give a short
+                       // window so easy cases still get a verified .frp; fall back to the
+                       // uncertified UNSAT verdict otherwise.
+    let known_unsat = unsat_row.is_some();
+    let sat_deadline = if known_unsat {
+        (cfg.timeout_s).min(start.elapsed().as_secs_f64() + 1.0)
+    } else {
+        cfg.timeout_s
+    };
+    if let Some(out) = saturate(
+        &mut db,
+        &mut g,
+        &start,
+        sat_deadline,
+        cfg,
+        &mut forks,
+        known_unsat,
+    ) {
+        return out;
+    }
+    bail(&db, forks, known_unsat)
+}
+
+/// Run the given-clause saturation loop until a verdict (Some) or the
+/// deadline / clause / fork budget (None). Mutates db and g in place so
+/// a later call resumes from where this one left off.
+fn saturate(
+    db: &mut Db,
+    g: &mut Formula,
+    start: &Instant,
+    sat_deadline: f64,
+    cfg: &Config,
+    forks: &mut usize,
+    known_unsat: bool,
+) -> Option<Output> {
     let mut tick = 0u64;
     loop {
         let mut found_empty = false;
-        while let Some(Reverse((_, cursor))) = db.queue.pop() {
+        while let Some(item @ Reverse((_, cursor))) = db.queue.pop() {
             if start.elapsed().as_secs_f64() > sat_deadline || db.clauses.len() > cfg.max_clauses {
-                return bail(&db, forks, known_unsat);
+                db.queue.push(item);
+                return None;
             }
             if db.dead[cursor] || db.processed[cursor] {
                 continue;
@@ -277,10 +335,10 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                         && (start.elapsed().as_secs_f64() > sat_deadline
                             || db.clauses.len() > cfg.max_clauses)
                     {
-                        return bail(&db, forks, known_unsat);
+                        return None;
                     }
                     if let Some(r) = resolve(&c, &db.clauses[di], var(l)) {
-                        let rr = universal_reduce(&g, &r);
+                        let rr = universal_reduce(g, &r);
                         if db.seen.contains(&rr) {
                             continue;
                         }
@@ -300,15 +358,15 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
             }
         }
         if found_empty {
-            return Output {
+            return Some(Output {
                 verdict: Verdict::Unsat,
-                proof: Some(db.proof),
+                proof: Some(std::mem::take(&mut db.proof)),
                 skolem: None,
                 stats: format!("⊥ after {} clauses, {} forks", db.clauses.len(), forks),
-            };
+            });
         }
         if start.elapsed().as_secs_f64() > sat_deadline || db.clauses.len() > cfg.max_clauses {
-            return bail(&db, forks, known_unsat);
+            return None;
         }
         // saturated; try a fork
         let mut order: Vec<usize> = (0..db.clauses.len()).filter(|&i| !db.dead[i]).collect();
@@ -316,18 +374,17 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
         let mut forked = false;
         for &i in &order {
             let c = db.clauses[i].clone();
-            if let Some((part, fr)) = crate::rules::choose_fork(&mut g, &c) {
+            if let Some((part, fr)) = crate::rules::choose_fork(g, &c) {
                 let src = db.idx[&c];
                 for cl in [&fr.left, &fr.right] {
                     db.record(cl, Step::fex(cl, src, part.clone(), fr.fresh));
-                    let rcl = universal_reduce(&g, cl);
+                    let rcl = universal_reduce(g, cl);
                     if rcl != *cl {
                         let pi = db.idx[cl];
                         db.record(&rcl, Step::ured(&rcl, pi));
                     }
                     db.activate(rcl);
                 }
-                forks += 1;
                 forked = true;
                 break;
             }
@@ -337,22 +394,23 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                 // Expand says UNSAT, saturation says SAT — contradiction.
                 // Don't trust either; bail UNKNOWN.
                 eprintln!("c WARNING: expand-UNSAT vs saturation-SAT");
-                return Output {
+                return Some(Output {
                     verdict: Verdict::Unknown,
                     proof: None,
                     skolem: None,
                     stats: "expand/saturation contradiction".into(),
-                };
+                });
             }
-            return Output {
+            return Some(Output {
                 verdict: Verdict::Sat,
                 proof: None,
                 skolem: None,
                 stats: format!("saturated: {} clauses", db.clauses.len()),
-            };
+            });
         }
-        if forks >= cfg.max_forks {
-            return bail(&db, forks, known_unsat);
+        *forks += 1;
+        if *forks >= cfg.max_forks {
+            return None;
         }
     }
 }
