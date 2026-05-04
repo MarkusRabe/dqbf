@@ -216,7 +216,14 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
     let mut g = f.clone();
     let mut db = Db::new();
 
-    for c in &g.clauses {
+    // BCE preserves DQBF-equisat, so a refutation over the surviving
+    // clauses is a refutation of the original (axioms are by content).
+    let sat_clauses: Vec<Clause> = if g.universals.len() < 64 {
+        crate::bce::dqbf_bce(&g, 0).clauses
+    } else {
+        g.clauses.clone()
+    };
+    for c in &sat_clauses {
         if is_tautology(c) {
             continue;
         }

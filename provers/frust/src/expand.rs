@@ -34,16 +34,19 @@ pub fn try_expand(
         dbg_ex!(debug, "skip: |U|={} > MAX_U={}", nu, MAX_U);
         return None;
     }
+    let bce = crate::bce::dqbf_bce(f, nu);
     dbg_ex!(
         debug,
-        "|U|={} ({} rows), |E|={}, |C|={}",
+        "|U|={} ({} rows), |E|={}, |C|={} (BCE removed {}, HTE removed {})",
         nu,
         1u32 << nu,
         f.deps.len(),
-        f.clauses.len()
+        bce.clauses.len(),
+        bce.stack.len(),
+        bce.n_ate
     );
     let n = f.n_vars as usize + 1;
-    let mut cdcl = Cdcl::new(f.n_vars as usize, &f.clauses);
+    let mut cdcl = Cdcl::new(f.n_vars as usize, &bce.clauses);
     let mut model = vec![0i8; n];
     let exs: Vec<Var> = f.deps.keys().copied().collect();
     let dep_lists: Vec<Vec<Var>> = exs
@@ -122,7 +125,9 @@ pub fn try_expand(
     );
     if slots.is_empty() {
         // No conflicts: the free pass IS a consistent Skolem.
-        return Some(build_skolem(&exs, &dep_lists, &first_seen));
+        let mut sk = build_skolem(&exs, &dep_lists, &first_seen);
+        crate::bce::reconstruct(&mut sk, f, &bce.stack);
+        return Some(sk);
     }
     let mut cegar_round = 0;
     'cegar: loop {
@@ -202,7 +207,9 @@ pub fn try_expand(
                     iters,
                     cdcl.n_learned
                 );
-                return Some(build_skolem(&exs, &dep_lists, &tables));
+                let mut sk = build_skolem(&exs, &dep_lists, &tables);
+                crate::bce::reconstruct(&mut sk, f, &bce.stack);
+                return Some(sk);
             }
             if !prune && !all_decided {
                 // soft conflict but more slots to decide — keep going.
