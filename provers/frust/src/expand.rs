@@ -97,6 +97,7 @@ pub fn try_expand(
         .collect();
     let rows = 1u32 << nu;
     let row_budget: u64 = ((1_000_000 / rows.max(1)) as u64).max(100);
+    let full_mask = (1u32 << nu).wrapping_sub(1);
     let row_assumps = |ub: u32, extra: &[(Var, i8)]| -> Vec<Lit> {
         let mut a: Vec<Lit> = expand_us
             .iter()
@@ -116,6 +117,32 @@ pub fn try_expand(
         }
         a
     };
+
+    // ∃∀∃ shape: every ex is a constant (dep ∅) or fully universal-
+    // dependent. CEGAR over the constants is complete and subsumes the
+    // free pass (round-1 row scan + empty-core = row-UNSAT detection).
+    let outer: Vec<usize> = (0..exs.len()).filter(|&i| dep_mask[i] == 0).collect();
+    if !partial
+        && nu > 16
+        && !outer.is_empty()
+        && dep_mask.iter().all(|&m| m == 0 || m == full_mask)
+    {
+        return outer_cegar(
+            &mut cdcl,
+            &exs,
+            &dep_lists,
+            &dep_mask,
+            &outer,
+            n,
+            rows,
+            &row_assumps,
+            row_budget,
+            deadline * 0.9,
+            start,
+            debug,
+            unsat_row,
+        );
+    }
 
     // ---- Free pass: solve every row free; record first value per
     // (existential, dep-key) and the set of (i,k) pairs that disagreed.
@@ -173,6 +200,7 @@ pub fn try_expand(
     // per leaf) beats incremental (1 row-scan per slot).
     let batch = rows > (1 << 16);
     let dpll_cap = if batch { 0.9 } else { 0.5 };
+
     let mut tables: Vec<Vec<i8>> = (0..exs.len())
         .map(|i| vec![0i8; 1usize << dep_lists[i].len()])
         .collect();
@@ -315,6 +343,155 @@ pub fn try_expand(
             }
         }
     } // 'cegar
+}
+
+/// CEGAR over the outer (dep-∅) existentials for ∃∀∃-shaped instances.
+/// Repeatedly: pick outer values (via a tiny CDCL over learned blocking
+/// clauses), scan rows under those pins, on first UNSAT row extract a
+/// minimal pin-core by deletion and block it. All rows SAT → Skolem.
+/// Outer-CDCL UNSAT → no constant assignment works → DQBF UNSAT.
+#[allow(clippy::too_many_arguments)]
+fn outer_cegar(
+    cdcl: &mut Cdcl,
+    exs: &[Var],
+    dep_lists: &[Vec<Var>],
+    dep_mask: &[u32],
+    outer: &[usize],
+    n: usize,
+    rows: u32,
+    row_assumps: &dyn Fn(u32, &[(Var, i8)]) -> Vec<Lit>,
+    row_budget: u64,
+    deadline: f64,
+    start: &std::time::Instant,
+    debug: bool,
+    unsat_row: &mut Option<u32>,
+) -> Option<Skolem> {
+    let mut model = vec![0i8; n];
+    let no = outer.len();
+    dbg_ex!(
+        debug,
+        "outer-CEGAR: {} outer / {} ex, {} rows",
+        no,
+        exs.len(),
+        rows
+    );
+    let mut learned: Vec<Vec<Lit>> = Vec::new();
+    // Seed each outer var negative (CDCL default phase); refined per round.
+    let mut pins: Vec<(Var, i8)> = outer.iter().map(|&i| (exs[i], -1i8)).collect();
+    let mut tables: Vec<Vec<i8>> = (0..exs.len())
+        .map(|i| vec![0i8; 1usize << dep_lists[i].len()])
+        .collect();
+    let mut round = 0u32;
+    loop {
+        round += 1;
+        if start.elapsed().as_secs_f64() > deadline {
+            dbg_ex!(debug, "outer-CEGAR: deadline after {} rounds", round);
+            return None;
+        }
+        // Row scan under current pins; stop at first failure.
+        let mut bad: Option<u32> = None;
+        for &(y, v) in &pins {
+            // outer table entries (key 0)
+            let i = exs.iter().position(|&e| e == y).unwrap();
+            tables[i][0] = v;
+        }
+        for ub in 0..rows {
+            if ub & 0x3fff == 0 && start.elapsed().as_secs_f64() > deadline {
+                return None;
+            }
+            let assumps = row_assumps(ub, &pins);
+            if !cdcl.solve(&assumps, &mut model, row_budget) {
+                if cdcl.budget_hit {
+                    return None;
+                }
+                bad = Some(ub);
+                break;
+            }
+            for (i, &y) in exs.iter().enumerate() {
+                if dep_mask[i] != 0 {
+                    let key = extract(ub, dep_mask[i]) as usize;
+                    tables[i][key] = if model[y as usize] > 0 { 1 } else { -1 };
+                }
+            }
+        }
+        let Some(ub) = bad else {
+            dbg_ex!(debug, "outer-CEGAR: SAT after {} rounds", round);
+            return Some(build_skolem(exs, dep_lists, &tables));
+        };
+        // Minimal pin-core by deletion on row ub.
+        let mut core_idx: Vec<usize> = (0..no).collect();
+        let mut j = 0;
+        while j < core_idx.len() {
+            let trial: Vec<(Var, i8)> = core_idx
+                .iter()
+                .enumerate()
+                .filter(|&(k, _)| k != j)
+                .map(|(_, &p)| pins[p])
+                .collect();
+            if !cdcl.solve(&row_assumps(ub, &trial), &mut model, row_budget * 4) && !cdcl.budget_hit
+            {
+                core_idx.remove(j);
+            } else {
+                j += 1;
+            }
+        }
+        // Block this core: clause = ∨ ¬pin over core vars (in 1..=no space).
+        let block: Vec<Lit> = core_idx
+            .iter()
+            .map(|&p| {
+                let l = (p + 1) as Lit;
+                if pins[p].1 > 0 {
+                    -l
+                } else {
+                    l
+                }
+            })
+            .collect();
+        dbg_ex!(
+            debug,
+            "outer-CEGAR r{}: row {} UNSAT, core {}/{}, learned {}",
+            round,
+            ub,
+            core_idx.len(),
+            no,
+            learned.len() + 1
+        );
+        if block.is_empty() {
+            // Row ub UNSAT under universals alone — already caught by
+            // free pass, but guard anyway.
+            *unsat_row = Some(ub);
+            return None;
+        }
+        learned.push(block);
+        // Re-pick pins satisfying all learned clauses, staying close to
+        // the previous round (try previous pins as soft preference, then
+        // drop the just-blocked core, then free).
+        let mut oc = Cdcl::new(no, &learned);
+        let mut om = vec![0i8; no + 1];
+        let pref: Vec<Lit> = (0..no)
+            .filter(|p| !core_idx.contains(p))
+            .map(|p| {
+                let l = (p + 1) as Lit;
+                if pins[p].1 > 0 {
+                    l
+                } else {
+                    -l
+                }
+            })
+            .collect();
+        let ok = oc.solve(&pref, &mut om, 10_000) || oc.solve(&[], &mut om, 10_000);
+        if !ok && !oc.budget_hit {
+            dbg_ex!(debug, "outer-CEGAR: outer space exhausted → UNSAT");
+            *unsat_row = Some(ub);
+            return None;
+        }
+        if !ok {
+            return None;
+        }
+        for (p, &i) in outer.iter().enumerate() {
+            pins[p] = (exs[i], if om[p + 1] > 0 { 1 } else { -1 });
+        }
+    }
 }
 
 fn build_skolem(exs: &[Var], dep_lists: &[Vec<Var>], tables: &[Vec<i8>]) -> Skolem {
