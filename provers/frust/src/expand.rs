@@ -25,7 +25,7 @@ macro_rules! dbg_ex {
 }
 
 /// Universals ranked by clause-occurrence count (descending).
-fn rank_universals(f: &Formula) -> Vec<Var> {
+pub fn rank_universals(f: &Formula) -> Vec<Var> {
     let mut occ: HashMap<Var, u32> = HashMap::new();
     for c in &f.clauses {
         for &l in c {
@@ -55,7 +55,7 @@ fn pick_expand_universals(f: &Formula, eae_full: bool) -> Vec<Var> {
 
 /// Iterative-deepening UNSAT scan: levels k=8,12,16,20 over the
 /// top-k-occurrence universals; CDCL persists across levels.
-fn deepening_partial_scan(
+pub fn deepening_partial_scan(
     f: &Formula,
     cdcl: &mut Cdcl,
     model: &mut [i8],
@@ -588,7 +588,7 @@ fn outer_cegar(
     }
 }
 
-fn build_skolem(exs: &[Var], dep_lists: &[Vec<Var>], tables: &[Vec<i8>]) -> Skolem {
+pub fn build_skolem(exs: &[Var], dep_lists: &[Vec<Var>], tables: &[Vec<i8>]) -> Skolem {
     let mut sk = Skolem::new();
     for (i, &y) in exs.iter().enumerate() {
         let nd = dep_lists[i].len();
@@ -605,7 +605,7 @@ fn build_skolem(exs: &[Var], dep_lists: &[Vec<Var>], tables: &[Vec<i8>]) -> Skol
 }
 
 #[inline]
-fn extract(ub: u32, mask: u32) -> u32 {
+pub fn extract(ub: u32, mask: u32) -> u32 {
     let mut out = 0u32;
     let mut b = 0;
     let mut m = mask;

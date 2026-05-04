@@ -353,6 +353,12 @@ impl Cdcl {
         }
     }
 
+    pub fn set_phase(&mut self, v: u32, p: i8) {
+        if (v as usize) < self.phase.len() {
+            self.phase[v as usize] = p;
+        }
+    }
+
     /// Add a clause discovered externally (e.g. by saturation). Must be
     /// matrix-valid. Cancels to level 0 first so watches stay consistent.
     pub fn add_external(&mut self, c: &[Lit]) {

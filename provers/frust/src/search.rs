@@ -250,17 +250,18 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
     }
     let mut forks = 0usize;
     let mut cdcl = crate::cdcl::Cdcl::new(f.n_vars as usize, &cert_bce.clauses);
+    let mut ex = crate::expand_state::ExpandState::new(f, cert_bce.stack);
     let mut fed_upto = 0usize;
     let mut known_unsat = false;
-    let mut unsat_row: Option<u32> = None;
-    let mut candidate: Vec<Lit> = Vec::new();
+    let mut expand_done = !cfg.extract_cert;
 
     // Interleaved scheduler: alternate expand and saturate slices,
     // feeding saturate's short derived clauses into expand's CDCL.
-    // First expand slice gets a generous budget so the common case
-    // (expand decides immediately) isn't penalized; subsequent slices
-    // grow geometrically.
-    let mut slice = (cfg.timeout_s * 0.5).clamp(0.5, 4.0);
+    // ExpandState is *resumable* — each slice continues from where
+    // the previous one yielded. First expand slice gets most of the
+    // budget so the common case (decides outright) is unpenalized;
+    // subsequent slices are smaller and grow geometrically.
+    let mut slice = cfg.timeout_s * 0.7;
     let mut first = true;
     loop {
         let now = start.elapsed().as_secs_f64();
@@ -268,29 +269,24 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
             return bail(&db, forks, known_unsat);
         }
 
-        // ---- Expand slice ----
-        if cfg.extract_cert && !known_unsat {
-            let ex_start = Instant::now();
-            let ex_budget = slice.min(cfg.timeout_s - now);
-            if let Some(sk) = crate::expand::try_expand(
-                f,
-                &mut cdcl,
-                &cert_bce.stack,
-                ex_budget,
-                &ex_start,
-                cfg.debug_expand,
-                &mut unsat_row,
-                &mut candidate,
-            ) {
-                return Output {
-                    verdict: Verdict::Sat,
-                    proof: None,
-                    skolem: Some(sk),
-                    stats: format!("expand (slice {:.2}s)", slice),
-                };
-            }
-            if unsat_row.is_some() {
-                known_unsat = true;
+        // ---- Expand slice (resumable) ----
+        if !expand_done && !known_unsat {
+            let ex_deadline = now + slice.min(cfg.timeout_s - now);
+            match ex.step(f, &mut cdcl, ex_deadline, &start, cfg.debug_expand) {
+                crate::expand_state::Step::Sat(sk) => {
+                    return Output {
+                        verdict: Verdict::Sat,
+                        proof: None,
+                        skolem: Some(sk),
+                        stats: format!("expand (slice {:.2}s)", slice),
+                    };
+                }
+                crate::expand_state::Step::UnsatRow(_) => {
+                    known_unsat = true;
+                    expand_done = true;
+                }
+                crate::expand_state::Step::Done => expand_done = true,
+                crate::expand_state::Step::Pending => {}
             }
         }
 

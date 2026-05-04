@@ -2,6 +2,7 @@ mod aiger;
 mod bce;
 mod cdcl;
 mod expand;
+mod expand_state;
 mod formula;
 mod parse;
 mod proof;
