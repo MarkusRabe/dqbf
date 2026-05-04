@@ -381,6 +381,7 @@ fn outer_cegar(
     let mut tables: Vec<Vec<i8>> = (0..exs.len())
         .map(|i| vec![0i8; 1usize << dep_lists[i].len()])
         .collect();
+    let mut bad_history: Vec<u32> = Vec::new();
     let mut round = 0u32;
     loop {
         round += 1;
@@ -388,29 +389,37 @@ fn outer_cegar(
             dbg_ex!(debug, "outer-CEGAR: deadline after {} rounds", round);
             return None;
         }
-        // Row scan under current pins; stop at first failure.
+        // Row scan under current pins; stop at first failure. Check
+        // previously-bad rows first (likely still bad → O(1) refinement),
+        // then sequential. tables only filled on the sequential pass.
         let mut bad: Option<u32> = None;
-        for &(y, v) in &pins {
-            // outer table entries (key 0)
-            let i = exs.iter().position(|&e| e == y).unwrap();
-            tables[i][0] = v;
-        }
-        for ub in 0..rows {
-            if ub & 0x3fff == 0 && start.elapsed().as_secs_f64() > deadline {
-                return None;
-            }
-            let assumps = row_assumps(ub, &pins);
-            if !cdcl.solve(&assumps, &mut model, row_budget) {
-                if cdcl.budget_hit {
-                    return None;
-                }
+        for &ub in bad_history.iter().rev().take(32) {
+            if !cdcl.solve(&row_assumps(ub, &pins), &mut model, row_budget) && !cdcl.budget_hit {
                 bad = Some(ub);
                 break;
             }
-            for (i, &y) in exs.iter().enumerate() {
-                if dep_mask[i] != 0 {
-                    let key = extract(ub, dep_mask[i]) as usize;
-                    tables[i][key] = if model[y as usize] > 0 { 1 } else { -1 };
+        }
+        if bad.is_none() {
+            for (p, &i) in outer.iter().enumerate() {
+                tables[i][0] = pins[p].1;
+            }
+            for ub in 0..rows {
+                if ub & 0x3fff == 0 && start.elapsed().as_secs_f64() > deadline {
+                    return None;
+                }
+                let assumps = row_assumps(ub, &pins);
+                if !cdcl.solve(&assumps, &mut model, row_budget) {
+                    if cdcl.budget_hit {
+                        return None;
+                    }
+                    bad = Some(ub);
+                    break;
+                }
+                for (i, &y) in exs.iter().enumerate() {
+                    if dep_mask[i] != 0 {
+                        let key = extract(ub, dep_mask[i]) as usize;
+                        tables[i][key] = if model[y as usize] > 0 { 1 } else { -1 };
+                    }
                 }
             }
         }
@@ -418,6 +427,9 @@ fn outer_cegar(
             dbg_ex!(debug, "outer-CEGAR: SAT after {} rounds", round);
             return Some(build_skolem(exs, dep_lists, &tables));
         };
+        if bad_history.last() != Some(&ub) {
+            bad_history.push(ub);
+        }
         // Minimal pin-core by deletion on row ub.
         let mut core_idx: Vec<usize> = (0..no).collect();
         let mut j = 0;
