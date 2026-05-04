@@ -26,7 +26,6 @@ pub fn dqbf_bce(f: &Formula, nu: usize) -> BceResult {
     let n = f.n_vars as usize;
     let nc = f.clauses.len();
     if nc > 20_000 {
-        // Occ-list pass on large nc dominates the 10 s budget.
         return BceResult {
             clauses: f.clauses.clone(),
             stack: Vec::new(),
@@ -34,7 +33,7 @@ pub fn dqbf_bce(f: &Formula, nu: usize) -> BceResult {
         };
     }
     let max_stack = (10_000_000u64 / (1u64 << nu).max(1)).max(16) as usize;
-    let step_budget = 10 * nc.max(1000);
+    let step_budget = (10 * nc.max(1000)).min(200_000);
     // occ[2v]=+v, occ[2v+1]=-v
     let lix = |l: Lit| 2 * var(l) as usize + if l < 0 { 1 } else { 0 };
     let mut occ: Vec<Vec<usize>> = vec![Vec::new(); 2 * (n + 1)];
@@ -133,9 +132,10 @@ pub fn dqbf_bce(f: &Formula, nu: usize) -> BceResult {
         }
     }
 
-    // ATE finds 0-2 removals on these benchmarks (BCE already cleaned
-    // most) at non-trivial cost; net −1 solved. Disabled.
-    let n_ate = 0;
+    // HTE pass over BCE survivors: ALA(C) tautological ⇒ F\{C} ⊨ C
+    // (reconstruction-free; every model of the surviving binaries that
+    // falsifies C falsifies all of ALA(C), contradicting the tautology).
+    let n_ate = hte_pass(&f.clauses, &mut alive, lix, n);
 
     let clauses: Vec<Clause> = f
         .clauses
@@ -149,6 +149,56 @@ pub fn dqbf_bce(f: &Formula, nu: usize) -> BceResult {
         stack,
         n_ate,
     }
+}
+
+/// HTE: ALA(C) via surviving binaries; if it contains q,¬q then any
+/// model of F\{C} satisfies C (so removal is reconstruction-free).
+fn hte_pass(clauses: &[Clause], alive: &mut [bool], lix: impl Fn(Lit) -> usize, n: usize) -> usize {
+    // bin_ala[lix(a)] = {¬b : (a∨b) is a surviving binary}.
+    let mut bin_ala: Vec<Vec<Lit>> = vec![Vec::new(); 2 * (n + 1)];
+    for (ci, c) in clauses.iter().enumerate() {
+        if alive[ci] && c.len() == 2 {
+            bin_ala[lix(c[0])].push(-c[1]);
+            bin_ala[lix(c[1])].push(-c[0]);
+        }
+    }
+    let mut seen = vec![false; 2 * (n + 1)];
+    let mut buf: Vec<Lit> = Vec::new();
+    let mut removed = 0;
+    for ci in 0..clauses.len() {
+        if !alive[ci] || clauses[ci].len() <= 2 {
+            continue;
+        }
+        buf.clear();
+        let mut taut = false;
+        for &q in &clauses[ci] {
+            seen[lix(q)] = true;
+            buf.push(q);
+        }
+        let mut h = 0;
+        while h < buf.len() && buf.len() < 256 && !taut {
+            let a = buf[h];
+            h += 1;
+            for &nb in &bin_ala[lix(a)] {
+                if seen[lix(-nb)] {
+                    taut = true;
+                    break;
+                }
+                if !seen[lix(nb)] {
+                    seen[lix(nb)] = true;
+                    buf.push(nb);
+                }
+            }
+        }
+        for &q in &buf {
+            seen[lix(q)] = false;
+        }
+        if taut {
+            alive[ci] = false;
+            removed += 1;
+        }
+    }
+    removed
 }
 
 /// Counter-based UP. For each alive clause C, assume ¬C and propagate
@@ -386,6 +436,20 @@ mod tests {
         let f = mk(4, &[1, 2], &[(3, &[1]), (4, &[2])], &[&[3, 4], &[-3, -4]]);
         let r = dqbf_bce(&f, f.universals.len());
         assert_eq!(r.stack.len(), 0, "incomparable deps must NOT be BCE'd");
+    }
+
+    #[test]
+    fn hte_via_binary_chain() {
+        // C={3,4,5}; binaries (3∨6),(4∨-6). ALA(C): 3→¬6, 4→6 ⇒ {6,-6}⊆ALA(C).
+        let cs: Vec<Clause> = [&[3, 4, 5][..], &[3, 6], &[4, -6]]
+            .iter()
+            .map(|c| clause_from(c.iter().copied()))
+            .collect();
+        let lix = |l: Lit| 2 * var(l) as usize + if l < 0 { 1 } else { 0 };
+        let mut alive = vec![true; 3];
+        let n = hte_pass(&cs, &mut alive, lix, 6);
+        assert_eq!(n, 1);
+        assert!(!alive[0], "HTE should remove {{3,4,5}} via ALA tautology");
     }
 
     #[test]

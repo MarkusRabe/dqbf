@@ -26,7 +26,14 @@ the flip.
 | 1-5 | propositional BCE scaffold + 4 unit tests | — | — | (no probe) |
 | 6 | DQBF-BCE wired into expand; reconstruct via 2^\|U\| enumeration | — | 0 | tiny-5 VALID |
 | 7 | first probe | 1043 | 0 | +3 / −6 |
-| 8 | queue dedup; nc>20k skip; max_stack=10M/2^\|U\|; flat-array reconstruct | **1049** | 0 | +3 / −0 |
+| 8 | queue dedup; nc>20k skip; max_stack=10M/2^\|U\|; flat-array reconstruct | 1049 | 0 | +3 / −0 |
+| 9 | flat-Vec sk in reconstruct; max_stack 50M tried (slower; reverted to 10M) | — | 0 | tiny-5 VALID |
+| 10 | ATE (counter-based UP, reconstruction-free) | 1048 | 0 | +2 / −0 |
+| 11 | ATE off; **feed BCE-reduced clauses into saturation** | **1061** | 0 | +15 / −0 |
+| 12 | nc-cap removed (step_budget≤200k only) — large BMC still ≥10s; reverted | — | — | — |
+| 13 | HTE pass over BCE survivors (ALA via surviving binaries; reconstruction-free) | 1061 | 0 | +15 / −0 |
+
+**Best: iter 13** (= iter 11 + HTE), commits `e285102 → d3f8aed → 78ea982` + this.
 
 ### Iter 7 → 8 analysis
 
@@ -60,3 +67,37 @@ Iter 8 gains (all UNSAT, baseline 12 s timeout):
 | `peano_both_n8` | 16 | 965 / 2182 (44%) |
 | `collatz_n08_k06` | 14 | 3301 / 6994 (47%) |
 | `fifo1_n16_k064` | 0 | 6399 / 35135 (18%) |
+
+### Iter 10: ATE
+
+`ate_pass` (counter-based UP per clause). Finds 0-2 removals — BCE
+already eliminated most redundancy. Net −1 (overhead pushed
+`ringbuf_n8_k032` past 10 s). Disabled; implementation kept with test.
+
+### Iter 11: BCE → saturation
+
+`search.rs` seeds the saturation database from
+`dqbf_bce(&g, 0).clauses` (guarded \|U\|<64). `.frp` axioms are by
+content so the verifier accepts the subset. **+12 over iter 8.**
+
+- 7× SAT at 0.00 s (`add_n12/16`, `add_zero_n20/24/32`): BCE removes
+  *all* clauses; empty matrix is trivially SAT. Provably correct via
+  equisat; uncertified (\|U\|>16, reconstruct can't enumerate).
+- 4× UNSAT with valid `.frp` (`rr_arbiter`, `conj_k3×2`, `pec_fifo1`).
+- 2× UNSAT no-proof (`ringbuf`, `max3` — pre-existing expand-UNSAT path).
+- 2× SAT via saturation closure (`pec_mutex_n8_k2_bb{2,3}_complete`).
+  By-construction SAT (`_complete` = blackbox is the correct gate).
+
+### Iter 13: HTE
+
+`hte_pass`: ALA(C) via surviving binaries (a∈ALA, (a∨b)∈F\{C} ⇒ add
+¬b); if tautological remove C. Reconstruction-free: M⊨F\{C} ∧ M⊭C
+gives M[p]=false for all p∈ALA(C) by induction on the binary chain;
+ALA(C)⊇{q,¬q} is then a contradiction. Finds 0-17 removals; net 0.
+
+### Not implemented
+
+- **HBCE**: derived sound only for full-dep pivots; the partial-dep
+  case fails because ALA-added witnesses propagate via binaries whose
+  other endpoint may have dep⊄dep(l). Reverted to HTE-only.
+- **CLA**: same reconstruction concern; not attempted.

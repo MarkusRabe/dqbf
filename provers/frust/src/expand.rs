@@ -37,7 +37,7 @@ pub fn try_expand(
     let bce = crate::bce::dqbf_bce(f, nu);
     dbg_ex!(
         debug,
-        "|U|={} ({} rows), |E|={}, |C|={} (BCE removed {}, ATE removed {})",
+        "|U|={} ({} rows), |E|={}, |C|={} (BCE removed {}, HTE removed {})",
         nu,
         1u32 << nu,
         f.deps.len(),
