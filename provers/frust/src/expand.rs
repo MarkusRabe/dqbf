@@ -124,7 +124,7 @@ pub fn try_expand(
     let mut slots: Vec<(usize, usize)> = Vec::new();
     let mut in_slot: std::collections::HashSet<(usize, usize)> = std::collections::HashSet::new();
     for ub in 0..rows {
-        if start.elapsed().as_secs_f64() > deadline * 0.4 {
+        if start.elapsed().as_secs_f64() > deadline * 0.25 {
             return None;
         }
         cdcl.reset_phase();
@@ -196,7 +196,7 @@ pub fn try_expand(
             std::collections::HashSet::new();
         loop {
             iters += 1;
-            if iters & 0x3f == 0 && start.elapsed().as_secs_f64() > deadline * 0.7 {
+            if iters & 0x3f == 0 && start.elapsed().as_secs_f64() > deadline * 0.5 {
                 return None;
             }
             // Decide one slot at a time so CDCL-UNSAT can prune subtrees.
@@ -271,7 +271,7 @@ pub fn try_expand(
                             .collect();
                         if added.is_empty()
                             || cegar_round >= 5
-                            || start.elapsed().as_secs_f64() > deadline * 0.7
+                            || start.elapsed().as_secs_f64() > deadline * 0.5
                         {
                             return None;
                         }
