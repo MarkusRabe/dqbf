@@ -270,8 +270,13 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                        // window so easy cases still get a verified .frp; fall back to the
                        // uncertified UNSAT verdict otherwise.
     let known_unsat = unsat_row.is_some();
+    // Adaptive: when expand already proved UNSAT, the .frp window
+    // scales with how long expand took (fast expand → likely-easy
+    // saturation or hopeless; slow expand → harder structure, give
+    // more rope). Clamped to [50ms, 0.5s].
     let sat_deadline = if known_unsat {
-        (cfg.timeout_s).min(start.elapsed().as_secs_f64() + 1.0)
+        let spent = start.elapsed().as_secs_f64();
+        (cfg.timeout_s).min(spent + (spent * 1.5).clamp(0.05, 0.5))
     } else {
         cfg.timeout_s
     };
