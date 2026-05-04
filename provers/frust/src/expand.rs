@@ -173,6 +173,10 @@ pub fn try_expand(
     // per leaf) beats incremental (1 row-scan per slot).
     let batch = rows > (1 << 16);
     let dpll_cap = if batch { 0.9 } else { 0.5 };
+    let mut tables: Vec<Vec<i8>> = (0..exs.len())
+        .map(|i| vec![0i8; 1usize << dep_lists[i].len()])
+        .collect();
+    let mut pins: Vec<(Var, i8)> = Vec::new();
     let mut cegar_round = 0;
     'cegar: loop {
         cegar_round += 1;
@@ -217,20 +221,25 @@ pub fn try_expand(
             }
             let all_decided = next_slot >= slots.len();
             // Run all rows with current slot assignment + greedy fill.
-            let mut tables: Vec<Vec<i8>> = (0..exs.len())
-                .map(|i| vec![0i8; 1usize << dep_lists[i].len()])
-                .collect();
+            for t in tables.iter_mut() {
+                t.fill(0);
+            }
             for (p, &(i, k)) in slots.iter().enumerate() {
                 tables[i][k] = slot_val[p];
             }
             let mut prune = false; // CDCL-UNSAT under slot pins → backtrack
             let mut soft_conflict = false; // greedy-fill disagree → decide more
             for ub in 0..rows {
-                let pins: Vec<(Var, i8)> = row_slots[ub as usize]
-                    .iter()
-                    .filter(|&&p| slot_val[p] != 0)
-                    .map(|&p| (exs[slots[p].0], slot_val[p]))
-                    .collect();
+                if batch && ub & 0x3fff == 0 && start.elapsed().as_secs_f64() > deadline * dpll_cap
+                {
+                    return None;
+                }
+                pins.clear();
+                for &p in &row_slots[ub as usize] {
+                    if slot_val[p] != 0 {
+                        pins.push((exs[slots[p].0], slot_val[p]));
+                    }
+                }
                 if !batch {
                     cdcl.reset_phase();
                 }

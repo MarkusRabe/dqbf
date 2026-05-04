@@ -12,3 +12,4 @@ Note: parent's 1522-instance set includes families not generated here.
 | 3 | budget split 0.4/0.7 → 0.25/0.5 | 773/995 | — | — (no headroom) |
 | 4 | MAX_U=20, free-pass 0.4 | 773/995 | +1 3qbf_v3 | −1 random_bv/v3 |
 | 5 | batch-decide at \|U\|>16; PARTIAL_U=16 split | 774/995 | +1 random_bv recover | — |
+| 6 | hoist tables alloc; row-scan deadline check | 775/995 | +1 synth_inv/add_zero_n20 | — |
