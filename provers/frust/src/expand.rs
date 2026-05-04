@@ -118,15 +118,17 @@ pub fn try_expand(
         a
     };
 
-    // ∃∀∃ shape: every ex is a constant (dep ∅) or fully universal-
-    // dependent. CEGAR over the constants is complete and subsumes the
-    // free pass (round-1 row scan + empty-core = row-UNSAT detection).
-    let outer: Vec<usize> = (0..exs.len()).filter(|&i| dep_mask[i] == 0).collect();
-    if !partial
-        && nu > 16
-        && !outer.is_empty()
-        && dep_mask.iter().all(|&m| m == 0 || m == full_mask)
-    {
+    // CEGAR over the dep-∅ existentials ("outer" / constants). Complete
+    // for ∃∀∃ shape with full enumeration (16<|U|≤MAX_U); UNSAT-only when
+    // partial or when mixed-dep exs exist (SAT would need cross-row
+    // consistency for those, which CEGAR doesn't track).
+    let outer: Vec<usize> = (0..exs.len())
+        .filter(|&i| f.deps[&exs[i]].is_empty())
+        .collect();
+    let eae = dep_mask.iter().all(|&m| m == 0 || m == full_mask);
+    let cegar_full = !partial && nu > 16 && eae && !outer.is_empty();
+    let cegar_unsat_only = partial && !outer.is_empty();
+    if cegar_full || cegar_unsat_only {
         return outer_cegar(
             &mut cdcl,
             &exs,
@@ -141,6 +143,7 @@ pub fn try_expand(
             start,
             debug,
             unsat_row,
+            cegar_unsat_only,
         );
     }
 
@@ -365,15 +368,17 @@ fn outer_cegar(
     start: &std::time::Instant,
     debug: bool,
     unsat_row: &mut Option<u32>,
+    unsat_only: bool,
 ) -> Option<Skolem> {
     let mut model = vec![0i8; n];
     let no = outer.len();
     dbg_ex!(
         debug,
-        "outer-CEGAR: {} outer / {} ex, {} rows",
+        "outer-CEGAR: {} outer / {} ex, {} rows{}",
         no,
         exs.len(),
-        rows
+        rows,
+        if unsat_only { " (UNSAT-only)" } else { "" }
     );
     let mut learned: Vec<Vec<Lit>> = Vec::new();
     // Seed each outer var negative (CDCL default phase); refined per round.
@@ -415,15 +420,24 @@ fn outer_cegar(
                     bad = Some(ub);
                     break;
                 }
-                for (i, &y) in exs.iter().enumerate() {
-                    if dep_mask[i] != 0 {
-                        let key = extract(ub, dep_mask[i]) as usize;
-                        tables[i][key] = if model[y as usize] > 0 { 1 } else { -1 };
+                if !unsat_only {
+                    for (i, &y) in exs.iter().enumerate() {
+                        if dep_mask[i] != 0 {
+                            let key = extract(ub, dep_mask[i]) as usize;
+                            tables[i][key] = if model[y as usize] > 0 { 1 } else { -1 };
+                        }
                     }
                 }
             }
         }
         let Some(ub) = bad else {
+            if unsat_only {
+                dbg_ex!(
+                    debug,
+                    "outer-CEGAR: all rows SAT (UNSAT-only mode, no Skolem)"
+                );
+                return None;
+            }
             dbg_ex!(debug, "outer-CEGAR: SAT after {} rounds", round);
             return Some(build_skolem(exs, dep_lists, &tables));
         };
