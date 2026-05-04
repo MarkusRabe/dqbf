@@ -22,6 +22,29 @@ macro_rules! dbg_ex {
     ($d:expr, $($a:tt)*) => { if $d { eprintln!("c [expand] {}", format!($($a)*)); } }
 }
 
+/// Select which universals to enumerate. If |U| ≤ MAX_U, all of them.
+/// Otherwise the MAX_U with highest clause occurrence — enumerating
+/// those gives the best chance of an UNSAT-row witness.
+fn pick_expand_universals(f: &Formula) -> Vec<Var> {
+    if f.universals.len() <= MAX_U {
+        return f.universals.clone();
+    }
+    let mut occ: HashMap<Var, u32> = HashMap::new();
+    for c in &f.clauses {
+        for &l in c {
+            let v = l.unsigned_abs();
+            if f.is_universal(v) {
+                *occ.entry(v).or_default() += 1;
+            }
+        }
+    }
+    let mut us = f.universals.clone();
+    us.sort_by_key(|u| std::cmp::Reverse(occ.get(u).copied().unwrap_or(0)));
+    us.truncate(MAX_U);
+    us.sort_unstable();
+    us
+}
+
 pub fn try_expand(
     f: &Formula,
     deadline: f64,
@@ -29,10 +52,18 @@ pub fn try_expand(
     debug: bool,
     unsat_row: &mut Option<u32>,
 ) -> Option<Skolem> {
-    let nu = f.universals.len();
-    if nu > MAX_U {
-        dbg_ex!(debug, "skip: |U|={} > MAX_U={}", nu, MAX_U);
-        return None;
+    let nu_full = f.universals.len();
+    let expand_us = pick_expand_universals(f);
+    let nu = expand_us.len();
+    let partial = nu < nu_full;
+    if partial {
+        dbg_ex!(
+            debug,
+            "partial: |U|={} > MAX_U={}, enumerating {} (UNSAT-only)",
+            nu_full,
+            MAX_U,
+            nu
+        );
     }
     dbg_ex!(
         debug,
@@ -46,15 +77,18 @@ pub fn try_expand(
     let mut cdcl = Cdcl::new(f.n_vars as usize, &f.clauses);
     let mut model = vec![0i8; n];
     let exs: Vec<Var> = f.deps.keys().copied().collect();
+    let u_idx: HashMap<Var, usize> = expand_us.iter().enumerate().map(|(i, &u)| (u, i)).collect();
+    // dep_lists / dep_mask only over the *expanded* universals; in partial
+    // mode the unselected ones are treated as free CDCL variables.
     let dep_lists: Vec<Vec<Var>> = exs
         .iter()
-        .map(|y| f.deps[y].iter().copied().collect())
-        .collect();
-    let u_idx: HashMap<Var, usize> = f
-        .universals
-        .iter()
-        .enumerate()
-        .map(|(i, &u)| (u, i))
+        .map(|y| {
+            f.deps[y]
+                .iter()
+                .copied()
+                .filter(|d| u_idx.contains_key(d))
+                .collect()
+        })
         .collect();
     let dep_mask: Vec<u32> = dep_lists
         .iter()
@@ -62,9 +96,8 @@ pub fn try_expand(
         .collect();
     let rows = 1u32 << nu;
     let row_budget: u64 = ((1_000_000 / rows.max(1)) as u64).max(100);
-    let row_assumps = |f: &Formula, ub: u32, extra: &[(Var, i8)]| -> Vec<Lit> {
-        let mut a: Vec<Lit> = f
-            .universals
+    let row_assumps = |ub: u32, extra: &[(Var, i8)]| -> Vec<Lit> {
+        let mut a: Vec<Lit> = expand_us
             .iter()
             .enumerate()
             .map(|(i, &u)| {
@@ -95,13 +128,20 @@ pub fn try_expand(
             return None;
         }
         cdcl.reset_phase();
-        let assumps = row_assumps(f, ub, &[]);
+        let assumps = row_assumps(ub, &[]);
         if !cdcl.solve(&assumps, &mut model, row_budget) {
             dbg_ex!(debug, "free pass row {}: UNSAT/budget", ub);
             if !cdcl.budget_hit {
+                // Sound even in partial mode: UNSAT under X'=x' (X\X' free)
+                // means ∀(X\X', Y) violate, so any x_rest is a witness.
                 *unsat_row = Some(ub);
             }
             return None;
+        }
+        if partial {
+            // Can't build a Skolem from partial enumeration; just keep
+            // scanning for an UNSAT row.
+            continue;
         }
         for (i, &y) in exs.iter().enumerate() {
             let key = extract(ub, dep_mask[i]) as usize;
@@ -120,6 +160,10 @@ pub fn try_expand(
         slots.len(),
         row_budget
     );
+    if partial {
+        dbg_ex!(debug, "partial: all 2^{} rows SAT, no UNSAT witness", nu);
+        return None; // saturation handles SAT
+    }
     if slots.is_empty() {
         // No conflicts: the free pass IS a consistent Skolem.
         return Some(build_skolem(&exs, &dep_lists, &first_seen));
@@ -179,7 +223,7 @@ pub fn try_expand(
                     .map(|&p| (exs[slots[p].0], slot_val[p]))
                     .collect();
                 cdcl.reset_phase();
-                let assumps = row_assumps(f, ub, &pins);
+                let assumps = row_assumps(ub, &pins);
                 if !cdcl.solve(&assumps, &mut model, row_budget) {
                     prune = true;
                     break;
