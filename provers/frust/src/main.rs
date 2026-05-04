@@ -1,4 +1,5 @@
 mod aiger;
+mod bce;
 mod cdcl;
 mod expand;
 mod formula;
