@@ -19,9 +19,20 @@ pub struct BceResult {
     pub stack: Vec<(Clause, Lit)>,
 }
 
-pub fn dqbf_bce(f: &Formula) -> BceResult {
+/// `nu` = number of universals; bounds the reconstruction stack so the
+/// 2^nu × |stack| reconstruction loop stays under ~10M evals.
+pub fn dqbf_bce(f: &Formula, nu: usize) -> BceResult {
     let n = f.n_vars as usize;
     let nc = f.clauses.len();
+    if nc > 20_000 {
+        // Occ-list pass on large nc dominates the 10 s budget.
+        return BceResult {
+            clauses: f.clauses.clone(),
+            stack: Vec::new(),
+        };
+    }
+    let max_stack = (10_000_000u64 / (1u64 << nu).max(1)).max(16) as usize;
+    let step_budget = 10 * nc.max(1000);
     // occ[2v]=+v, occ[2v+1]=-v
     let lix = |l: Lit| 2 * var(l) as usize + if l < 0 { 1 } else { 0 };
     let mut occ: Vec<Vec<usize>> = vec![Vec::new(); 2 * (n + 1)];
@@ -32,13 +43,19 @@ pub fn dqbf_bce(f: &Formula) -> BceResult {
     }
     let mut alive = vec![true; nc];
     let mut stack: Vec<(Clause, Lit)> = Vec::new();
-    // Candidate literals: any existential literal might block its clauses.
-    // Work-queue of (clause_idx, lit) to (re)check.
+    // Work-queue of (clause_idx, lit) to (re)check; dedup so each pair
+    // is enqueued at most once between checks.
     let mut queue: Vec<(usize, Lit)> = Vec::new();
+    let mut in_queue: std::collections::HashSet<(usize, Lit)> = std::collections::HashSet::new();
+    let push = |q: &mut Vec<_>, iq: &mut std::collections::HashSet<_>, ci: usize, l: Lit| {
+        if iq.insert((ci, l)) {
+            q.push((ci, l));
+        }
+    };
     for (ci, c) in f.clauses.iter().enumerate() {
         for &l in c {
             if f.is_existential(var(l)) {
-                queue.push((ci, l));
+                push(&mut queue, &mut in_queue, ci, l);
             }
         }
     }
@@ -53,7 +70,13 @@ pub fn dqbf_bce(f: &Formula) -> BceResult {
     // _seen[lix(l)] marks l ∈ current C for tautology check.
     let mut seen = vec![false; 2 * (n + 1)];
 
+    let mut steps = 0usize;
     while let Some((ci, l)) = queue.pop() {
+        steps += 1;
+        if steps > step_budget || stack.len() >= max_stack {
+            break;
+        }
+        in_queue.remove(&(ci, l));
         if !alive[ci] {
             continue;
         }
@@ -100,7 +123,7 @@ pub fn dqbf_bce(f: &Formula) -> BceResult {
                 if alive[di] {
                     for &dl in &f.clauses[di] {
                         if f.is_existential(var(dl)) {
-                            queue.push((di, dl));
+                            push(&mut queue, &mut in_queue, di, dl);
                         }
                     }
                 }
@@ -124,42 +147,40 @@ pub fn dqbf_bce(f: &Formula) -> BceResult {
 pub fn reconstruct(sk: &mut Skolem, f: &Formula, stack: &[(Clause, Lit)]) {
     let nu = f.universals.len();
     if nu > 20 || stack.is_empty() {
-        // Reconstruction enumerates 2^|U|; bail if too large (caller
-        // shouldn't have done BCE on the SAT path then).
         return;
     }
-    let u_idx: std::collections::HashMap<Var, usize> = f
-        .universals
-        .iter()
-        .enumerate()
-        .map(|(i, &u)| (u, i))
-        .collect();
-    let dep_mask = |y: Var| -> u32 { f.deps[&y].iter().map(|&u| 1u32 << u_idx[&u]).sum() };
-    // Evaluate Skolem at full assignment ub for one var.
-    let sk_val = |sk: &Skolem, y: Var, ub: u32| -> bool {
-        let (bits, nd) = &sk[&y];
-        let dm = dep_mask(y);
-        let key = pext(ub, dm) as usize;
-        debug_assert!(key < (1usize << nd));
-        (bits[key / 64] >> (key % 64)) & 1 == 1
-    };
+    let n = f.n_vars as usize;
+    // Flat lookup tables: u_idx[v]=bit-index for universal v; dmask[v]=dep mask for existential v.
+    let mut u_idx = vec![0u8; n + 1];
+    for (i, &u) in f.universals.iter().enumerate() {
+        u_idx[u as usize] = i as u8;
+    }
+    let mut dmask = vec![0u32; n + 1];
+    for (&y, ds) in &f.deps {
+        dmask[y as usize] = ds.iter().map(|&u| 1u32 << u_idx[u as usize]).sum();
+    }
     let lit_val = |sk: &Skolem, l: Lit, ub: u32| -> bool {
-        let v = var(l);
-        let truth = if f.is_universal(v) {
-            (ub >> u_idx[&v]) & 1 == 1
+        let v = var(l) as usize;
+        let truth = if f.is_universal(var(l)) {
+            (ub >> u_idx[v]) & 1 == 1
         } else {
-            sk_val(sk, v, ub)
+            let (bits, _) = &sk[&var(l)];
+            let key = pext(ub, dmask[v]) as usize;
+            (bits[key / 64] >> (key % 64)) & 1 == 1
         };
         (l > 0) == truth
     };
     for (c, l) in stack.iter().rev() {
         let y = var(*l);
         let want = *l > 0;
-        let dm = dep_mask(y);
-        // For each ub: if C(ub) false under sk, set sk[y][key(ub)] := want.
+        let dm = dmask[y as usize];
         for ub in 0..(1u32 << nu) {
+            // Skip if l already has the right value at this key (cheap; covers ~half).
+            if lit_val(sk, *l, ub) {
+                continue;
+            }
             if c.iter().any(|&q| lit_val(sk, q, ub)) {
-                continue; // C satisfied
+                continue;
             }
             let key = pext(ub, dm) as usize;
             let (bits, _) = sk.get_mut(&y).unwrap();
@@ -211,7 +232,7 @@ mod tests {
     fn pure_literal_is_blocked() {
         // y3 only positive → blocked on 3 in every clause containing it.
         let f = mk(3, &[1, 2], &[(3, &[1, 2])], &[&[1, 3], &[2, 3], &[-1, -2]]);
-        let r = dqbf_bce(&f);
+        let r = dqbf_bce(&f, f.universals.len());
         assert_eq!(r.stack.len(), 2);
         assert_eq!(r.clauses.len(), 1);
     }
@@ -225,7 +246,7 @@ mod tests {
             &[(3, &[1, 2]), (4, &[1, 2])],
             &[&[3, 4], &[-3, -4], &[1, -4]],
         );
-        let r = dqbf_bce(&f);
+        let r = dqbf_bce(&f, f.universals.len());
         // {3,4} blocked on 3 (witness 4). After removal, {-3,-4} has -3 pure → blocked. {1,-4} has -4 pure → blocked.
         assert!(r.stack.len() >= 1);
     }
@@ -235,7 +256,7 @@ mod tests {
         // C={3,4}, D={-3,-4}. dep(3)={1}, dep(4)={2}. Witness 4 for pivot 3: dep(4)={2}⊄{1}. NOT blocked on 3.
         // Witness 3 for pivot 4: dep(3)={1}⊄{2}. NOT blocked on 4 either.
         let f = mk(4, &[1, 2], &[(3, &[1]), (4, &[2])], &[&[3, 4], &[-3, -4]]);
-        let r = dqbf_bce(&f);
+        let r = dqbf_bce(&f, f.universals.len());
         assert_eq!(r.stack.len(), 0, "incomparable deps must NOT be BCE'd");
     }
 
@@ -243,7 +264,7 @@ mod tests {
     fn universal_witness_in_dep() {
         // C={1,3}, D={-1,-3}. Pivot 3 (dep={1}). Witness 1 universal, 1∈dep(3). ✓
         let f = mk(3, &[1, 2], &[(3, &[1])], &[&[1, 3], &[-1, -3], &[2, -3]]);
-        let r = dqbf_bce(&f);
+        let r = dqbf_bce(&f, f.universals.len());
         // {1,3} blocked on 3? D1={-1,-3}: witness 1, ok. D2={2,-3}: witness must be in C\{3}={1}, ¬1∉D2. Not blocked.
         // {2,-3} blocked on -3? Partners with 3: {1,3}. Witness in {2}: ¬2∉{1,3}. Not blocked.
         // Actually let's just assert it doesn't crash and stack is consistent.

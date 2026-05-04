@@ -34,7 +34,7 @@ pub fn try_expand(
         dbg_ex!(debug, "skip: |U|={} > MAX_U={}", nu, MAX_U);
         return None;
     }
-    let bce = crate::bce::dqbf_bce(f);
+    let bce = crate::bce::dqbf_bce(f, nu);
     dbg_ex!(
         debug,
         "|U|={} ({} rows), |E|={}, |C|={} (BCE removed {})",
