@@ -16,6 +16,9 @@ use crate::cdcl::Cdcl;
 use crate::formula::{Formula, Lit, Var};
 use std::collections::HashMap;
 
+#[allow(clippy::type_complexity)]
+type RowAssumps<'a> = &'a dyn Fn(u32, &[(Var, i8)]) -> Vec<Lit>;
+
 pub const MAX_U: usize = 20;
 const PARTIAL_U: usize = 16; // partial-mode (UNSAT-only) scan width
 
@@ -52,6 +55,7 @@ pub fn try_expand(
     start: &std::time::Instant,
     debug: bool,
     unsat_row: &mut Option<u32>,
+    candidate: &mut Vec<Lit>,
 ) -> Option<Skolem> {
     let nu_full = f.universals.len();
     let expand_us = pick_expand_universals(f);
@@ -144,6 +148,7 @@ pub fn try_expand(
             debug,
             unsat_row,
             cegar_unsat_only,
+            candidate,
         );
     }
 
@@ -362,13 +367,14 @@ fn outer_cegar(
     outer: &[usize],
     n: usize,
     rows: u32,
-    row_assumps: &dyn Fn(u32, &[(Var, i8)]) -> Vec<Lit>,
+    row_assumps: RowAssumps,
     row_budget: u64,
     deadline: f64,
     start: &std::time::Instant,
     debug: bool,
     unsat_row: &mut Option<u32>,
     unsat_only: bool,
+    candidate: &mut Vec<Lit>,
 ) -> Option<Skolem> {
     let mut model = vec![0i8; n];
     let no = outer.len();
@@ -434,8 +440,15 @@ fn outer_cegar(
             if unsat_only {
                 dbg_ex!(
                     debug,
-                    "outer-CEGAR: all rows SAT (UNSAT-only mode, no Skolem)"
+                    "outer-CEGAR: all rows SAT under {:?} (UNSAT-only, returning candidate)",
+                    pins.iter()
+                        .map(|&(y, v)| if v > 0 { y as Lit } else { -(y as Lit) })
+                        .collect::<Vec<_>>()
                 );
+                *candidate = pins
+                    .iter()
+                    .map(|&(y, v)| if v > 0 { y as Lit } else { -(y as Lit) })
+                    .collect();
                 return None;
             }
             dbg_ex!(debug, "outer-CEGAR: SAT after {} rounds", round);

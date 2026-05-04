@@ -17,3 +17,4 @@ Note: parent's 1522-instance set includes families not generated here.
 | 8 | outer-∃ CEGAR for ∃∀∃ shape, skip free pass | **790/995** | +15 3qbf_v3 (16 SAT VALID) | — |
 | 9 | bad-row history (check last 32 first) | 791/995 | +2 3qbf_v3 | −1 3qbf (51-round borderline) |
 | 10 | partial outer-CEGAR (UNSAT-only) for \|U\|>MAX_U | 791/995 | — | — (condition too strong for pec) |
+| 11 | fast-leaf (all slots=first_seen, 1 scan) | — | — | revert (assumption-prop conflict; incremental's intermediate scans matter) |

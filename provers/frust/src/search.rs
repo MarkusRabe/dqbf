@@ -236,12 +236,18 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
     // Phase B: universal expansion (SAT path) + UNSAT-row detection.
     // Caps are relative to remaining time, not the global start.
     let mut unsat_row: Option<u32> = None;
+    let mut candidate: Vec<Lit> = Vec::new();
     if cfg.extract_cert {
         let ex_start = Instant::now();
         let ex_budget = (cfg.timeout_s - start.elapsed().as_secs_f64()).max(0.0);
-        if let Some(sk) =
-            crate::expand::try_expand(f, ex_budget, &ex_start, cfg.debug_expand, &mut unsat_row)
-        {
+        if let Some(sk) = crate::expand::try_expand(
+            f,
+            ex_budget,
+            &ex_start,
+            cfg.debug_expand,
+            &mut unsat_row,
+            &mut candidate,
+        ) {
             return Output {
                 verdict: Verdict::Sat,
                 proof: None,
@@ -251,9 +257,10 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
         }
     }
 
-    // Phase C: full saturation. If expand proved UNSAT, give a short
-    // window so easy cases still get a verified .frp; fall back to the
-    // uncertified UNSAT verdict otherwise.
+    let _ = candidate; // reserved for future expand→saturate feedback
+                       // Phase C: full saturation. If expand proved UNSAT, give a short
+                       // window so easy cases still get a verified .frp; fall back to the
+                       // uncertified UNSAT verdict otherwise.
     let known_unsat = unsat_row.is_some();
     let sat_deadline = if known_unsat {
         (cfg.timeout_s).min(start.elapsed().as_secs_f64() + 1.0)
@@ -323,7 +330,7 @@ fn saturate(
                         return None;
                     }
                     if let Some(r) = resolve(&c, &db.clauses[di], var(l)) {
-                        let rr = universal_reduce(&g, &r);
+                        let rr = universal_reduce(g, &r);
                         if db.seen.contains(&rr) {
                             continue;
                         }
@@ -363,7 +370,7 @@ fn saturate(
                 let src = db.idx[&c];
                 for cl in [&fr.left, &fr.right] {
                     db.record(cl, Step::fex(cl, src, part.clone(), fr.fresh));
-                    let rcl = universal_reduce(&g, cl);
+                    let rcl = universal_reduce(g, cl);
                     if rcl != *cl {
                         let pi = db.idx[cl];
                         db.record(&rcl, Step::ured(&rcl, pi));
