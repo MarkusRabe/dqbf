@@ -108,6 +108,8 @@ fn deepening_partial_scan(
 
 pub fn try_expand(
     f: &Formula,
+    cdcl: &mut Cdcl,
+    bce_stack: &[(crate::formula::Clause, Lit)],
     deadline: f64,
     start: &std::time::Instant,
     debug: bool,
@@ -120,27 +122,9 @@ pub fn try_expand(
     let nu = expand_us.len();
     let partial = nu < nu_full;
     if partial {
-        dbg_ex!(
-            debug,
-            "partial: |U|={} > MAX_U={}, enumerating {} (UNSAT-only)",
-            nu_full,
-            MAX_U,
-            nu
-        );
+        dbg_ex!(debug, "partial: |U|={}, enumerating {}", nu_full, nu);
     }
-    let bce = crate::bce::dqbf_bce(f, nu);
-    dbg_ex!(
-        debug,
-        "|U|={} ({} rows), |E|={}, |C|={} (BCE removed {}, HTE removed {})",
-        nu,
-        1u32 << nu,
-        f.deps.len(),
-        bce.clauses.len(),
-        bce.stack.len(),
-        bce.n_ate
-    );
     let n = f.n_vars as usize + 1;
-    let mut cdcl = Cdcl::new(f.n_vars as usize, &bce.clauses);
     let mut model = vec![0i8; n];
     let exs: Vec<Var> = f.deps.keys().copied().collect();
     let u_idx: HashMap<Var, usize> = expand_us.iter().enumerate().map(|(i, &u)| (u, i)).collect();
@@ -195,13 +179,13 @@ pub fn try_expand(
     if partial {
         // Iterative-deepening UNSAT scan replaces the old fixed-16 partial
         // free pass and the partial outer-CEGAR.
-        *unsat_row = deepening_partial_scan(f, &mut cdcl, &mut model, deadline * 0.4, start, debug);
+        *unsat_row = deepening_partial_scan(f, cdcl, &mut model, deadline * 0.4, start, debug);
         let _ = candidate;
         return None;
     }
     if cegar_full {
         return outer_cegar(
-            &mut cdcl,
+            cdcl,
             &exs,
             &dep_lists,
             &dep_mask,
@@ -270,7 +254,7 @@ pub fn try_expand(
     if slots.is_empty() {
         // No conflicts: the free pass IS a consistent Skolem.
         let mut sk = build_skolem(&exs, &dep_lists, &first_seen);
-        crate::bce::reconstruct(&mut sk, f, &bce.stack);
+        crate::bce::reconstruct(&mut sk, f, bce_stack);
         return Some(sk);
     }
     // Batch mode: at high row counts, decide-all-then-check (1 row-scan
@@ -372,7 +356,7 @@ pub fn try_expand(
                     cdcl.n_learned
                 );
                 let mut sk = build_skolem(&exs, &dep_lists, &tables);
-                crate::bce::reconstruct(&mut sk, f, &bce.stack);
+                crate::bce::reconstruct(&mut sk, f, bce_stack);
                 return Some(sk);
             }
             if !prune && !all_decided {

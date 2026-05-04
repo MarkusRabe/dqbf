@@ -353,6 +353,27 @@ impl Cdcl {
         }
     }
 
+    /// Add a clause discovered externally (e.g. by saturation). Must be
+    /// matrix-valid. Cancels to level 0 first so watches stay consistent.
+    pub fn add_external(&mut self, c: &[Lit]) {
+        if !self.ok {
+            return;
+        }
+        self.cancel_until(0);
+        // Drop satisfied / shrink falsified at level-0.
+        let mut lits: Vec<ILit> = Vec::with_capacity(c.len());
+        for &l in c {
+            match self.val_lit(ilit(l)) {
+                1 => return, // already satisfied
+                0 => lits.push(ilit(l)),
+                _ => {} // falsified: drop literal
+            }
+        }
+        lits.sort_unstable();
+        lits.dedup();
+        self.add_clause(&lits, true);
+    }
+
     #[inline]
     fn bump(&mut self, v: usize) {
         self.activity[v] += self.var_inc;

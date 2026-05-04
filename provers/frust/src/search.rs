@@ -191,14 +191,21 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
     let mut g = f.clone();
     let mut db = Db::new();
 
-    // BCE preserves DQBF-equisat, so a refutation over the surviving
-    // clauses is a refutation of the original (axioms are by content).
-    let sat_clauses: Vec<Clause> = if g.universals.len() < 64 {
-        crate::bce::dqbf_bce(&g, 0).clauses
+    // BCE for saturation (nu=0 → no reconstruction-cost cap; can fully
+    // empty). The cert path needs a separately-capped BCE so reconstruct
+    // stays sub-exponential at high |U|.
+    let sat_bce = if g.universals.len() < 64 {
+        crate::bce::dqbf_bce(&g, 0)
     } else {
-        g.clauses.clone()
+        crate::bce::BceResult {
+            clauses: g.clauses.clone(),
+            stack: Vec::new(),
+            n_ate: 0,
+        }
     };
-    for c in &sat_clauses {
+    let nu_expand = g.universals.len().min(16);
+    let cert_bce = crate::bce::dqbf_bce(&g, nu_expand);
+    for c in &sat_bce.clauses {
         if is_tautology(c) {
             continue;
         }
@@ -217,81 +224,125 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
             stats: "empty in input".into(),
         };
     }
-    let mut forks = 0usize;
-
-    // Phase A: short saturation window — only when |U| is too large for
-    // expand to decide SAT. Easy UNSAT proofs land here with a .frp;
-    // SAT-from-saturation is discarded (no Skolem cert).
-    let pre_deadline = if f.universals.len() > crate::expand::MAX_U {
-        (cfg.timeout_s * 0.1).min(1.0)
-    } else {
-        0.0
-    };
-    if let Some(out) = saturate(
-        &mut db,
-        &mut g,
-        &start,
-        pre_deadline,
-        cfg,
-        &mut forks,
-        false,
-    ) {
-        if out.verdict == Verdict::Unsat {
-            return out;
-        }
-    }
-
-    // Phase B: universal expansion (SAT path) + UNSAT-row detection.
-    // Caps are relative to remaining time, not the global start.
-    let mut unsat_row: Option<u32> = None;
-    let mut candidate: Vec<Lit> = Vec::new();
-    if cfg.extract_cert {
-        let ex_start = Instant::now();
-        let ex_budget = (cfg.timeout_s - start.elapsed().as_secs_f64()).max(0.0);
-        if let Some(sk) = crate::expand::try_expand(
-            f,
-            ex_budget,
-            &ex_start,
-            cfg.debug_expand,
-            &mut unsat_row,
-            &mut candidate,
-        ) {
+    // BCE emptied the matrix → SAT. With cert if reconstruction is
+    // affordable (|U|≤16); otherwise SAT-no-cert.
+    if sat_bce.clauses.is_empty() {
+        if cfg.extract_cert && f.universals.len() <= 16 {
+            let mut sk = crate::aiger::Skolem::new();
+            for (&y, d) in &f.deps {
+                let nd = d.len();
+                sk.insert(y, (vec![0u64; ((1usize << nd) + 63) / 64], nd));
+            }
+            crate::bce::reconstruct(&mut sk, f, &sat_bce.stack);
             return Output {
                 verdict: Verdict::Sat,
                 proof: None,
                 skolem: Some(sk),
-                stats: "expand".into(),
+                stats: "BCE empties matrix".into(),
             };
         }
+        return Output {
+            verdict: Verdict::Sat,
+            proof: None,
+            skolem: None,
+            stats: "BCE empties matrix (no cert at |U|>16)".into(),
+        };
     }
+    let mut forks = 0usize;
+    let mut cdcl = crate::cdcl::Cdcl::new(f.n_vars as usize, &cert_bce.clauses);
+    let mut fed_upto = 0usize;
+    let mut known_unsat = false;
+    let mut unsat_row: Option<u32> = None;
+    let mut candidate: Vec<Lit> = Vec::new();
 
-    let _ = candidate; // reserved for future expand→saturate feedback
-                       // Phase C: full saturation. If expand proved UNSAT, give a short
-                       // window so easy cases still get a verified .frp; fall back to the
-                       // uncertified UNSAT verdict otherwise.
-    let known_unsat = unsat_row.is_some();
-    // Adaptive: when expand already proved UNSAT, the .frp window
-    // scales with how long expand took (fast expand → likely-easy
-    // saturation or hopeless; slow expand → harder structure, give
-    // more rope). Clamped to [50ms, 0.5s].
-    let sat_deadline = if known_unsat {
-        let spent = start.elapsed().as_secs_f64();
-        (cfg.timeout_s).min(spent + (spent * 1.5).clamp(0.05, 0.5))
-    } else {
-        cfg.timeout_s
-    };
-    if let Some(out) = saturate(
-        &mut db,
-        &mut g,
-        &start,
-        sat_deadline,
-        cfg,
-        &mut forks,
-        known_unsat,
-    ) {
-        return out;
+    // Interleaved scheduler: alternate expand and saturate slices,
+    // feeding saturate's short derived clauses into expand's CDCL.
+    // First expand slice gets a generous budget so the common case
+    // (expand decides immediately) isn't penalized; subsequent slices
+    // grow geometrically.
+    let mut slice = (cfg.timeout_s * 0.5).clamp(0.5, 4.0);
+    let mut first = true;
+    loop {
+        let now = start.elapsed().as_secs_f64();
+        if now >= cfg.timeout_s {
+            return bail(&db, forks, known_unsat);
+        }
+
+        // ---- Expand slice ----
+        if cfg.extract_cert && !known_unsat {
+            let ex_start = Instant::now();
+            let ex_budget = slice.min(cfg.timeout_s - now);
+            if let Some(sk) = crate::expand::try_expand(
+                f,
+                &mut cdcl,
+                &cert_bce.stack,
+                ex_budget,
+                &ex_start,
+                cfg.debug_expand,
+                &mut unsat_row,
+                &mut candidate,
+            ) {
+                return Output {
+                    verdict: Verdict::Sat,
+                    proof: None,
+                    skolem: Some(sk),
+                    stats: format!("expand (slice {:.2}s)", slice),
+                };
+            }
+            if unsat_row.is_some() {
+                known_unsat = true;
+            }
+        }
+
+        // ---- Saturate slice ----
+        let now = start.elapsed().as_secs_f64();
+        let sat_slice = if known_unsat {
+            // We already know UNSAT; spend the rest of the budget on a
+            // .frp, capped so we still return promptly.
+            (cfg.timeout_s - now).min(now * 1.5).clamp(0.05, 0.5)
+        } else {
+            slice.min(cfg.timeout_s - now)
+        };
+        if let Some(out) = saturate(
+            &mut db,
+            &mut g,
+            &start,
+            now + sat_slice,
+            cfg,
+            &mut forks,
+            known_unsat,
+        ) {
+            // saturate decided (UNSAT+proof, or SAT-via-saturation).
+            if out.verdict == Verdict::Sat && known_unsat {
+                eprintln!("c WARNING: expand-UNSAT vs saturation-SAT");
+                return Output {
+                    verdict: Verdict::Unknown,
+                    proof: None,
+                    skolem: None,
+                    stats: "contradiction".into(),
+                };
+            }
+            return out;
+        }
+        if known_unsat {
+            return bail(&db, forks, true);
+        }
+
+        // ---- Cross-feed: short Q-resolution-derived clauses → CDCL ----
+        for c in &db.clauses[fed_upto..] {
+            if c.len() <= 4 {
+                cdcl.add_external(c);
+            }
+        }
+        fed_upto = db.clauses.len();
+
+        if first {
+            slice = (cfg.timeout_s * 0.1).clamp(0.2, 1.0);
+            first = false;
+        } else {
+            slice = (slice * 1.6).min(cfg.timeout_s * 0.4);
+        }
     }
-    bail(&db, forks, known_unsat)
 }
 
 /// Run the given-clause saturation loop until a verdict (Some) or the
