@@ -26,11 +26,12 @@ macro_rules! dbg_ex {
     ($d:expr, $($a:tt)*) => { if $d { eprintln!("c [expand] {}", format!($($a)*)); } }
 }
 
-/// Select which universals to enumerate. If |U| ≤ MAX_U, all of them.
-/// Otherwise the MAX_U with highest clause occurrence — enumerating
-/// those gives the best chance of an UNSAT-row witness.
-fn pick_expand_universals(f: &Formula) -> Vec<Var> {
-    if f.universals.len() <= MAX_U {
+/// Full enumeration only when ≤16 universals, or ≤MAX_U with the ∃∀∃
+/// shape (outer-CEGAR handles the row scan there). Otherwise PARTIAL_U
+/// highest-occurrence universals.
+fn pick_expand_universals(f: &Formula, eae_full: bool) -> Vec<Var> {
+    let nu = f.universals.len();
+    if nu <= 16 || (nu <= MAX_U && eae_full) {
         return f.universals.clone();
     }
     let mut occ: HashMap<Var, u32> = HashMap::new();
@@ -58,7 +59,8 @@ pub fn try_expand(
     candidate: &mut Vec<Lit>,
 ) -> Option<Skolem> {
     let nu_full = f.universals.len();
-    let expand_us = pick_expand_universals(f);
+    let eae_full = f.deps.values().all(|d| d.is_empty() || d.len() == nu_full);
+    let expand_us = pick_expand_universals(f, eae_full);
     let nu = expand_us.len();
     let partial = nu < nu_full;
     if partial {
@@ -143,7 +145,11 @@ pub fn try_expand(
             rows,
             &row_assumps,
             row_budget,
-            deadline * 0.9,
+            if cegar_unsat_only {
+                deadline * 0.3
+            } else {
+                deadline * 0.9
+            },
             start,
             debug,
             unsat_row,

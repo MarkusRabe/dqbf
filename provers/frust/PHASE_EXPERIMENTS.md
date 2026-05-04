@@ -18,3 +18,33 @@ Note: parent's 1522-instance set includes families not generated here.
 | 9 | bad-row history (check last 32 first) | 791/995 | +2 3qbf_v3 | −1 3qbf (51-round borderline) |
 | 10 | partial outer-CEGAR (UNSAT-only) for \|U\|>MAX_U | 791/995 | — | — (condition too strong for pec) |
 | 11 | fast-leaf (all slots=first_seen, 1 scan) | — | — | revert (assumption-prop conflict; incremental's intermediate scans matter) |
+| 12 | clippy fixes; candidate-units plumbing | 791/995 | — | — |
+| 13 | route 16<\|U\|≤20 non-∃∀∃ to PARTIAL_U | 790/995 | — | — (peano \|U\|=20 are SAT) |
+| 14 | CEGAR cap 0.9→0.95 | 790/995 | — | — |
+| 15 | unsat_only cap 0.3; dedup history (revert) | 790/995 | — | −2 (dedup O(n), revert) |
+
+**Final**: 791/995 standalone, 790 under -j8 load (2 borderline 3qbf at 8-9s). +21 over baseline, 0 INVALID.
+
+## What worked
+
+1. **Outer-∃ CEGAR for ∃∀∃ shape (iter 8, +15)** — the dominant gain. For
+   16<|U|≤20 with every existential either constant or full-dep, CEGAR
+   over the constants (deletion-core, min-change preference, skip free
+   pass) replaces the unscalable 1M-row slot-DPLL. Unlocked 18/23
+   `random_qbf/v3/3qbf` (∃²⁰∀²⁰∃⁴⁰), all VALID Skolem certs.
+2. **Partial-universal expand (iter 1, +3)** — for |U|>MAX_U, enumerate
+   the top-PARTIAL_U universals; row-UNSAT with the rest free is sound.
+   +3 `random_bv/v3`.
+3. **bad-row history (iter 9, +1)** — check the last 32 bad rows first;
+   refinement rounds become O(1) row scans.
+
+## What didn't
+
+- Pure expand↔saturate reordering (iters 2,3,7): **±0**. Only ~4
+  unsolved instances have |U|≤16; on the rest, partial-expand exits in
+  ~0.1s so saturation already gets full budget and either times out or
+  hits the 200k-clause cap. There is no scheduling headroom.
+- Partial outer-CEGAR for UNSAT (iter 10): condition too strong;
+  pec_circuits all have an outer choice that survives partial rows.
+- fast-leaf (iter 11): pinning all slots at once hits an
+  assumption-propagation conflict that incremental's per-slot scans avoid.
