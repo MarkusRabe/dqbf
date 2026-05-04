@@ -9,3 +9,6 @@ Note: parent's 1522-instance set includes families not generated here.
 | 0 | (baseline) | 770/995 | — | — |
 | 1 | partial-universal expand for \|U\|>16 (UNSAT-only) | 773/995 | +3 random_bv/v3 | — |
 | 2 | bail slot-DPLL at >96 slots → saturation | 770/995 | — | −3 peano_v2 (revert) |
+| 3 | budget split 0.4/0.7 → 0.25/0.5 | 773/995 | — | — (no headroom) |
+| 4 | MAX_U=20, free-pass 0.4 | 773/995 | +1 3qbf_v3 | −1 random_bv/v3 |
+| 5 | batch-decide at \|U\|>16; PARTIAL_U=16 split | 774/995 | +1 random_bv recover | — |

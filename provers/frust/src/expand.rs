@@ -16,7 +16,8 @@ use crate::cdcl::Cdcl;
 use crate::formula::{Formula, Lit, Var};
 use std::collections::HashMap;
 
-pub const MAX_U: usize = 16;
+pub const MAX_U: usize = 20;
+const PARTIAL_U: usize = 16; // partial-mode (UNSAT-only) scan width
 
 macro_rules! dbg_ex {
     ($d:expr, $($a:tt)*) => { if $d { eprintln!("c [expand] {}", format!($($a)*)); } }
@@ -40,7 +41,7 @@ fn pick_expand_universals(f: &Formula) -> Vec<Var> {
     }
     let mut us = f.universals.clone();
     us.sort_by_key(|u| std::cmp::Reverse(occ.get(u).copied().unwrap_or(0)));
-    us.truncate(MAX_U);
+    us.truncate(PARTIAL_U);
     us.sort_unstable();
     us
 }
@@ -124,7 +125,7 @@ pub fn try_expand(
     let mut slots: Vec<(usize, usize)> = Vec::new();
     let mut in_slot: std::collections::HashSet<(usize, usize)> = std::collections::HashSet::new();
     for ub in 0..rows {
-        if start.elapsed().as_secs_f64() > deadline * 0.25 {
+        if start.elapsed().as_secs_f64() > deadline * 0.4 {
             return None;
         }
         cdcl.reset_phase();
@@ -168,6 +169,10 @@ pub fn try_expand(
         // No conflicts: the free pass IS a consistent Skolem.
         return Some(build_skolem(&exs, &dep_lists, &first_seen));
     }
+    // Batch mode: at high row counts, decide-all-then-check (1 row-scan
+    // per leaf) beats incremental (1 row-scan per slot).
+    let batch = rows > (1 << 16);
+    let dpll_cap = if batch { 0.9 } else { 0.5 };
     let mut cegar_round = 0;
     'cegar: loop {
         cegar_round += 1;
@@ -196,15 +201,19 @@ pub fn try_expand(
             std::collections::HashSet::new();
         loop {
             iters += 1;
-            if iters & 0x3f == 0 && start.elapsed().as_secs_f64() > deadline * 0.5 {
+            if iters & 0x3f == 0 && start.elapsed().as_secs_f64() > deadline * dpll_cap {
                 return None;
             }
             // Decide one slot at a time so CDCL-UNSAT can prune subtrees.
-            if next_slot < slots.len() {
+            // At |U|>16 the row-scan dominates, so batch-decide instead.
+            while next_slot < slots.len() {
                 let (i, k) = slots[next_slot];
                 slot_val[next_slot] = first_seen[i][k]; // prefer first-seen value
                 decisions.push((next_slot, false));
                 next_slot += 1;
+                if !batch {
+                    break;
+                }
             }
             let all_decided = next_slot >= slots.len();
             // Run all rows with current slot assignment + greedy fill.
@@ -222,7 +231,9 @@ pub fn try_expand(
                     .filter(|&&p| slot_val[p] != 0)
                     .map(|&p| (exs[slots[p].0], slot_val[p]))
                     .collect();
-                cdcl.reset_phase();
+                if !batch {
+                    cdcl.reset_phase();
+                }
                 let assumps = row_assumps(ub, &pins);
                 if !cdcl.solve(&assumps, &mut model, row_budget) {
                     prune = true;
@@ -271,7 +282,7 @@ pub fn try_expand(
                             .collect();
                         if added.is_empty()
                             || cegar_round >= 5
-                            || start.elapsed().as_secs_f64() > deadline * 0.5
+                            || start.elapsed().as_secs_f64() > deadline * dpll_cap
                         {
                             return None;
                         }
