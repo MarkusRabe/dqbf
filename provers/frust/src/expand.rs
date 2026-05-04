@@ -20,20 +20,12 @@ use std::collections::HashMap;
 type RowAssumps<'a> = &'a dyn Fn(u32, &[(Var, i8)]) -> Vec<Lit>;
 
 pub const MAX_U: usize = 20;
-const PARTIAL_U: usize = 16; // partial-mode (UNSAT-only) scan width
-
 macro_rules! dbg_ex {
     ($d:expr, $($a:tt)*) => { if $d { eprintln!("c [expand] {}", format!($($a)*)); } }
 }
 
-/// Full enumeration only when ≤16 universals, or ≤MAX_U with the ∃∀∃
-/// shape (outer-CEGAR handles the row scan there). Otherwise PARTIAL_U
-/// highest-occurrence universals.
-fn pick_expand_universals(f: &Formula, eae_full: bool) -> Vec<Var> {
-    let nu = f.universals.len();
-    if nu <= 16 || (nu <= MAX_U && eae_full) {
-        return f.universals.clone();
-    }
+/// Universals ranked by clause-occurrence count (descending).
+fn rank_universals(f: &Formula) -> Vec<Var> {
     let mut occ: HashMap<Var, u32> = HashMap::new();
     for c in &f.clauses {
         for &l in c {
@@ -45,9 +37,73 @@ fn pick_expand_universals(f: &Formula, eae_full: bool) -> Vec<Var> {
     }
     let mut us = f.universals.clone();
     us.sort_by_key(|u| std::cmp::Reverse(occ.get(u).copied().unwrap_or(0)));
-    us.truncate(PARTIAL_U);
+    us
+}
+
+/// Full enumeration only when ≤16 universals, or ≤MAX_U with the ∃∀∃
+/// shape (outer-CEGAR handles the row scan there). Otherwise top-16.
+fn pick_expand_universals(f: &Formula, eae_full: bool) -> Vec<Var> {
+    let nu = f.universals.len();
+    if nu <= 16 || (nu <= MAX_U && eae_full) {
+        return f.universals.clone();
+    }
+    let mut us = rank_universals(f);
+    us.truncate(16);
     us.sort_unstable();
     us
+}
+
+/// Iterative-deepening UNSAT scan: levels k=8,12,16,20 over the
+/// top-k-occurrence universals; CDCL persists across levels.
+fn deepening_partial_scan(
+    f: &Formula,
+    cdcl: &mut Cdcl,
+    model: &mut [i8],
+    deadline: f64,
+    start: &std::time::Instant,
+    debug: bool,
+) -> Option<u32> {
+    let ranked = rank_universals(f);
+    let nu_full = f.universals.len();
+    for &k in &[8usize, 12, 16, 20] {
+        if k > nu_full {
+            break;
+        }
+        let mut us: Vec<Var> = ranked[..k.min(ranked.len())].to_vec();
+        us.sort_unstable();
+        let rows = 1u32 << k;
+        let row_budget: u64 = ((1_000_000 / rows as u64).max(100)).min(50_000);
+        dbg_ex!(
+            debug,
+            "deepening k={}: {} rows, budget {}",
+            k,
+            rows,
+            row_budget
+        );
+        for ub in 0..rows {
+            if start.elapsed().as_secs_f64() > deadline {
+                dbg_ex!(debug, "deepening k={}: deadline at row {}", k, ub);
+                return None;
+            }
+            let assumps: Vec<Lit> = us
+                .iter()
+                .enumerate()
+                .map(|(i, &u)| {
+                    if (ub >> i) & 1 == 1 {
+                        u as Lit
+                    } else {
+                        -(u as Lit)
+                    }
+                })
+                .collect();
+            cdcl.reset_phase();
+            if !cdcl.solve(&assumps, model, row_budget) && !cdcl.budget_hit {
+                dbg_ex!(debug, "deepening k={}: row {} UNSAT", k, ub);
+                return Some(ub);
+            }
+        }
+    }
+    None
 }
 
 pub fn try_expand(
@@ -136,8 +192,14 @@ pub fn try_expand(
         .collect();
     let eae = dep_mask.iter().all(|&m| m == 0 || m == full_mask);
     let cegar_full = !partial && nu > 16 && eae && !outer.is_empty();
-    let cegar_unsat_only = partial && !outer.is_empty();
-    if cegar_full || cegar_unsat_only {
+    if partial {
+        // Iterative-deepening UNSAT scan replaces the old fixed-16 partial
+        // free pass and the partial outer-CEGAR.
+        *unsat_row = deepening_partial_scan(f, &mut cdcl, &mut model, deadline * 0.4, start, debug);
+        let _ = candidate;
+        return None;
+    }
+    if cegar_full {
         return outer_cegar(
             &mut cdcl,
             &exs,
@@ -148,15 +210,11 @@ pub fn try_expand(
             rows,
             &row_assumps,
             row_budget,
-            if cegar_unsat_only {
-                deadline * 0.3
-            } else {
-                deadline * 0.9
-            },
+            deadline * 0.9,
             start,
             debug,
             unsat_row,
-            cegar_unsat_only,
+            false,
             candidate,
         );
     }
