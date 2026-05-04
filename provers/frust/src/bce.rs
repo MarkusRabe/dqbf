@@ -17,6 +17,7 @@ pub struct BceResult {
     pub clauses: Vec<Clause>,
     /// Removed clauses, in removal order. Reconstruct in reverse.
     pub stack: Vec<(Clause, Lit)>,
+    pub n_ate: usize,
 }
 
 /// `nu` = number of universals; bounds the reconstruction stack so the
@@ -29,6 +30,7 @@ pub fn dqbf_bce(f: &Formula, nu: usize) -> BceResult {
         return BceResult {
             clauses: f.clauses.clone(),
             stack: Vec::new(),
+            n_ate: 0,
         };
     }
     let max_stack = (10_000_000u64 / (1u64 << nu).max(1)).max(16) as usize;
@@ -131,6 +133,10 @@ pub fn dqbf_bce(f: &Formula, nu: usize) -> BceResult {
         }
     }
 
+    // ATE finds 0-2 removals on these benchmarks (BCE already cleaned
+    // most) at non-trivial cost; net −1 solved. Disabled.
+    let n_ate = 0;
+
     let clauses: Vec<Clause> = f
         .clauses
         .iter()
@@ -138,7 +144,120 @@ pub fn dqbf_bce(f: &Formula, nu: usize) -> BceResult {
         .filter(|&(i, _)| alive[i])
         .map(|(_, c)| c.clone())
         .collect();
-    BceResult { clauses, stack }
+    BceResult {
+        clauses,
+        stack,
+        n_ate,
+    }
+}
+
+/// Counter-based UP. For each alive clause C, assume ¬C and propagate
+/// over the other alive clauses; if a conflict is reached, mark C dead.
+/// Kept for completeness; not currently called from `dqbf_bce`.
+#[allow(dead_code)]
+pub fn ate_pass(
+    clauses: &[Clause],
+    alive: &mut [bool],
+    occ: &[Vec<usize>],
+    lix: impl Fn(Lit) -> usize,
+    n: usize,
+) -> usize {
+    let nc = clauses.len();
+    let base_cnt: Vec<u16> = clauses.iter().map(|c| c.len() as u16).collect();
+    let mut assign = vec![0i8; n + 1];
+    let mut cnt = vec![0u16; nc];
+    let mut touched: Vec<usize> = Vec::new();
+    let mut trail: Vec<Lit> = Vec::new();
+    let mut removed = 0usize;
+    let mut budget = 200 * nc;
+    'outer: for ci in 0..nc {
+        if !alive[ci] || budget == 0 {
+            continue;
+        }
+        let c = &clauses[ci];
+        cnt.copy_from_slice(&base_cnt);
+        touched.clear();
+        trail.clear();
+        let mut conflict = false;
+        // Seed pre-existing unit clauses so their literal propagates.
+        for (di, c2) in clauses.iter().enumerate() {
+            if di != ci && alive[di] && c2.len() == 1 {
+                touched.push(di);
+            }
+        }
+        for &l in c {
+            let v = var(l);
+            assign[v as usize] = if l > 0 { -1 } else { 1 };
+            trail.push(-l);
+        }
+        let mut head = 0;
+        while head < trail.len() && !conflict {
+            let p = trail[head];
+            head += 1;
+            budget = budget.saturating_sub(1);
+            for &di in &occ[lix(-p)] {
+                if di == ci || !alive[di] {
+                    continue;
+                }
+                cnt[di] -= 1;
+                if cnt[di] == 0 {
+                    conflict = true;
+                    break;
+                }
+                if cnt[di] == 1 {
+                    touched.push(di);
+                }
+            }
+        }
+        if !conflict {
+            // Find unit clauses among touched and propagate.
+            let mut th = 0;
+            while th < touched.len() && !conflict {
+                let di = touched[th];
+                th += 1;
+                if cnt[di] != 1 {
+                    continue;
+                }
+                let unit = clauses[di]
+                    .iter()
+                    .copied()
+                    .find(|&q| assign[var(q) as usize] == 0);
+                let Some(q) = unit else { continue };
+                let v = var(q) as usize;
+                assign[v] = if q > 0 { 1 } else { -1 };
+                trail.push(q);
+                budget = budget.saturating_sub(1);
+                for &dj in &occ[lix(-q)] {
+                    if dj == ci || !alive[dj] {
+                        continue;
+                    }
+                    cnt[dj] -= 1;
+                    if cnt[dj] == 0 {
+                        conflict = true;
+                        break;
+                    }
+                    if cnt[dj] == 1 {
+                        touched.push(dj);
+                    }
+                }
+                if budget == 0 {
+                    break;
+                }
+            }
+        }
+        for &l in &trail {
+            assign[var(l) as usize] = 0;
+        }
+        if conflict {
+            alive[ci] = false;
+            removed += 1;
+        }
+        if budget == 0 {
+            // Reset assign fully (defensive — trail unwound above).
+            continue 'outer;
+        }
+    }
+    removed
 }
 
 /// Walk the BCE stack in reverse; for each (C, l), set sk[var(l)](k):=true
@@ -156,40 +275,49 @@ pub fn reconstruct(sk: &mut Skolem, f: &Formula, stack: &[(Clause, Lit)]) {
         u_idx[u as usize] = i as u8;
     }
     let mut dmask = vec![0u32; n + 1];
+    let mut is_u = vec![false; n + 1];
+    for &u in &f.universals {
+        is_u[u as usize] = true;
+    }
     for (&y, ds) in &f.deps {
         dmask[y as usize] = ds.iter().map(|&u| 1u32 << u_idx[u as usize]).sum();
     }
-    let lit_val = |sk: &Skolem, l: Lit, ub: u32| -> bool {
+    // Snapshot sk into a flat Vec so the inner loop avoids BTreeMap lookups.
+    let mut bits: Vec<Vec<u64>> = vec![Vec::new(); n + 1];
+    for (&y, (b, _)) in sk.iter() {
+        bits[y as usize] = b.clone();
+    }
+    let lit_val = |bits: &[Vec<u64>], l: Lit, ub: u32| -> bool {
         let v = var(l) as usize;
-        let truth = if f.is_universal(var(l)) {
+        let truth = if is_u[v] {
             (ub >> u_idx[v]) & 1 == 1
         } else {
-            let (bits, _) = &sk[&var(l)];
             let key = pext(ub, dmask[v]) as usize;
-            (bits[key / 64] >> (key % 64)) & 1 == 1
+            (bits[v][key / 64] >> (key % 64)) & 1 == 1
         };
         (l > 0) == truth
     };
     for (c, l) in stack.iter().rev() {
-        let y = var(*l);
+        let yv = var(*l) as usize;
         let want = *l > 0;
-        let dm = dmask[y as usize];
+        let dm = dmask[yv];
         for ub in 0..(1u32 << nu) {
-            // Skip if l already has the right value at this key (cheap; covers ~half).
-            if lit_val(sk, *l, ub) {
+            if lit_val(&bits, *l, ub) {
                 continue;
             }
-            if c.iter().any(|&q| lit_val(sk, q, ub)) {
+            if c.iter().any(|&q| lit_val(&bits, q, ub)) {
                 continue;
             }
             let key = pext(ub, dm) as usize;
-            let (bits, _) = sk.get_mut(&y).unwrap();
             if want {
-                bits[key / 64] |= 1u64 << (key % 64);
+                bits[yv][key / 64] |= 1u64 << (key % 64);
             } else {
-                bits[key / 64] &= !(1u64 << (key % 64));
+                bits[yv][key / 64] &= !(1u64 << (key % 64));
             }
         }
+    }
+    for (&y, (b, _)) in sk.iter_mut() {
+        *b = std::mem::take(&mut bits[y as usize]);
     }
 }
 
@@ -258,6 +386,26 @@ mod tests {
         let f = mk(4, &[1, 2], &[(3, &[1]), (4, &[2])], &[&[3, 4], &[-3, -4]]);
         let r = dqbf_bce(&f, f.universals.len());
         assert_eq!(r.stack.len(), 0, "incomparable deps must NOT be BCE'd");
+    }
+
+    #[test]
+    fn ate_removes_subsumed() {
+        // {1,2,4} subsumed by {1,2}: assuming {-1,-2,-4} makes {1,2} a
+        // conflict via UP. Tests ate_pass directly (disabled in dqbf_bce).
+        let cs: Vec<Clause> = [&[1, 2, 4][..], &[1, 2], &[-4]]
+            .iter()
+            .map(|c| clause_from(c.iter().copied()))
+            .collect();
+        let lix = |l: Lit| 2 * var(l) as usize + if l < 0 { 1 } else { 0 };
+        let mut occ: Vec<Vec<usize>> = vec![Vec::new(); 2 * 5];
+        for (ci, c) in cs.iter().enumerate() {
+            for &l in c {
+                occ[lix(l)].push(ci);
+            }
+        }
+        let mut alive = vec![true; 3];
+        let n = ate_pass(&cs, &mut alive, &occ, lix, 4);
+        assert!(n >= 1 && !alive[0], "ATE should remove subsumed {{1,2,4}}");
     }
 
     #[test]

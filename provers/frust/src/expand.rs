@@ -37,12 +37,13 @@ pub fn try_expand(
     let bce = crate::bce::dqbf_bce(f, nu);
     dbg_ex!(
         debug,
-        "|U|={} ({} rows), |E|={}, |C|={} (BCE removed {})",
+        "|U|={} ({} rows), |E|={}, |C|={} (BCE removed {}, ATE removed {})",
         nu,
         1u32 << nu,
         f.deps.len(),
         bce.clauses.len(),
-        bce.stack.len()
+        bce.stack.len(),
+        bce.n_ate
     );
     let n = f.n_vars as usize + 1;
     let mut cdcl = Cdcl::new(f.n_vars as usize, &bce.clauses);
