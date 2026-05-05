@@ -22,7 +22,7 @@ import click
 from core import dqdimacs
 from tools.bmc2dqbf.circuits import REGISTRY
 from tools.hwmc2dqbf_indinv.circuits_buggy import REGISTRY_BUGGY
-from tools.hwmc2dqbf_indinv.encode import encode_indinv
+from tools.hwmc2dqbf_indinv.encode import encode_indinv_aig
 from tools.pec2dqbf.aiger_seq import parse_seq_aag
 
 WIDTHS = (2, 4, 8, 16, 32)
@@ -54,7 +54,7 @@ def main(out: str, widths: str) -> None:
             aag, comment = fn(n)
             (base / f"{name}_n{n}.aag").write_text(aag)
             seq = parse_seq_aag(aag)
-            f = encode_indinv(seq, source=f"{name}_n{n}.aag")
+            f = encode_indinv_aig(seq, source=f"{name}_n{n}.aag")
             inst = f"indinv_{name}_n{n}"
             with gzip.open(base / f"{inst}.dqdimacs.gz", "wt") as fp:
                 fp.write(f"c hwmc_indinv N={n}: {comment}\n")
