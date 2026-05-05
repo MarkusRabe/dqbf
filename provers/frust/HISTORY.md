@@ -9,7 +9,7 @@ verified** by `tools/verify/` and the loop reverts on any INVALID.
 
 Probe-set sizes shifted across rounds (344 → 804 → 1522 instances) so
 absolute counts aren't comparable across section breaks; deltas within
-a section are. The full per-iteration table is in the appendix.
+a section are. The per-iteration tables are in the appendix.
 
 ---
 
@@ -201,43 +201,113 @@ pedant INVALID. Cert path now `certdir/solver/family/stem`.
 
 ## Parallel experiment tracks off v1.0 (`2e045d3` `5799b26`)
 
-Two 20-iteration tracks branched from `7d2d9d9`, each in an isolated
-worktree. Both merged to main; combined **1082/1522, 0 INVALID**.
-Per-iteration logs: [`PHASE_EXPERIMENTS.md`](PHASE_EXPERIMENTS.md) /
-[`BCE_EXPERIMENTS.md`](BCE_EXPERIMENTS.md).
+Two independent tracks branched from v1.0 (`7d2d9d9`, 1046/1522), each
+in an isolated worktree, each running its own 13-15 iteration loop.
+Both merged to main; combined **1082/1522, 0 INVALID**. Per-iteration
+tables are in the appendix.
 
-**Track A — phase reordering (+21/-0).** The headline is **outer-∃
-CEGAR for the ∃∀∃ shape** (`902069b`, +15): for 16<|U|≤20 where every
-existential is either a constant (deps=∅) or full-dep, replace the
-3.5s free pass with CEGAR over the constants — pin → scan rows to
-first UNSAT → deletion-core → block → re-pick (min-change). Unlocked
-18/23 `random_qbf/v3/3qbf` (∃²⁰∀²⁰∃⁴⁰), all VALID Skolem certs.
-**Partial-universal expand** (`a48f621`, +3): for |U|>MAX_U, enumerate
-the top-16-by-occurrence universals only; row-UNSAT with the rest free
-is sound. **Bad-row history** (`12b7481`, +1): check the last 32 bad
-rows first so refinement rounds drop to O(1) row scans. Pure
-expand↔saturate reordering (iters 2, 3, 7) was ±0: only ~4 unsolved
-instances have |U|≤16; on the rest, partial-expand exits in ~0.1s so
-saturation already gets full budget regardless of phase order.
-Slot-count bailout, fast-leaf (pin all slots at once), and
-partial-CEGAR-UNSAT were tried and reverted.
+### Track A — phase reordering / interleaving (+21/-0)
 
-**Track B — Blocked Clause Elimination (+15/-0).** Precise definition,
-worked unsoundness example, and reconstruction proof are in
-[`BCE.md`](BCE.md). The implementation (`e285102` `d3f8aed`) needed
-queue dedup, a clause-count budget, and a `max_stack=10M/2^|U|` cap to
-avoid
-quadratic re-enqueue and O(2^|U|·|stack|) reconstruction. The big
-gain (`78ea982`, +12) was feeding the BCE-reduced clause set to
-**saturation as well** — `.frp` axioms are by-content so the verifier
-accepts the subset. ATE (net −1) and HTE (net 0) were measured and
-disabled; HBCE/CLA derived sound only for full-dep pivots and was
-skipped.
+**Iter A1, A4-5 (→774, `a48f621`): partial-universal expand.** Iter 30
+had shown that brute-forcing |U|>16 doesn't scale (1M-row free pass
+hangs). Instead, for |U|>MAX_U, rank universals by clause-occurrence
+count and enumerate only the top 16; the rest stay as free CDCL
+variables. A row that's CDCL-UNSAT under {16 pinned + rest free} means
+*every* extension is UNSAT → DQBF UNSAT. SAT from a partial scan tells
+you nothing, so it falls through. +3 on `random_bv/v3`. Iter A4 tried
+MAX_U=20 directly (+1 −1, wash); A5 settled on PARTIAL_U=16 with
+batch-decide for the >16 slot-DPLL.
+
+**Iter A8 (775→790, `902069b`): outer-∃ CEGAR for ∃∀∃ — the
+headline.** `random_qbf/v3/3qbf` has the shape ∃²⁰∀²⁰∃⁴⁰: every
+existential is either dep-∅ (a "constant" — outer-∃) or full-dep
+(inner-∃). At |U|=20 the free pass takes ~3.5s and slot-DPLL never
+finishes round 1. Replaced it with CEGAR over the dep-∅ existentials:
+pin them to a candidate, scan rows to the first UNSAT, deletion-core
+the conflicting subset, learn a blocking clause over the constants,
+re-pick (preferring minimum change). Unlocked 18/23 instances with
+VALID Skolem certs; +15 in one step.
+
+**Iter A9 (→791, `12b7481`): bad-row history.** After a few CEGAR
+rounds the same handful of rows tend to be the witnesses. Checking the
+last 32 bad rows first turns each refinement from a full row scan into
+O(1). +1 net (one borderline 51-round 3qbf gained, one 8-9s instance
+slipped under load).
+
+**Iter A2, A3, A7: pure expand↔saturate reordering — the negative
+result.** Bailing slot-DPLL early to give saturation more time (A2,
+−3, reverted), tightening the budget split 0.4/0.7 → 0.25/0.5 (A3,
+±0), and running 1s pre-saturation only when |U|>MAX_U (A7, ±0) all
+landed at zero. The reason: only ~4 unsolved instances have |U|≤16; on
+the rest, partial-expand exits in ~0.1s so saturation already gets the
+full budget regardless of phase order. There was no scheduling
+headroom to find.
+
+**Iter A10-A15: tried and reverted.** Partial outer-CEGAR for
+|U|>MAX_U as an UNSAT-only path (A10): `pec_circuits` always have an
+outer choice that survives the partial rows, so the condition never
+fires. Fast-leaf (A11, pin all slots = `first_seen` and check once):
+pinning everything at once hits an assumption-propagation conflict
+that the incremental per-slot scans avoid. Dedup of the bad-row
+history (A15): made it O(n) and lost 2. The track converged at A9;
+A10-A15 were confirmation that nothing simple was left.
+
+### Track B — Blocked Clause Elimination (+15/-0)
+
+The DQBF-safe soundness condition (witness dep ⊆ dep(pivot)), the
+worked example showing why plain QBF-BCE is unsound here, and the
+reconstruction proof are in [`BCE.md`](BCE.md).
+
+**Iter B1-B6 (`e285102`): scaffold.** Propositional BCE with 4 unit
+tests, then the DQBF restriction, then cert reconstruction by walking
+the removal stack in reverse and flipping `sk[var(l)]` at every
+universal assignment where the model violates a removed clause.
+Reconstruction enumerates 2^|U| assignments per stack entry. Tiny-5
+VALID; no probe yet.
+
+**Iter B7-B8 (→1049, `d3f8aed`): first probe and the regressions it
+exposed.** B7's first full probe came back +3/−6. The six losses were
+all 12s timeouts on instances baseline solved in ≤3.2s: four
+`fifo1_*`/`bobcount`/`eijks349` at |U|=0 with 25-48k clauses (the BCE
+work-queue re-enqueued without dedup — quadratic on high-occurrence
+literals), and `peano_both_n8`/`collatz_n08_k06` where reconstruction
+cost 2^16 × |stack| × |C| ≈ 190M HashMap-backed `lit_val` calls. B8
+fixed all of it: `in_queue` HashSet dedup, an `nc>20k` early-out, a
+`max_stack=10M/2^|U|` cap so reconstruction is bounded, and a flat
+`Vec<u32>` dep-mask replacing the HashMap. The gains showed up on
+saturation-side UNSATs: `rr_arbiter_n4_k032` 12.0s → 1.3s,
+`cbmc/max3_ge_u005` 12.0s → 0.6s.
+
+**Iter B11 (1049→1061, `78ea982`): feed BCE into saturation — the
+headline.** `synthesis_invertibility/add_n*` is the bottleneck shape:
+BCE removes 30-80% of clauses but expand can't use the result (|U|>16,
+reconstruction can't enumerate). Feeding the BCE-reduced clause set to
+*saturation* as well — sound because `.frp` axiom steps are matched by
+content, so the verifier accepts a subset of the input clauses — is
+the unlock. +12: seven SAT instances (`add_n12/16`, `add_zero_n20-32`)
+where BCE empties the matrix entirely (trivially SAT, uncertified
+since |U|>16); four UNSAT with valid `.frp` (`rr_arbiter`, `conj_k3`,
+`pec_fifo1`); two SAT via saturation closure on `pec_mutex_*_complete`.
+
+**Iter B10, B13: ATE and HTE — measured and disabled.** Asymmetric
+Tautology Elimination (B10, counter-based UP per clause,
+reconstruction-free): finds 0-2 removals — BCE has already cleared
+the redundancy — and the overhead pushes `ringbuf_n8_k032` past 10s.
+Net −1; disabled, implementation kept with test. Hidden Tautology
+Elimination (B13, ALA via surviving binaries): finds 0-17 removals,
+net 0. Kept enabled since it's reconstruction-free and can only help.
+
+**Not implemented.** HBCE and CLA were derived as sound only for
+full-dep pivots — the partial-dep case fails because ALA-added
+witnesses propagate via binaries whose other endpoint may have
+dep⊄dep(l). With ATE/HTE already at zero, the full-dep-only variants
+weren't worth the code.
+
+### After merge
 
 The two tracks are nearly orthogonal — only ~1 instance overlaps in
-their +sets. After merge: frust 1080/1517, 808 verified certs
-(`b0802c9`). frust solves 117 instances pedant doesn't and 41 hqs
-doesn't.
+their +sets. Combined: **1080/1517, 808 verified certs** (`b0802c9`);
+frust solves 117 instances pedant doesn't and 41 hqs doesn't.
 
 ## Continual-process redesign (`45bcf54`..`d775db4`)
 
@@ -283,51 +353,7 @@ succinct encoding has |U|=2m frame-index universals with mixed-dep
 existentials — neither track touches this) and `pec_circuits` /
 `peano` at |U|≥20 with mixed deps.
 
----
-
-## Appendix: full iteration table
-
-Probe set: iters 0-17 use 344 instances; iters 18-30 use the full
-804-instance train set. 10 s each. Zero invalid certificates at every
-iteration.
-
-| iter | bottleneck instance | observation | change | result |
-|---:|---|---|---|---|
-| 0 | — | naive O(n²) saturation, BTreeSet clauses | baseline | 154/344 |
-| 1 | `2qbf_s0001` (9v, 10s) | 51% in `resolve`; whole-db clone per item | Vec\<i32\> clauses + occurrence lists | 194/344; instance still 10s |
-| 2 | same | 13270 clauses ≈ 2/3 of 3⁹ clause space | forward+backward subsumption via occ lists | 225/344; instance **7ms** (445 clauses) |
-| 3 | `inc_n4` (36v, 95cl, 10s) | 48% in `activate` (subsumption) | u64 signature fast-reject + shortest-first queue | 261/344; instance still 10s |
-| 4 | same | only 4 universals → saturation is wrong tool | greedy ∀-expansion + per-row DPLL (SAT-only, cert) | 279/344; instance **7ms** VALID; missing-certs 70→6 |
-| 5 | `and_n8` (\|U\|=16, 12s) | 115 MB cert (Shannon = 3·2¹⁶ gates/output) | bitmap BDD-memoized Shannon (fixed cofactor-bit + probe substring bugs) | 289/344; cert **925 B**, 0.93s |
-| 6 | `peano_add_n8` (292v, 9.6s) | 32% in DPLL (clones `pol` per branch) | trail-based DPLL (fixed backtrack bug); bitmap Skolem repr | 289/344; instance 5.4s |
-| 7 | same, 5.4s | 78% try_expand: 19M HashMap ops + linear unit-prop | flat-array tables + occurrence-driven propagation | 290/344; instance **1.8s** |
-| 8 | `peano_v2_mul_n2` (84v, partial deps) | greedy pin causes cross-row conflict | retry with opposite first-branch polarity | 291/344; still UNKNOWN |
-| 9 | same | vote-mode no help; `universal_reduce` 5% in BTreeSet | bitmask `universal_reduce` (u64 dep_mask) | 291/344; saturation ~15% faster |
-| 10 | `activate` 46% | length-gating fwd subsumption hurt | backward-subsume gate at len≤5 only | 291/344. **Full: 490/819 vs forkres 132 vs hqs 705**; 476 verified certs |
-| 11 | `add_n12` (\|U\|=24) | Tseitin auxes have no unit/pure | HQSpre unit/pure prep (existentials only) | 291/344; finds 0 on bottlenecks |
-| 12 | `peano_v2_mul_n2` | EQFOB emits XOR (4-clause), not AND | static AND-gate detection | 291/344; pattern doesn't match |
-| 13 | same | "ever_decided" heuristic **UNSOUND** (`fork_unsat` → SAT) | per-key conflict detection + pinned-pass `row_conflict` guard | 291/344, sound again |
-| 14 | same | 4 heuristic seeds all fail; ≤16 conflicting slots | iDQ-style: enumerate 2^slots | 294/344; instance **10ms VALID** |
-| 15 | `peano_v2_mul_n3` | enumerating all keys (>16 slots) | enumerate only (i,k) that actually disagreed | 296/344; n3/both_n2 solved |
-| 16 | `peano_v2_mul_n4` (32 slots) | 2³² enumeration hopeless | DPLL-over-slots: vote-ordered, backtrack on row fail | 305/344; n4-6 solved |
-| 17 | `v2_mul_n8` (192 slots) | 53% in DPLL — re-runs all rows per decision | cache row models keyed by row-local slot-signature | 306/344 |
-| 18 | `dep_cycle_n1` (11v, 12s) | needs SFEx; also `mutex_n2_k016` ignores --timeout (74s on 3s) | SFEx wired into `choose_fork` | 513/804; dep_cycle still UNKNOWN |
-| 19 | `mutex_n2_k016` (\|U\|=0) | DPLL has no conflict bound; saturation inner loop no timeout | conflict cap + tick-based inner check | 513/804; mutex_n2 **16ms** |
-| 20 | `mutex_n4_k008` | DPLL exponential on propositional UNSAT | row_budget = 200k/rows; **CDCL identified as next step** | ~511/804 |
-| 21 | `mutex_n4_k008` (DPLL exponential) | studied minisat/picosat/satch | 2-watched-lit + 1-UIP CDCL with assumption-based incremental solve | (integration churn) |
-| 22 | `peano_v2_*` regressed (CDCL model drift) | greedy fills pinned as assumptions → CDCL-UNSAT | phase-saving + reset before free pass; pin only slot entries; CEGAR add new conflicts | 506/804 |
-| 23 | `peano_v2_mul_n4` (62 slots, lost) | decide-all-then-check killed pruning | incremental: 1 slot/iter; CDCL-UNSAT prunes subtree, soft-conflict decides more | 517/804 (+11) |
-| 24 | `under_s9010` (672 slots) | tried analyzeFinal-based slot backjump; buggy (-6) | reverted; analyzeFinal stays as cdcl.rs infrastructure | 517/804 (held) |
-| 25 | linear pick_branch over clauses | minisat VSIDS: bump in analyze, decay 0.95 | +2 -3 (model variation again) |
-| 26 | iter-25 lost 3 | VSIDS adds variation when row was conflict-free | hybrid: first-unset until first conflict, then VSIDS | 519/804 (+3, all 3 recovered) |
-| 27 | `activate` 69% (subsumption) | tried cap-64 (faster but lost mutex_n4_k004); replaced with periodic occ compaction | 519/804 |
-| 28 | `2qbf_v2_*` (expand finds UNSAT row, no proof) | tried CDCL proof-tracing (too large for 1 iter) | return UNSAT-no-proof when free-pass row genuinely UNSAT | **679/804** (+160); missing-certs 13→380; cross-checked 30 vs hqs: 0/30 mismatch |
-| 29 | missing-certs 380 | many easy UNSATs lost their proof | 1s saturation window after expand-UNSAT; SAT-vs-expand-UNSAT contradiction → UNKNOWN | 679/804; missing-certs 380→173 |
-| 30 | `3qbf_v3_*` (\|U\|=20) | tried MAX_U=20: only +1 (1M-row free pass too slow) | reverted to 16 | 679/804 final |
-
-![iterations](../../docs/dev_reports/frust_iterations.svg)
-
-## Refined-loop iteration: `bmc_circuits_succinct` (2026-05-05)
+## Refined-loop iteration: `bmc_circuits_succinct` (`a38485b`)
 
 First iteration under the refined `IMPROVEMENT_LOOP.md` (sample ~10,
 find commonalities, name the constraint level, expect multiple
@@ -390,3 +416,92 @@ unit-propagated). Roots are the truly-free slots; the rest propagate.
 For BMC-succinct, roots = initial-state bits (~n_latches), trajectory
 follows. This is Pedant's definition extraction lifted to the slot
 level.
+
+---
+
+## Appendix: iteration tables
+
+Quick-reference; see the corresponding prose section for context.
+Zero invalid certificates at every iteration.
+
+### Rounds 1-3 (iters 0-30)
+
+Probe set: iters 0-17 use 344 instances; iters 18-30 use the full
+804-instance train set. 10 s each.
+
+| iter | bottleneck instance | observation | change | result |
+|---:|---|---|---|---|
+| 0 | — | naive O(n²) saturation, BTreeSet clauses | baseline | 154/344 |
+| 1 | `2qbf_s0001` (9v, 10s) | 51% in `resolve`; whole-db clone per item | Vec\<i32\> clauses + occurrence lists | 194/344; instance still 10s |
+| 2 | same | 13270 clauses ≈ 2/3 of 3⁹ clause space | forward+backward subsumption via occ lists | 225/344; instance **7ms** (445 clauses) |
+| 3 | `inc_n4` (36v, 95cl, 10s) | 48% in `activate` (subsumption) | u64 signature fast-reject + shortest-first queue | 261/344; instance still 10s |
+| 4 | same | only 4 universals → saturation is wrong tool | greedy ∀-expansion + per-row DPLL (SAT-only, cert) | 279/344; instance **7ms** VALID; missing-certs 70→6 |
+| 5 | `and_n8` (\|U\|=16, 12s) | 115 MB cert (Shannon = 3·2¹⁶ gates/output) | bitmap BDD-memoized Shannon (fixed cofactor-bit + probe substring bugs) | 289/344; cert **925 B**, 0.93s |
+| 6 | `peano_add_n8` (292v, 9.6s) | 32% in DPLL (clones `pol` per branch) | trail-based DPLL (fixed backtrack bug); bitmap Skolem repr | 289/344; instance 5.4s |
+| 7 | same, 5.4s | 78% try_expand: 19M HashMap ops + linear unit-prop | flat-array tables + occurrence-driven propagation | 290/344; instance **1.8s** |
+| 8 | `peano_v2_mul_n2` (84v, partial deps) | greedy pin causes cross-row conflict | retry with opposite first-branch polarity | 291/344; still UNKNOWN |
+| 9 | same | vote-mode no help; `universal_reduce` 5% in BTreeSet | bitmask `universal_reduce` (u64 dep_mask) | 291/344; saturation ~15% faster |
+| 10 | `activate` 46% | length-gating fwd subsumption hurt | backward-subsume gate at len≤5 only | 291/344. **Full: 490/819 vs forkres 132 vs hqs 705**; 476 verified certs |
+| 11 | `add_n12` (\|U\|=24) | Tseitin auxes have no unit/pure | HQSpre unit/pure prep (existentials only) | 291/344; finds 0 on bottlenecks |
+| 12 | `peano_v2_mul_n2` | EQFOB emits XOR (4-clause), not AND | static AND-gate detection | 291/344; pattern doesn't match |
+| 13 | same | "ever_decided" heuristic **UNSOUND** (`fork_unsat` → SAT) | per-key conflict detection + pinned-pass `row_conflict` guard | 291/344, sound again |
+| 14 | same | 4 heuristic seeds all fail; ≤16 conflicting slots | iDQ-style: enumerate 2^slots | 294/344; instance **10ms VALID** |
+| 15 | `peano_v2_mul_n3` | enumerating all keys (>16 slots) | enumerate only (i,k) that actually disagreed | 296/344; n3/both_n2 solved |
+| 16 | `peano_v2_mul_n4` (32 slots) | 2³² enumeration hopeless | DPLL-over-slots: vote-ordered, backtrack on row fail | 305/344; n4-6 solved |
+| 17 | `v2_mul_n8` (192 slots) | 53% in DPLL — re-runs all rows per decision | cache row models keyed by row-local slot-signature | 306/344 |
+| 18 | `dep_cycle_n1` (11v, 12s) | needs SFEx; also `mutex_n2_k016` ignores --timeout (74s on 3s) | SFEx wired into `choose_fork` | 513/804; dep_cycle still UNKNOWN |
+| 19 | `mutex_n2_k016` (\|U\|=0) | DPLL has no conflict bound; saturation inner loop no timeout | conflict cap + tick-based inner check | 513/804; mutex_n2 **16ms** |
+| 20 | `mutex_n4_k008` | DPLL exponential on propositional UNSAT | row_budget = 200k/rows; **CDCL identified as next step** | ~511/804 |
+| 21 | `mutex_n4_k008` (DPLL exponential) | studied minisat/picosat/satch | 2-watched-lit + 1-UIP CDCL with assumption-based incremental solve | (integration churn) |
+| 22 | `peano_v2_*` regressed (CDCL model drift) | greedy fills pinned as assumptions → CDCL-UNSAT | phase-saving + reset before free pass; pin only slot entries; CEGAR add new conflicts | 506/804 |
+| 23 | `peano_v2_mul_n4` (62 slots, lost) | decide-all-then-check killed pruning | incremental: 1 slot/iter; CDCL-UNSAT prunes subtree, soft-conflict decides more | 517/804 (+11) |
+| 24 | `under_s9010` (672 slots) | tried analyzeFinal-based slot backjump; buggy (-6) | reverted; analyzeFinal stays as cdcl.rs infrastructure | 517/804 (held) |
+| 25 | linear pick_branch over clauses | minisat VSIDS: bump in analyze, decay 0.95 | +2 -3 (model variation again) |
+| 26 | iter-25 lost 3 | VSIDS adds variation when row was conflict-free | hybrid: first-unset until first conflict, then VSIDS | 519/804 (+3, all 3 recovered) |
+| 27 | `activate` 69% (subsumption) | tried cap-64 (faster but lost mutex_n4_k004); replaced with periodic occ compaction | 519/804 |
+| 28 | `2qbf_v2_*` (expand finds UNSAT row, no proof) | tried CDCL proof-tracing (too large for 1 iter) | return UNSAT-no-proof when free-pass row genuinely UNSAT | **679/804** (+160); missing-certs 13→380; cross-checked 30 vs hqs: 0/30 mismatch |
+| 29 | missing-certs 380 | many easy UNSATs lost their proof | 1s saturation window after expand-UNSAT; SAT-vs-expand-UNSAT contradiction → UNKNOWN | 679/804; missing-certs 380→173 |
+| 30 | `3qbf_v3_*` (\|U\|=20) | tried MAX_U=20: only +1 (1M-row free pass too slow) | reverted to 16 | 679/804 final |
+
+![iterations](../../docs/dev_reports/frust_iterations.svg)
+
+### Track A — phase reordering (off v1.0, see prose above)
+
+Baseline: 770/995 (worktree-local probe; parent's 1522-set includes
+families not generated here).
+
+| iter | hypothesis | result | gained | lost |
+|---:|---|---|---|---|
+| A0 | (baseline) | 770/995 | — | — |
+| A1 | partial-universal expand for \|U\|>16 (UNSAT-only) | 773/995 | +3 random_bv/v3 | — |
+| A2 | bail slot-DPLL at >96 slots → saturation | 770/995 | — | −3 peano_v2 (revert) |
+| A3 | budget split 0.4/0.7 → 0.25/0.5 | 773/995 | — | — (no headroom) |
+| A4 | MAX_U=20, free-pass 0.4 | 773/995 | +1 3qbf_v3 | −1 random_bv/v3 |
+| A5 | batch-decide at \|U\|>16; PARTIAL_U=16 split | 774/995 | +1 random_bv recover | — |
+| A6 | hoist tables alloc; row-scan deadline check | 775/995 | +1 synth_inv/add_zero_n20 | — |
+| A7 | factor saturate(); pre-sat 1s only if \|U\|>MAX_U | 775/995 | — | — (saturate-first ±0) |
+| A8 | outer-∃ CEGAR for ∃∀∃ shape, skip free pass | **790/995** | +15 3qbf_v3 (16 SAT VALID) | — |
+| A9 | bad-row history (check last 32 first) | 791/995 | +2 3qbf_v3 | −1 3qbf (51-round borderline) |
+| A10 | partial outer-CEGAR (UNSAT-only) for \|U\|>MAX_U | 791/995 | — | — (condition too strong for pec) |
+| A11 | fast-leaf (all slots=first_seen, 1 scan) | — | — | revert (assumption-prop conflict) |
+| A12 | clippy fixes; candidate-units plumbing | 791/995 | — | — |
+| A13 | route 16<\|U\|≤20 non-∃∀∃ to PARTIAL_U | 790/995 | — | — (peano \|U\|=20 are SAT) |
+| A14 | CEGAR cap 0.9→0.95 | 790/995 | — | — |
+| A15 | unsat_only cap 0.3; dedup history (revert) | 790/995 | — | −2 (dedup O(n), revert) |
+
+### Track B — BCE (off v1.0, see prose above; soundness in [`BCE.md`](BCE.md))
+
+Baseline: 1046/1522.
+
+| iter | change | solved | INVALID | gained / lost |
+|---:|---|---:|---:|---|
+| B0 | (baseline) | 1046 | 0 | — |
+| B1-5 | propositional BCE scaffold + 4 unit tests | — | — | (no probe) |
+| B6 | DQBF-BCE wired into expand; reconstruct via 2^\|U\| enumeration | — | 0 | tiny-5 VALID |
+| B7 | first probe | 1043 | 0 | +3 / −6 |
+| B8 | queue dedup; nc>20k skip; max_stack=10M/2^\|U\|; flat-array reconstruct | 1049 | 0 | +3 / −0 |
+| B9 | flat-Vec sk in reconstruct; max_stack 50M tried (slower; reverted to 10M) | — | 0 | tiny-5 VALID |
+| B10 | ATE (counter-based UP, reconstruction-free) | 1048 | 0 | +2 / −0 |
+| B11 | ATE off; **feed BCE-reduced clauses into saturation** | **1061** | 0 | +15 / −0 |
+| B12 | nc-cap removed (step_budget≤200k only) — large BMC still ≥10s; reverted | — | — | — |
+| B13 | HTE pass over BCE survivors (ALA via surviving binaries) | 1061 | 0 | +15 / −0 |
