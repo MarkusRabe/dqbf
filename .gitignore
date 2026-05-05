@@ -66,3 +66,4 @@ benchmarks/train/cbmc_v2/instances/*/manifest.json
 benchmarks/train/hwmc_indinv/instances/*.dqdimacs.gz
 benchmarks/train/hwmc_indinv/instances/manifest.json
 benchmarks/train/conjunction/instances/
+results/.bench_cache/

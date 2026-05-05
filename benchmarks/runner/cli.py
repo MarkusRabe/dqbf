@@ -65,6 +65,7 @@ def compare_cmd(baseline: str, candidate: str) -> None:
 @click.option("--report", "report_out", default="results/multi.html", type=click.Path())
 @click.option("--certdir", default="results/certs", type=click.Path())
 @click.option("--verify-certs", is_flag=True)
+@click.option("--no-cache", is_flag=True, help="Bypass the result cache (force re-run).")
 def multi_cmd(
     root: str,
     solvers: str,
@@ -74,21 +75,25 @@ def multi_cmd(
     report_out: str,
     certdir: str,
     verify_certs: bool,
+    no_cache: bool,
 ) -> None:
     from pathlib import Path
 
     from benchmarks.runner.multi import run_multi
-    from benchmarks.runner.multi import verify_certs as do_verify
     from benchmarks.runner.multi_report import render
 
     Path(out).parent.mkdir(parents=True, exist_ok=True)
     Path(certdir).mkdir(parents=True, exist_ok=True)
-    rows = run_multi(Path(root), solvers.split(","), timeout_s, jobs, Path(certdir), Path(out))
-    if verify_certs:
-        do_verify(rows)
-        with open(out, "w") as f:
-            for r in rows:
-                f.write(__import__("json").dumps(asdict(r)) + "\n")
+    rows = run_multi(
+        Path(root),
+        solvers.split(","),
+        timeout_s,
+        jobs,
+        Path(certdir),
+        Path(out),
+        verify=verify_certs,
+        use_cache=not no_cache,
+    )
     render([asdict(r) for r in rows], Path(report_out), timeout_s)
 
 

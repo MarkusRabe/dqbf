@@ -1,0 +1,81 @@
+"""Content-addressed result cache for the multi-solver runner.
+
+A run of `(solver-binary, instance, timeout)` is deterministic, so its
+result can be reused as long as none of the three change. The cache key
+is the SHA-256 of:
+
+  - the solver binary's bytes (or, for `python -m pkg`, the package's
+    source files), so a rebuild invalidates;
+  - the gunzipped instance content, so a regenerated instance with the
+    same path but different bytes invalidates;
+  - the timeout, so a 5 s result isn't reused for a 10 s budget.
+
+Only the `RunRow` is cached, not certificate files. `cert_status` is
+preserved (it was checked once) but `cert_path` is cleared on a hit
+because the certdir may have been wiped.
+"""
+
+from __future__ import annotations
+
+import gzip
+import hashlib
+import json
+from pathlib import Path
+
+CACHE_DIR = Path("results/.bench_cache")
+
+
+def _sha(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()[:24]
+
+
+def solver_hash(cmd: list[str]) -> str:
+    """Hash the executable part of a solver invocation."""
+    h = hashlib.sha256()
+    exe = cmd[0]
+    p = Path(exe)
+    if p.is_file():
+        h.update(p.read_bytes())
+    elif exe.endswith("python") or exe.endswith("python3"):
+        # `python -m pkg.mod ...` — hash the package's .py sources.
+        try:
+            i = cmd.index("-m")
+            mod = cmd[i + 1]
+            import importlib.util
+
+            spec = importlib.util.find_spec(mod)
+            if spec and spec.origin:
+                root = Path(spec.origin).parent
+                for src in sorted(root.rglob("*.py")):
+                    h.update(src.read_bytes())
+        except (ValueError, IndexError, ImportError):
+            h.update(repr(cmd).encode())
+    else:
+        h.update(repr(cmd).encode())
+    return h.hexdigest()[:24]
+
+
+def instance_hash(path: Path) -> str:
+    raw = path.read_bytes()
+    if path.suffix == ".gz":
+        raw = gzip.decompress(raw)
+    return _sha(raw)
+
+
+def key(shash: str, ihash: str, timeout_s: float) -> str:
+    return _sha(f"{shash}|{ihash}|{timeout_s:.3f}".encode())
+
+
+def load(k: str) -> dict | None:
+    p = CACHE_DIR / f"{k}.json"
+    if not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text())
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def store(k: str, row: dict) -> None:
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    (CACHE_DIR / f"{k}.json").write_text(json.dumps(row))
