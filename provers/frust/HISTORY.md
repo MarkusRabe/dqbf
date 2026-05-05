@@ -655,6 +655,30 @@ convergence.
 (were timeout) now SAT in 573-658 rounds. alu_add_n20+ still
 diverges (16k forcing at 30s) — interpolation gap; cores are wide.
 
+**Gotcha.** I rebuilt mid-report (the contamination warning, again).
+iter11 report skipped; iter12's report covers both.
+
+## Refined-loop iteration 12: arbsolve-UNSAT ⇒ DQBF-UNSAT (2026-05-05)
+
+**Target**: tiny consistency-shape instances (`dep_cycle_n2` 23 vars,
+`indinv_*_n4` 26-49 vars, `bmc/succinct/*_n4`) timing out. All four
+sampled hit "arbiter space exhausted" then bailed to SlotDpll, which
+also fails to close. **Constraint: implementation** — the soundness
+argument was already there, just not wired.
+
+**Change** (`5e0d2b8`): `arbsolve.solve()` UNSAT ⇒ `CegarOut::Unsat`
+when no constant arbiters were allocated. Proof: each per-cell
+arbiter assignment α is the visited-cell projection of *some* Skolem;
+each conflict clause `¬c` came from `consist[U_c, c, rest-free]`
+UNSAT, so any S projecting to ⊇c fails at U_c; arbsolve-UNSAT means
+every α violates some `¬c`, so every S fails. Constant arbiters
+restrict the search to constant-S_y and miss non-constant Skolems, so
+exhaustion there stays `Bail`.
+
+**Result: +58/-0 = +58 net**, 1790/2856. 0 INVALID. 20/20 sampled
+no-cert UNSAT match pedant. Gains across `bmc_circuits/succinct`
+(~40), `hwmc_indinv` (+10), `cbmc_v2/succinct`, `dep_cycle`.
+
 ---
 
 ## Appendix: iteration tables
