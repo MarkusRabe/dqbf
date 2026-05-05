@@ -224,7 +224,15 @@ impl ExpandState {
                 s.defined.len(),
                 s.undefined.len()
             );
-            if s.undefined.len() <= 64 {
+            // Gate on estimated arbiter cells, not raw undefined count:
+            // bmc/succinct has 200+ undefined but |dep|=4-5 each, so
+            // total cells fit comfortably.
+            let est_cells: usize = s
+                .undefined
+                .iter()
+                .map(|y| 1usize << f.deps[y].len().min(8))
+                .sum();
+            if est_cells <= 8192 {
                 use crate::arbiter::CegarOut;
                 match crate::arbiter::validity_cegar(f, &s.undefined, sub_deadline, start, debug) {
                     CegarOut::Sat(cert) => {
