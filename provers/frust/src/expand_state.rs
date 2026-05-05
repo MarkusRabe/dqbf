@@ -197,7 +197,7 @@ impl ExpandState {
         // Budget: at most half the slice for Padoa+CEGAR; the rest
         // falls through to Partial if this doesn't pan out.
         let now = start.elapsed().as_secs_f64();
-        let sub_deadline = now + (deadline - now) * 0.5;
+        let sub_deadline = now + (deadline - now) * 0.7;
         // Gate: definability is for circuit-like matrices. Large
         // unrolled instances (collatz n64, hwmcc) burn budget here for
         // nothing and miss the Partial-mode UNSAT they'd otherwise hit.
@@ -211,8 +211,13 @@ impl ExpandState {
             };
             return self.step(f, cdcl, deadline, start, debug);
         }
-        dbg_ex!(debug, "definability: padoa+cegar, deadline {:.2}s", sub_deadline);
-        if let Some(s) = crate::definability::padoa_split(f, sub_deadline, start, debug) {
+        // Padoa was a fast-reject (bail if too many undefined). The
+        // CEGAR's flip-check rediscovers definedness on demand and
+        // promotes to arbiter when not defined, so a quick Padoa
+        // suffices: cap at 0.2× slice; the rest goes to CEGAR.
+        let padoa_dl = now + (deadline - now) * 0.2;
+        dbg_ex!(debug, "definability: padoa→{:.2}s cegar→{:.2}s", padoa_dl, sub_deadline);
+        if let Some(s) = crate::definability::padoa_split(f, padoa_dl, start, debug) {
             dbg_ex!(
                 debug,
                 "padoa: {} defined, {} undefined",
