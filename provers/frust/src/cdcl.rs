@@ -172,7 +172,18 @@ impl Cdcl {
     /// Minisat analyzeFinal: subset of assumptions implying ¬p (where p is
     /// the assumption that was found false, passed as ¬a).
     fn analyze_final(&mut self, p: ILit) -> Vec<Lit> {
-        let mut out: Vec<Lit> = Vec::new();
+        // Returned core is a subset of *assumptions* that is unsatisfiable
+        // together. `p = ¬a` where `a` is the violated assumption; the
+        // walk collects decisions implying p, and `a` itself completes
+        // the unsat subset (Minisat includes it; previous version didn't,
+        // which made callers that test "is X in core?" miss the violated
+        // assumption).
+        let a = neg(p);
+        let mut out: Vec<Lit> = vec![if isign(a) > 0 {
+            ivar(a) as Lit
+        } else {
+            -(ivar(a) as Lit)
+        }];
         if self.dl() == 0 {
             return out;
         }
