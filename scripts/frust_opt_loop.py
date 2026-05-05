@@ -8,6 +8,7 @@ to find "surprisingly slow" cases).
 from __future__ import annotations
 
 import gzip
+import hashlib
 import json
 import subprocess
 import sys
@@ -31,8 +32,9 @@ def n_vars_of(path: Path) -> int:
 
 
 def run_one(path: Path) -> dict:
-    cert = Path(f"/tmp/frust_{path.stem}.aag")
-    frp = Path(f"/tmp/frust_{path.stem}.frp")
+    h = hashlib.sha1(str(path).encode()).hexdigest()[:8]
+    cert = Path(f"/tmp/frust_{path.stem}_{h}.aag")
+    frp = Path(f"/tmp/frust_{path.stem}_{h}.frp")
     cert.unlink(missing_ok=True)
     frp.unlink(missing_ok=True)
     t0 = time.monotonic()

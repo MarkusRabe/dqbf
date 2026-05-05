@@ -687,6 +687,40 @@ arbsolve-UNSAT soundness; skip and retry once linked-z's pinned.
 so the skip just loses 2 SAT instances. **Reverted.** −2 net,
 recorded as a dead-end.
 
+## Refined-loop iteration 14: clause-form Skolem cert (2026-05-05, `95d7311`)
+
+**Target**: cert coverage. ~55 SAT verdicts at max|dep|>20 had no
+cert (truth-table is 2^|dep| bits). **Constraint: implementation** —
+the forcing clauses *are* a circuit; emit them.
+
+**Change**: `aiger::SkolemFn` enum — `Table` (existing bitmap) or
+`Clauses` (priority cube list). AIG writer renders `Clauses` as a
+first-match decoder (`acc/not_yet` chain). `forcing_to_skolem` emits
+`Clauses` for nd>20 instead of `None`; small-nd still materialises
+tables so BCE-reconstruct applies.
+
+**Result: +0 solved, +53 verified certs**, 1789/2856. 0 INVALID. 3/3
+sampled large-dep `pec_circuits` now SAT-with-VALID-cert.
+
+## Refined-loop iteration 15: cell-count gate (the big one) (2026-05-05)
+
+**Target**: `bmc_circuits/succinct` (444 unsolved). Padoa shows
+65-291 undefined; the `≤64` gate kicks them straight to SlotDpll
+(88-165 slots, grinds). But |dep|=4-5 → ≤32 cells/var → fits
+ARB_BUDGET. **Constraint: implementation** — wrong gate metric.
+
+**Change**: gate on `Σ min(2^|dep(y)|, 256) ≤ 8192` instead of
+`|undefined| ≤ 64`.
+
+**Result: +125 net**, 1914/2856. 0 INVALID. 15/15 sampled match
+pedant. Gains across `bmc/succinct`, `cbmc_v2/succinct`,
+`hwmc_indinv`, `prog_equiv`. The 3 near-misses (bcd_ctr, prio_enc)
+hit deadline at 5-7k rounds with 3-6k arbiters — within reach.
+
+**Gotcha.** Probe falsely flagged one INVALID: `path.stem` collision
+between `bmc_circuits/updown/X` and `bmc_circuits/succinct/updown/X`
+(same stem, j=48 race). Fixed with sha1(path) suffix.
+
 ---
 
 ## Appendix: iteration tables
