@@ -303,6 +303,13 @@ impl ExpandState {
                 }
             }
             if !prune && !soft {
+                dbg_ex!(
+                    debug,
+                    "slot-DPLL SAT r{}: {} slots, {} iters",
+                    self.cegar_round,
+                    self.slots.len(),
+                    iters
+                );
                 let mut sk = build_skolem(&self.exs, &self.dep_lists, &self.tables);
                 crate::bce::reconstruct(&mut sk, f, &self.bce_stack);
                 self.mode = Mode::Exhausted;
@@ -323,7 +330,16 @@ impl ExpandState {
                             .copied()
                             .collect();
                         self.cegar_round += 1;
-                        if added.is_empty() || self.cegar_round >= 5 {
+                        dbg_ex!(
+                            debug,
+                            "slot-DPLL exhausted r{}: {} slots, {} iters, +{} conflicts, cdcl {}l",
+                            self.cegar_round,
+                            self.slots.len(),
+                            iters,
+                            added.len(),
+                            cdcl.n_learned
+                        );
+                        if added.is_empty() || self.cegar_round >= 50 {
                             self.mode = Mode::Exhausted;
                             return Step::Done;
                         }

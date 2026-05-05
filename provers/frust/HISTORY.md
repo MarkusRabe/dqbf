@@ -326,3 +326,67 @@ iteration.
 | 30 | `3qbf_v3_*` (\|U\|=20) | tried MAX_U=20: only +1 (1M-row free pass too slow) | reverted to 16 | 679/804 final |
 
 ![iterations](../../docs/dev_reports/frust_iterations.svg)
+
+## Refined-loop iteration: `bmc_circuits_succinct` (2026-05-05)
+
+First iteration under the refined `IMPROVEMENT_LOOP.md` (sample ~10,
+find commonalities, name the constraint level, expect multiple
+attempts at step 4).
+
+**Sample.** 145/445 unsolved are `bmc_circuits_succinct/*` — 45-350
+vars, the same circuits we solve fine in unrolled form. |U|=2m (m bits
+of t + m bits of t'); existentials with deps `{t}`, `{t'}`, `{t,t'}`,
+and one `{}`.
+
+**Observability built.** Slot-DPLL had no debug output in the
+ExpandState port — added per-round prints (`slots`, `iters`,
+`+conflicts`, `cdcl learned`). Immediately showed:
+`shift_reg_n4_k008` exhausts at the **5-round CEGAR cap** with slots
+still growing 7→19→still adding; `mutex`/`counter` never finish
+round 1 (2¹⁷⁺ slots, `cdcl 0l` — rows are propositionally trivial so
+CDCL never prunes).
+
+**Constraint named (architectural).** Slots are *conditionally
+defined*: l(t+1) is determined given l(t), but both look like
+independent slots to the free pass because l(t) itself varies across
+rows. Slot-DPLL searches 2^slots when the answer is unique-given-roots.
+
+**Attempt 1 — raise the cap (`359faf3`).** 5→50. `shift_reg_n4_k008`
+solved at round 6. **+6, -0** on probe (all `shift_reg_n4/n8` —
+the low-starting-slot variants). `mutex`/`counter`/`gray`/`fifo1`/
+`alu_add` unchanged (≥17 starting slots; round 1 never completes).
+
+**Attempt 2 — greedy-pin pass.** Re-added one of the deleted heuristic
+passes: process rows in order, pin all filled tables (not just slots).
+All 6 sample instances → "row UNSAT" (non-transition rows pin garbage,
+later transition rows conflict).
+
+**Attempt 3 — core-based per-row repair.** Re-added `analyzeFinal` to
+cdcl.rs; on row-UNSAT, drop core-pinned existentials and retry. **All
+6 sample instances → SAT but cert INVALID**: clearing `tables[i][k]`
+mid-pass invalidates earlier rows that were checked against the old
+value. Added a final validation pass — correctly rejects all 6.
+
+**Attempt 4 — worklist fixpoint.** Re-queue every row touching a
+cleared (i,k). Oscillates: row A sets l(t)=1, row B's core clears it,
+row A re-sets it. No learning at the table level → no convergence;
+bails at 4×rows step cap.
+
+**What stuck.** Cap raise + observability + `analyzeFinal` (for
+future use). Fixpoint code reverted.
+
+**Gotchas hit.**
+- `analyzeFinal`/`last_core` were deleted in the simplification round;
+  had to re-add (and the deletion wasn't noted as "may need this back").
+- The first INVALID certs in this session — caught by tiny-5 + sample
+  cert-verify before the probe, exactly as the loop intends.
+- `iters` counter is local to `step_slot_dpll`, resets per slice; the
+  debug print is per-slice cumulative, not lifetime.
+
+**Next (structural).** Slot-dependency analysis: after the free pass,
+for each slot s, check if it's *determined* given a subset of other
+slots (one CDCL call per candidate: pin the subset, solve, check s is
+unit-propagated). Roots are the truly-free slots; the rest propagate.
+For BMC-succinct, roots = initial-state bits (~n_latches), trajectory
+follows. This is Pedant's definition extraction lifted to the slot
+level.

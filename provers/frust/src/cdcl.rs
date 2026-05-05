@@ -61,6 +61,7 @@ pub struct Cdcl {
     pub conflicts: u64,
     pub n_learned: usize,
     pub budget_hit: bool,
+    core: Vec<Lit>,
 }
 
 impl Cdcl {
@@ -84,6 +85,7 @@ impl Cdcl {
             conflicts: 0,
             n_learned: 0,
             budget_hit: false,
+            core: Vec::new(),
         };
         for c in clauses {
             let lits: Vec<ILit> = c.iter().map(|&l| ilit(l)).collect();
@@ -159,6 +161,45 @@ impl Cdcl {
     #[inline]
     fn dl(&self) -> u32 {
         self.trail_lim.len() as u32
+    }
+
+    pub fn last_core(&self) -> &[Lit] {
+        &self.core
+    }
+
+    /// Minisat analyzeFinal: subset of assumptions implying ¬p (where p is
+    /// the assumption that was found false, passed as ¬a).
+    fn analyze_final(&mut self, p: ILit) -> Vec<Lit> {
+        let mut out: Vec<Lit> = Vec::new();
+        if self.dl() == 0 {
+            return out;
+        }
+        self.seen[ivar(p)] = 1;
+        let mut to_clear = vec![ivar(p)];
+        for &l in self.trail.iter().rev() {
+            let v = ivar(l);
+            if self.seen[v] == 0 {
+                continue;
+            }
+            if self.reason[v] == UNDEF {
+                debug_assert!(self.level[v] > 0);
+                out.push(if isign(l) > 0 { v as Lit } else { -(v as Lit) });
+            } else {
+                let cr = self.reason[v];
+                let len = self.cl_len(cr);
+                for k in 1..len {
+                    let q = self.cl_lit(cr, k);
+                    if self.level[ivar(q)] > 0 {
+                        self.seen[ivar(q)] = 1;
+                        to_clear.push(ivar(q));
+                    }
+                }
+            }
+        }
+        for v in to_clear {
+            self.seen[v] = 0;
+        }
+        out
     }
 
     fn cancel_until(&mut self, lvl: u32) {
@@ -393,6 +434,7 @@ impl Cdcl {
 
     pub fn solve(&mut self, assumptions: &[Lit], model: &mut [i8], max_conflicts: u64) -> bool {
         self.budget_hit = false;
+        self.core.clear();
         if !self.ok {
             return false;
         }
@@ -436,6 +478,7 @@ impl Cdcl {
                     1 => self.trail_lim.push(self.trail.len()), // empty level
                     -1 => {
                         // Assumption violated → UNSAT under assumptions.
+                        self.core = self.analyze_final(neg(a));
                         self.cancel_until(0);
                         return false;
                     }

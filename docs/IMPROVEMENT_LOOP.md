@@ -66,11 +66,29 @@ results into a heuristic decision.
    verify after each commit keeps the soundness invariant; the probe
    only needs to run on the last one.
 
-4. **Probe again.** Any INVALID → revert immediately. Regression diff
-   tells you *which* instances flipped, not just how many.
+4. **Probe again — and test the intended effect specifically.** This
+   step usually takes several attempts.
+
+   - Any INVALID → fix or revert before going further.
+   - Regression diff tells you *which* instances flipped, not just how
+     many.
+   - **Check the change did what you hypothesised**, not just that the
+     count went up. If the hypothesis was "fixpoint converges in ≤4×rows
+     steps", confirm it on the sample with `--debug-expand`. If it was
+     "cert size shrinks", check a cert. A change that gains +5 for the
+     wrong reason will regress later.
+   - Expect to iterate within this step: the first implementation often
+     has a subtle bug (an INVALID cert from a missing validation pass,
+     a counter that doesn't reset, a `≥` that should be `>`). Tighten,
+     re-probe, repeat until the result is both correct *and* explained.
 
 5. **Record** in `HISTORY.md`: the sampled instances, the constraint
-   you identified, what you changed, the result.
+   you identified, what you tried (including the dead ends), what
+   stuck, and the result. Also record **gotchas, papercuts, and
+   inconsistencies** you hit along the way — a `cargo fmt` that
+   reordered something, a probe-script edge case, a debug print that
+   misled you. Those notes save the next iteration from re-discovering
+   them.
 
 6. Periodically: 9-solver `dqbf-bench multi` for the cactus + cross-tool
    disagreement check.
