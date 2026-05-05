@@ -155,11 +155,6 @@ pub fn validity_cegar(
             f.clauses.len()
         );
     }
-    let mut last_progress = (
-        arb_meta.len(),
-        forcing.values().map(|v| v.len()).sum::<usize>(),
-        *rounds,
-    );
     loop {
         if start.elapsed().as_secs_f64() >= deadline {
             if debug {
@@ -173,24 +168,6 @@ pub fn validity_cegar(
             return CegarOut::Pending;
         }
         *rounds += 1;
-        // Stall detection: bail when arbiter/forcing counts plateau —
-        // arbsolve is searching a space too large to exhaust.
-        let cur = (
-            arb_meta.len(),
-            forcing.values().map(|v| v.len()).sum::<usize>(),
-        );
-        if (cur.0, cur.1) != (last_progress.0, last_progress.1) {
-            last_progress = (cur.0, cur.1, *rounds);
-        } else if *rounds - last_progress.2 > 256 {
-            if debug {
-                eprintln!(
-                    "c [def] cegar stalled: {} rounds w/o progress at {}",
-                    *rounds - last_progress.2,
-                    rounds
-                );
-            }
-            return CegarOut::Bail;
-        }
 
         // ---- validity counterexample under current arbiters ----------
         let sat = validity.solve(&arb_assump, vmodel, conf_budget);
