@@ -92,5 +92,5 @@ Each pair × `(W, A, K)` grid; see `generate.py`.
 - Felsing et al., *Automating regression verification* (ASE'14, the
   Rêve tool) and Barthe et al. on product programs / relational Hoare
   logic — the basis for the inductive-coupling variant.
-- This repo's `bmc_circuits_succinct` for the consistency-clause
+- This repo's `bmc_circuits/succinct` for the consistency-clause
   trick, and `tools/hwmc2dqbf_indinv` for the invariant prefix.

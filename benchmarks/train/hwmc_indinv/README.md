@@ -16,7 +16,7 @@ The encoding (`tools/hwmc2dqbf_indinv/encode.py`) introduces two
 existential bits `inv` with `dep={s}` and `inv'` with `dep={s'}`, then
 ties them to the same Skolem function via the consistency clause
 `(s = s') → (inv ↔ inv')` — the same isomorphic-dep trick as
-`bmc_circuits_succinct`. The result is genuine DQBF (the two dep-sets
+`bmc_circuits/succinct`. The result is genuine DQBF (the two dep-sets
 are incomparable).
 
 ## Variants

@@ -183,7 +183,7 @@ Per-iteration: tiny-5 verify + INVALID count in the probe. Per-batch:
 cross-solver disagreement check (`dqbf-bench multi` with hqs/pedant).
 The second one catches unsound UNSAT-without-proof verdicts that the
 first can't. The runner cert-path collision bug (`bmc_circuits/` vs
-`bmc_circuits_succinct/` shared stems) was caught by the per-batch
+`bmc_circuits/succinct/` shared stems) was caught by the per-batch
 check showing both frust *and* pedant with INVALID certs — which
 pointed at the runner, not either solver.
 
