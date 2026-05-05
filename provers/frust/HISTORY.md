@@ -679,6 +679,14 @@ exhaustion there stays `Bail`.
 no-cert UNSAT match pedant. Gains across `bmc_circuits/succinct`
 (~40), `hwmc_indinv` (+10), `cbmc_v2/succinct`, `dep_cycle`.
 
+## Refined-loop iteration 13: skip flip-SAT |dep|>8 (reverted) (2026-05-05)
+
+**Hypothesis**: const-arbiter at flip-SAT |dep|>8 blocks
+arbsolve-UNSAT soundness; skip and retry once linked-z's pinned.
+**Wrong** — `any_const_arbiter` already guards iter12's UNSAT path,
+so the skip just loses 2 SAT instances. **Reverted.** −2 net,
+recorded as a dead-end.
+
 ---
 
 ## Appendix: iteration tables
