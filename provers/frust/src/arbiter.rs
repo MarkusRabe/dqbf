@@ -60,6 +60,7 @@ pub struct CegarState {
     arb_meta: Vec<(Var, Vec<Lit>)>,
     arb_assump: Vec<Lit>,
     any_const_arbiter: bool,
+    cell_dep_cap: usize,
     rounds: usize,
 }
 
@@ -112,6 +113,10 @@ impl CegarState {
             arb_meta: vec![(0, vec![])],
             arb_assump: Vec::new(),
             any_const_arbiter: false,
+            cell_dep_cap: (ARB_BUDGET / undefined.len().max(1))
+                .next_power_of_two()
+                .trailing_zeros()
+                .min(12) as usize,
             rounds: 0,
         }
     }
@@ -143,8 +148,10 @@ pub fn validity_cegar(
         arb_meta,
         arb_assump,
         any_const_arbiter,
+        cell_dep_cap,
         rounds,
     } = st;
+    let cell_dep_cap = *cell_dep_cap;
     let (n, arb_base) = (*n, *arb_base);
     let conf_budget: u64 = 100_000;
     if debug && *rounds == 0 {
@@ -310,8 +317,9 @@ pub fn validity_cegar(
                 // flip-SAT: y not determined by dep(y) alone (Padoa's
                 // fixpoint linked extra z's). Fall through to arbiter.
             }
-            // Arbiter: per-cell when |dep|≤8, else a single constant.
-            let cell_dep = if dep_lits.len() > 8 {
+            // Arbiter: per-cell when |dep| fits the per-undef share of
+            // ARB_BUDGET; else a single constant.
+            let cell_dep = if dep_lits.len() > cell_dep_cap {
                 *any_const_arbiter = true;
                 vec![]
             } else {
