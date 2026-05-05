@@ -4,12 +4,6 @@ How to iterate on a DQBF prover without fooling yourself. This was
 written before `frust` existed; the "Lessons" section below is what we
 learned from actually running ~35 iterations on it.
 
-```
-generate (EQFOB/AIGER/TLSF)  →  train families  →  run prover  →  verify each result
-        ↑                                                              │
-        └──────────── per-instance diff vs baseline, propose change ───┘
-```
-
 ## Current state (2026-05)
 
 | Area | Status |
@@ -35,13 +29,49 @@ results into a heuristic decision.
    every cert through `tools/verify`. Output: solved/total, INVALID
    count, missing-cert count, slowest-small-instance list, **per-instance
    diff vs the previous run**.
-2. **Hypothesise** — pick the smallest unsolved instance (by vars × time);
-   `--debug-expand` it; state what you think is the bottleneck.
-3. **Change** — one commit. `cargo test` + tiny-5 cert verify before
-   probing.
+
+2. **Hypothesise** — this is where most of the leverage is; spend real
+   effort here.
+
+   Sample ~10 instances that are either unsolved or taking non-trivial
+   time (>1s). Don't fixate on the single smallest one. `--debug-expand`
+   / `perf record` / dump intermediate state on each, and look for
+   **commonalities**: same family? same |U| range? same phase bailing?
+   same clause-count blowup?
+
+   Then ask what the *fundamental constraint* is. Name it at the right
+   level:
+   - **implementation roughness** — a hot loop allocating, a linear scan
+     where an index would do (perf shows it directly);
+   - **algorithmic limitation** — the algorithm is the right one but
+     this instance shape defeats its heuristic (e.g., model drift
+     inflating slot counts);
+   - **architectural limitation** — the phase structure itself is
+     wrong (e.g., expand can prove UNSAT but can't emit a `.frp`, so
+     the verdict is held back for saturation);
+   - **research-approach limitation** — no known technique handles this
+     shape well (e.g., `dep_cycle` without SFEx).
+
+   You may need to **build a tool** to see what's happening (a
+   `--debug-X` flag, a one-off script that tabulates a quantity across
+   the sample) or **test the hypothesis at small scale** (hand-craft a
+   3-variable instance with the same shape, check the brute-force
+   oracle, watch the solver step through it). A hypothesis you can't
+   demonstrate on a tiny instance is probably wrong.
+
+3. **Change** — one commit when the change is local; **several commits
+   when it's architectural**. The big wins (CDCL, expand-UNSAT,
+   resumable scheduler) each took 3-5 commits with intermediate states
+   that didn't fully work. That's fine — `cargo test` + tiny-5 cert
+   verify after each commit keeps the soundness invariant; the probe
+   only needs to run on the last one.
+
 4. **Probe again.** Any INVALID → revert immediately. Regression diff
    tells you *which* instances flipped, not just how many.
-5. **Record** in `HISTORY.md`: bottleneck, observation, change, result.
+
+5. **Record** in `HISTORY.md`: the sampled instances, the constraint
+   you identified, what you changed, the result.
+
 6. Periodically: 9-solver `dqbf-bench multi` for the cactus + cross-tool
    disagreement check.
 
