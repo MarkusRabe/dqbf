@@ -94,6 +94,7 @@ pub fn validity_cegar(
     let mut arb_of: HashMap<(Var, Vec<Lit>), usize> = HashMap::new();
     let mut arb_meta: Vec<(Var, Vec<Lit>)> = vec![(0, vec![])]; // 1-indexed
     let mut arb_assump: Vec<Lit> = Vec::new();
+    let mut any_const_arbiter = false;
 
     let conf_budget: u64 = 100_000;
     let mut rounds = 0usize;
@@ -188,10 +189,22 @@ pub fn validity_cegar(
             let conflict: Vec<Lit> = arb_core.iter().map(|&l| -l).collect();
             arbsolve.add_external(&conflict);
             if !arbsolve.solve(&[], &mut amodel, conf_budget) {
+                // Every per-cell arbiter assignment hits some U* with
+                // matrix[U*, cells, rest-free] UNSAT — so every Skolem
+                // fails. Sound only when arbiters cover full cells:
+                // a constant arbiter restricts the search to constant-S_y,
+                // missing non-constant Skolems.
                 if debug {
-                    eprintln!("c [def] cegar arbiter space exhausted → no Skolem");
+                    eprintln!(
+                        "c [def] cegar arbiter space exhausted (const={})",
+                        any_const_arbiter
+                    );
                 }
-                return CegarOut::Bail;
+                return if any_const_arbiter {
+                    CegarOut::Bail
+                } else {
+                    CegarOut::Unsat
+                };
             }
             arb_assump.clear();
             for i in 1..arb_meta.len() {
@@ -245,7 +258,12 @@ pub fn validity_cegar(
                 // fixpoint linked extra z's). Fall through to arbiter.
             }
             // Arbiter: per-cell when |dep|≤8, else a single constant.
-            let cell_dep = if dep_lits.len() > 8 { vec![] } else { dep_lits.clone() };
+            let cell_dep = if dep_lits.len() > 8 {
+                any_const_arbiter = true;
+                vec![]
+            } else {
+                dep_lits.clone()
+            };
             let key = (y, cell_dep.clone());
             let ai = *arb_of.entry(key.clone()).or_insert_with(|| {
                 arb_meta.push((y, cell_dep.clone()));
