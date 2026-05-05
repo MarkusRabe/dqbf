@@ -55,9 +55,10 @@ for f in tests/integration/tiny/*.dqdimacs; do rm -f /tmp/c.aag /tmp/p.frp; \
   iteration table.
 - [`FRUST_v1.0.md`](FRUST_v1.0.md) — architecture snapshot at the
   v1.0 commit.
-- [`EXPERIMENTS.md`](EXPERIMENTS.md) — parallel-track summary;
-  [`BCE_EXPERIMENTS.md`](BCE_EXPERIMENTS.md) /
-  [`PHASE_EXPERIMENTS.md`](PHASE_EXPERIMENTS.md) for detail.
+- [`BCE.md`](BCE.md) — DQBF-BCE soundness, reconstruction, fire rate.
+- [`BCE_EXPERIMENTS.md`](BCE_EXPERIMENTS.md) /
+  [`PHASE_EXPERIMENTS.md`](PHASE_EXPERIMENTS.md) — per-iteration logs
+  for the two parallel tracks off v1.0.
 
 ## Next
 

@@ -203,9 +203,8 @@ pedant INVALID. Cert path now `certdir/solver/family/stem`.
 
 Two 20-iteration tracks branched from `7d2d9d9`, each in an isolated
 worktree. Both merged to main; combined **1082/1522, 0 INVALID**.
-Detailed logs: [`BCE_EXPERIMENTS.md`](BCE_EXPERIMENTS.md) /
-[`PHASE_EXPERIMENTS.md`](PHASE_EXPERIMENTS.md); summary:
-[`EXPERIMENTS.md`](EXPERIMENTS.md).
+Per-iteration logs: [`PHASE_EXPERIMENTS.md`](PHASE_EXPERIMENTS.md) /
+[`BCE_EXPERIMENTS.md`](BCE_EXPERIMENTS.md).
 
 **Track A — phase reordering (+21/-0).** The headline is **outer-∃
 CEGAR for the ∃∀∃ shape** (`902069b`, +15): for 16<|U|≤20 where every
@@ -220,16 +219,14 @@ rows first so refinement rounds drop to O(1) row scans. Pure
 expand↔saturate reordering (iters 2, 3, 7) was ±0: only ~4 unsolved
 instances have |U|≤16; on the rest, partial-expand exits in ~0.1s so
 saturation already gets full budget regardless of phase order.
+Slot-count bailout, fast-leaf (pin all slots at once), and
+partial-CEGAR-UNSAT were tried and reverted.
 
-**Track B — Blocked Clause Elimination (+15/-0).** A clause C is
-**DQBF-blocked on existential `l`** iff every partner D∋¬l has a
-witness `p ∈ C\{l}` with `¬p ∈ D` and `dep(p) ⊆ dep(l)` — matches
-HQSpre's `checkResolventTautology`. Reconstruction walks the removal
-stack in reverse: for each `(C,l)` and α with `sk⊭C(α)`, set
-`sk[var(l)](α|_dep(l)) := sign(l)`; the dep-subset condition guarantees
-every partner clause stays satisfied after the flip. The
-implementation (`e285102` `d3f8aed`) needed queue dedup, a
-clause-count budget, and a `max_stack=10M/2^|U|` cap to avoid
+**Track B — Blocked Clause Elimination (+15/-0).** Precise definition,
+worked unsoundness example, and reconstruction proof are in
+[`BCE.md`](BCE.md). The implementation (`e285102` `d3f8aed`) needed
+queue dedup, a clause-count budget, and a `max_stack=10M/2^|U|` cap to
+avoid
 quadratic re-enqueue and O(2^|U|·|stack|) reconstruction. The big
 gain (`78ea982`, +12) was feeding the BCE-reduced clause set to
 **saturation as well** — `.frp` axioms are by-content so the verifier
@@ -242,32 +239,44 @@ their +sets. After merge: frust 1080/1517, 808 verified certs
 (`b0802c9`). frust solves 117 instances pedant doesn't and 41 hqs
 doesn't.
 
-## Continual-process redesign (in progress, `45bcf54`..)
+## Continual-process redesign (`45bcf54`..`d775db4`)
 
 The cactus plot at v1.0+BCE+phase has a visible shelf at ~1s — the
 fixed `.frp` window after expand-UNSAT. ~180 instances are
 artificially delayed by ~0.9s waiting for a proof that almost never
 arrives.
 
-**Option 1 — adaptive `.frp` window (`45bcf54`).** Replace the fixed
-1s with `clamp(1.5×expand_time, 50ms, 0.5s)`. <0.5s went 59%→86%; the
-0.9-1.2s bucket collapsed 120→19. Same solved count (1082); ~12 fewer
-`.frp` certs (those that needed >0.5s saturation).
+**Option 1 — adaptive `.frp` window (`45bcf54`, 1082).** Replace the
+fixed 1s with `clamp(1.5×expand_time, 50ms, 0.5s)`. <0.5s went
+59%→86%; the 0.9-1.2s bucket collapsed 120→19. Same solved count;
+~12 fewer `.frp` certs (those that needed >0.5s saturation).
 
-**Option 2 — iterative-deepening partial scan (`69f2ced`).** Replace
-the one-shot top-16 partial scan with levels k=8, 12, 16, 20 over the
-occurrence-ranked universals; CDCL persists across levels so each
-deeper level is cheaper. +1 (`collatz_n24_k12`, |U|=24); UNSAT rows
-found at low k finish faster.
+**Option 2 — iterative-deepening partial scan (`69f2ced`, 1083).**
+Replace the one-shot top-16 partial scan with levels k=8, 12, 16, 20
+over the occurrence-ranked universals; CDCL persists across levels so
+each deeper level is cheaper. +1 (`collatz_n24_k12`, |U|=24); UNSAT
+rows found at low k finish faster.
 
-**Option 3 — clause-level interleave (in progress).** Interleaved
-scheduler in `solve()`: build CDCL once, alternate expand and saturate
-slices with geometrically-growing budgets, push saturate's short
-Q-resolution-derived clauses into expand's CDCL via `add_external`
-between slices. The saturate→expand direction is the high-value one
-(every saturation-derived clause is matrix-valid and tightens
-subsequent row solves); expand→saturate would need CDCL proof tracing
-to keep `.frp` derivations checkable.
+**Option 3 — clause-level interleave (`2b9360d` `9651b38`, 1077).**
+`solve()` becomes a scheduler: build CDCL once, alternate expand and
+saturate slices with geometrically-growing budgets, push saturate's
+short Q-resolution-derived clauses into expand's CDCL via
+`add_external` between slices. Opt3a (`2b9360d`) ran the existing
+`try_expand` in the loop, restarting it from scratch each slice; opt3b
+(`9651b38`) rebuilt expand as a resumable `ExpandState` state machine
+(`expand_state.rs`, ~480L) so the free pass / outer-CEGAR / slot-DPLL
+each pause and resume across slices instead of repeating work. Result:
+89% solved <0.5s (vs opt2's 86%), but **−6** vs opt2 on the solved
+count — the port lost the min-change re-pick in outer-CEGAR and the
+`dpll_cap` bound in slot-DPLL. Both are recoverable; opt3b is kept on
+main as the architecture going forward.
+
+**Incremental BCE (`d775db4`, +0).** After each saturate slice, when
+the live clause set has grown ≥50%+256, re-run BCE on it and mark
+newly-blocked clauses dead. Sound (BCE preserves equisat on any CNF;
+already-recorded `.frp` steps stay), but on the current bottleneck
+families derived clauses don't expose new blocked clauses. Hook kept
+in place.
 
 Largest remaining gap: `bmc_circuits_succinct` (145/150 unsolved; the
 succinct encoding has |U|=2m frame-index universals with mixed-dep

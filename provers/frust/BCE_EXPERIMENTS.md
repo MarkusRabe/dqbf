@@ -4,19 +4,8 @@ Baseline: frust v1.0 (commit `7d2d9d9`), 1046/1522, 0 invalid certs.
 Probe: `tests/integration/tiny` + `benchmarks/train`, 10 s, j=24,
 SAT certs verified via `tools/verify --solve`.
 
-## Soundness condition
-
-C is **DQBF-blocked** on existential pivot l ∈ C iff for every D with
-¬l ∈ D there exists a witness p ∈ C\{l} with ¬p ∈ D and
-**dep(var(p)) ⊆ dep(var(l))** (universal p: var(p) ∈ dep(l)). Matches
-HQSpre's `checkResolventTautology`.
-
-**Reconstruction.** Walk the removal stack in reverse; for each (C, l)
-and each universal assignment α with sk(α) ⊭ C, set
-sk[var(l)](α|_dep(l)) := sign(l). Sound because the witness p has
-dep(p) ⊆ dep(l), so p(α') = p(α) = false for any α' sharing the
-dep(l)-key — every partner clause D ∋ ¬l stays satisfied via ¬p after
-the flip.
+Soundness condition, reconstruction proof, and a worked example
+showing why the witness-dep restriction is necessary: [`BCE.md`](BCE.md).
 
 ## Iterations
 
