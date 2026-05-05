@@ -13,13 +13,14 @@ macro_rules! dbg_ex {
 }
 
 pub enum Step {
-    Sat(Skolem),
+    Sat(Option<Skolem>),
     UnsatRow(u32),
     Pending, // ran out of slice budget mid-search
     Done,    // exhausted; can't decide
 }
 
 enum Mode {
+    Definability,
     Partial,
     OuterCegar,
     SlotDpll,
@@ -101,7 +102,7 @@ impl ExpandState {
             .collect();
         let eae = dep_mask.iter().all(|&m| m == 0 || m == full_mask);
         let mode = if partial {
-            Mode::Partial
+            Mode::Definability
         } else if nu > 16 && eae && !outer.is_empty() {
             Mode::OuterCegar
         } else {
@@ -172,11 +173,50 @@ impl ExpandState {
         debug: bool,
     ) -> Step {
         match self.mode {
+            Mode::Definability => self.step_definability(f, cdcl, deadline, start, debug),
             Mode::Partial => self.step_partial(f, cdcl, deadline, start, debug),
             Mode::OuterCegar => self.step_outer_cegar(f, cdcl, deadline, start, debug),
             Mode::SlotDpll => self.step_slot_dpll(f, cdcl, deadline, start, debug),
             Mode::Exhausted => Step::Done,
         }
+    }
+
+    fn step_definability(
+        &mut self,
+        f: &Formula,
+        cdcl: &mut Cdcl,
+        deadline: f64,
+        start: &std::time::Instant,
+        debug: bool,
+    ) -> Step {
+        // Budget: at most half the slice for Padoa+CEGAR; the rest
+        // falls through to Partial if this doesn't pan out.
+        let now = start.elapsed().as_secs_f64();
+        let sub_deadline = now + (deadline - now) * 0.5;
+        dbg_ex!(debug, "definability: padoa+cegar, deadline {:.2}s", sub_deadline);
+        if let Some(s) = crate::definability::padoa_split(f, sub_deadline, start, debug) {
+            dbg_ex!(
+                debug,
+                "padoa: {} defined, {} undefined",
+                s.defined.len(),
+                s.undefined.len()
+            );
+            if s.undefined.len() <= 64 {
+                if let Some(cert) =
+                    crate::arbiter::validity_cegar(f, &s.undefined, sub_deadline, start, debug)
+                {
+                    self.mode = Mode::Exhausted;
+                    if let Some(mut sk) = crate::arbiter::forcing_to_skolem(f, &cert, 20) {
+                        crate::bce::reconstruct(&mut sk, f, &self.bce_stack);
+                        return Step::Sat(Some(sk));
+                    }
+                    dbg_ex!(debug, "definability SAT, no cert (max|dep|>20)");
+                    return Step::Sat(None);
+                }
+            }
+        }
+        self.mode = Mode::Partial;
+        self.step_partial(f, cdcl, deadline, start, debug)
     }
 
     fn step_partial(
@@ -244,7 +284,7 @@ impl ExpandState {
             let mut sk = build_skolem(&self.exs, &self.dep_lists, &self.first_seen);
             crate::bce::reconstruct(&mut sk, f, &self.bce_stack);
             self.mode = Mode::Exhausted;
-            return Step::Sat(sk);
+            return Step::Sat(Some(sk));
         }
 
         // ---- Slot-DPLL (resumable from self.decisions/next_slot) ----
@@ -313,7 +353,7 @@ impl ExpandState {
                 let mut sk = build_skolem(&self.exs, &self.dep_lists, &self.tables);
                 crate::bce::reconstruct(&mut sk, f, &self.bce_stack);
                 self.mode = Mode::Exhausted;
-                return Step::Sat(sk);
+                return Step::Sat(Some(sk));
             }
             if !prune && !all_decided {
                 continue;
@@ -435,7 +475,7 @@ impl ExpandState {
                     let mut sk = build_skolem(&self.exs, &self.dep_lists, &self.tables);
                     crate::bce::reconstruct(&mut sk, f, &self.bce_stack);
                     self.mode = Mode::Exhausted;
-                    return Step::Sat(sk);
+                    return Step::Sat(Some(sk));
                 }
                 Some(ub) => {
                     self.bad_rows.push(ub);

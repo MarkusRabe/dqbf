@@ -287,7 +287,7 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                     return Output {
                         verdict: Verdict::Sat,
                         proof: None,
-                        skolem: Some(sk),
+                        skolem: sk,
                         stats: format!("expand (slice {:.2}s)", slice),
                     };
                 }

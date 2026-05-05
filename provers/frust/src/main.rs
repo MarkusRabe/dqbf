@@ -1,6 +1,8 @@
 mod aiger;
+mod arbiter;
 mod bce;
 mod cdcl;
+mod definability;
 mod expand;
 mod expand_state;
 mod formula;

@@ -61,6 +61,7 @@ pub struct Cdcl {
     pub conflicts: u64,
     pub n_learned: usize,
     pub budget_hit: bool,
+    decide: Vec<bool>,
     core: Vec<Lit>,
 }
 
@@ -85,6 +86,7 @@ impl Cdcl {
             conflicts: 0,
             n_learned: 0,
             budget_hit: false,
+            decide: vec![true; n_vars + 1],
             core: Vec::new(),
         };
         for c in clauses {
@@ -367,14 +369,14 @@ impl Cdcl {
             let mut best: Option<usize> = None;
             let mut best_a = -1.0f64;
             for v in 1..=self.n_vars {
-                if self.value[v] == 0 && self.activity[v] > best_a {
+                if self.value[v] == 0 && self.decide[v] && self.activity[v] > best_a {
                     best_a = self.activity[v];
                     best = Some(v);
                 }
             }
             best
         } else {
-            (1..=self.n_vars).find(|&v| self.value[v] == 0)
+            (1..=self.n_vars).find(|&v| self.value[v] == 0 && self.decide[v])
         };
         v.map(|v| {
             if self.phase[v] >= 0 {
@@ -383,6 +385,12 @@ impl Cdcl {
                 2 * v as ILit + 1
             }
         })
+    }
+
+    pub fn set_decision(&mut self, v: u32, d: bool) {
+        if (v as usize) <= self.n_vars {
+            self.decide[v as usize] = d;
+        }
     }
 
     /// Incremental solve under `assumptions` (external Lit polarity).
