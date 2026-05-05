@@ -15,6 +15,7 @@ macro_rules! dbg_ex {
 pub enum Step {
     Sat(Option<Skolem>),
     UnsatRow(u32),
+    Unsat,   // exhausted slot space; no Skolem exists; no cert
     Pending, // ran out of slice budget mid-search
     Done,    // exhausted; can't decide
 }
@@ -298,6 +299,7 @@ impl ExpandState {
         // ---- Slot-DPLL (resumable from self.decisions/next_slot) ----
         let mut pins: Vec<(Var, i8)> = Vec::new();
         let mut iters = 0u64;
+        let mut any_budget = false;
         loop {
             iters += 1;
             if iters & 0x3f == 0 && start.elapsed().as_secs_f64() > deadline {
@@ -336,6 +338,7 @@ impl ExpandState {
                 }
                 let assumps = self.row_assumps(ub, &pins);
                 if !cdcl.solve(&assumps, &mut self.model, self.row_budget) {
+                    any_budget |= cdcl.budget_hit;
                     prune = true;
                     break;
                 }
@@ -387,7 +390,19 @@ impl ExpandState {
                             added.len(),
                             cdcl.n_learned
                         );
-                        if added.is_empty() || self.cegar_round >= 50 {
+                        if added.is_empty() {
+                            // Every assignment to the current slots was
+                            // backtracked: prune (row-UNSAT under pins)
+                            // proves that slot-assignment can't extend
+                            // to a Skolem table; soft-at-all-decided is
+                            // impossible since every slot is pinned.
+                            // Exhaustion ⇒ DQBF UNSAT, *unless* some
+                            // CDCL call hit its conflict budget (then
+                            // the prune was inconclusive).
+                            self.mode = Mode::Exhausted;
+                            return if any_budget { Step::Done } else { Step::Unsat };
+                        }
+                        if self.cegar_round >= 50 {
                             self.mode = Mode::Exhausted;
                             return Step::Done;
                         }

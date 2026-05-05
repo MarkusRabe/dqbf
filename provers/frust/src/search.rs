@@ -291,6 +291,14 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                         stats: format!("expand (slice {:.2}s)", slice),
                     };
                 }
+                crate::expand_state::Step::Unsat => {
+                    return Output {
+                        verdict: Verdict::Unsat,
+                        proof: None,
+                        skolem: None,
+                        stats: format!("expand-slot-exhausted (slice {:.2}s)", slice),
+                    };
+                }
                 crate::expand_state::Step::UnsatRow(_) => {
                     known_unsat = true;
                     expand_done = true;
