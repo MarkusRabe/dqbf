@@ -61,16 +61,30 @@ CSS = (
     "nav#tabs button.active{background:#fff;font-weight:600;"
     "box-shadow:0 -2px 0 #0969da inset}"
     "section.tab{display:none}section.tab.active{display:block}"
-    "ul.famtree,ul.famtree ul{list-style:none;margin:0;padding-left:1em}"
-    "ul.famtree>li{padding-left:0}"
-    "ul.famtree li{line-height:1.6}"
+    "ul.famtree,ul.famtree ul{list-style:none;margin:0;padding:0}"
+    "ul.famtree li{line-height:1.7}"
     ".famtree ul.folded{display:none}"
+    ".famrow{display:flex;align-items:center;gap:.3em;"
+    "border-bottom:1px solid #f0f1f3;padding:.05em 0}"
+    ".famrow:hover{background:#f6f8fa}"
+    ".famname{flex:1;min-width:0;white-space:nowrap;overflow:hidden;"
+    "text-overflow:ellipsis}"
+    ".famstats{display:grid;grid-auto-flow:column;gap:0;"
+    "font-family:ui-monospace,monospace;font-size:.8em}"
+    ".famstats span{width:7.2em;text-align:right;padding:.1em .4em;"
+    "border-left:1px solid #f0f1f3}"
+    ".famhead{display:flex;align-items:center;gap:.3em;font-weight:600;"
+    "border-bottom:1px solid var(--bd);padding:.3em 0;background:var(--bg);"
+    "position:sticky;top:0;z-index:1}"
+    ".famhead .famname{padding-left:1.4em}"
+    ".famhead .famstats span{border-left:none}"
     ".famfold{display:inline-block;width:1em;text-align:center;cursor:pointer;"
     "font-family:ui-monospace,monospace;user-select:none;color:var(--mut)}"
     ".famfold-none{cursor:default;color:transparent}"
-    "a.famonly{font-size:.8em;color:var(--mut);margin-left:.4em;cursor:pointer;"
+    "a.famonly{font-size:.75em;color:var(--mut);margin-left:.3em;cursor:pointer;"
     "text-decoration:none}a.famonly:hover{text-decoration:underline;color:var(--fg)}"
-    ".ctl fieldset.families{max-height:16em;overflow:auto;min-width:14em}"
+    ".famtree-panel{border:1px solid var(--bd);border-radius:var(--r);"
+    "max-height:28em;overflow:auto;margin:.6em 0;font-size:.9em}"
 )
 
 
@@ -99,13 +113,14 @@ def _opts(solvers: list[str], selected: str = "") -> str:
 
 
 def _family_tree(scope: str, families: list[str]) -> str:
-    """Nested <ul class="famtree"> with one checkbox per node + an 'only' link.
+    """Nested <ul class="famtree"> with checkbox + per-solver stats per node.
 
-    Leaf checkboxes carry class=famchk-<scope> and value=<full family path>
-    so the existing state(scope) JS keeps working unchanged. Interior
-    checkboxes use class=famint-<scope> and have no value.
+    Each node carries a `data-path` attribute (the path-prefix for interior
+    nodes, the full family for leaves) so the JS can attach aggregated
+    solved/total per solver. Leaf checkboxes carry class=famchk-<scope>
+    and value=<full family path> so state(scope) keeps working; interior
+    checkboxes use class=famint-<scope>.
     """
-    # Build a trie: node = {"_leaf": str|None, children: {seg: node}}
     root: dict = {"_leaf": None, "ch": {}}
     for fam in sorted(families):
         cur = root
@@ -113,38 +128,44 @@ def _family_tree(scope: str, families: list[str]) -> str:
             cur = cur["ch"].setdefault(seg, {"_leaf": None, "ch": {}})
         cur["_leaf"] = fam
 
-    def emit(label: str, node: dict) -> str:
-        leaf = node["_leaf"]
-        kids = node["ch"]
+    def emit(label: str, node: dict, depth: int, path: str) -> str:
+        leaf, kids = node["_leaf"], node["ch"]
         if leaf is not None:
             cb = f'<input type="checkbox" class="famchk-{scope}" value="{_esc(leaf)}" checked>'
         else:
             cb = f'<input type="checkbox" class="famint-{scope}" checked>'
         if kids:
             fold = '<span class="famfold">▸</span>'
-            sub = (
-                '<ul class="folded">'
-                + "".join(emit(k, v) for k, v in sorted(kids.items()))
-                + "</ul>"
-            )
+            sub = '<ul class="folded">' + "".join(
+                emit(k, v, depth + 1, f"{path}/{k}") for k, v in sorted(kids.items())
+            ) + "</ul>"
         else:
             fold = '<span class="famfold famfold-none">·</span>'
             sub = ""
-        return f'<li>{fold}{cb} {_esc(label)} <a class="famonly">only</a>{sub}</li>'
+        pad = f'style="padding-left:{depth * 1.2:.1f}em"'
+        return (
+            f'<li><div class="famrow" data-path="{_esc(path)}" {pad}>'
+            f'{fold}{cb}<span class="famname">{_esc(label)}'
+            f' <a class="famonly">only</a></span>'
+            f'<span class="famstats"></span></div>{sub}</li>'
+        )
 
-    inner = "".join(emit(k, v) for k, v in sorted(root["ch"].items()))
+    inner = "".join(emit(k, v, 1, k) for k, v in sorted(root["ch"].items()))
     return (
+        f'<div class="famtree-panel">'
+        f'<div class="famhead"><span class="famname">family</span>'
+        f'<span class="famstats" id="famstats-hdr-{scope}"></span></div>'
         f'<ul class="famtree" data-scope="{scope}">'
-        f'<li><span class="famfold">▾</span>'
-        f'<input type="checkbox" class="famint-{scope}" checked> all '
-        f'<a class="famonly">only</a><ul>{inner}</ul></li></ul>'
+        f'<li><div class="famrow" data-path=""><span class="famfold">▾</span>'
+        f'<input type="checkbox" class="famint-{scope}" checked>'
+        f'<span class="famname"><b>all</b> <a class="famonly">only</a></span>'
+        f'<span class="famstats"></span></div><ul>{inner}</ul></li></ul></div>'
     )
 
 
 def _local_controls(scope: str, families: list[str], extra: str) -> str:
     return f"""
 <div class="ctl">
-  <fieldset class="families"><legend>families</legend>{_family_tree(scope, families)}</fieldset>
   <fieldset><legend>result</legend>
     <label><input type="radio" name="resf-{scope}" value="all" checked> all</label>
     <label><input type="radio" name="resf-{scope}" value="sat"> sat</label>
@@ -152,6 +173,7 @@ def _local_controls(scope: str, families: list[str], extra: str) -> str:
   </fieldset>
   {extra}
 </div>
+{_family_tree(scope, families)}
 """
 
 
@@ -244,6 +266,53 @@ function rowsFor(solver, st){
   return rowsAll(st).filter(r => r.solver === solver);
 }
 
+function pctCell(ok, n){
+  if(!n) return "—";
+  const pct = Math.round(100*ok/n);
+  // Heat: red→yellow→green via HSL.
+  const bg = `hsl(${Math.round(pct*1.2)} 65% 92%)`;
+  const s = el("span",{}); s.style.background = bg;
+  s.textContent = `${ok}/${n} ${String(pct).padStart(3)}%`;
+  return s;
+}
+
+function updateFamStats(scope){
+  const SV = dSolvers(), df = dFams();
+  const resf = ($$("input[name=resf-"+scope+"]").find(r=>r.checked)||{}).value || "all";
+  // Per-leaf-family stats over the *full* domain (ignoring checkbox
+  // selection — the tree shows what's available, not what's filtered).
+  const leaf = {};  // family -> {n, ok:{sv:n}}
+  for(const r of DATA){
+    if(!df.has(r.family) || !SV.includes(r.solver)) continue;
+    if(resf!=="all" && r.expected!==resf) continue;
+    const d = leaf[r.family] ||= {paths:new Set(), ok:{}};
+    d.paths.add(r.path);
+    if(SOLVED.has(r.got)) d.ok[r.solver] = (d.ok[r.solver]||0)+1;
+  }
+  // Header.
+  const hdr = $("#famstats-hdr-"+scope);
+  if(hdr){ hdr.textContent=""; for(const s of SV) hdr.appendChild(el("span",{text:s})); }
+  // Each node aggregates over leaf families with matching path-prefix.
+  const tree = $$("ul.famtree").find(t=>t.dataset.scope===scope);
+  if(!tree) return;
+  for(const row of tree.querySelectorAll(".famrow")){
+    const p = row.dataset.path;
+    let n=0; const ok={}; for(const s of SV) ok[s]=0;
+    for(const [f,d] of Object.entries(leaf)){
+      if(p==="" || f===p || f.startsWith(p+"/")){
+        n += d.paths.size;
+        for(const s of SV) ok[s] += d.ok[s]||0;
+      }
+    }
+    const stats = row.querySelector(".famstats");
+    stats.textContent = "";
+    for(const s of SV){
+      const c = pctCell(ok[s], n);
+      stats.appendChild(typeof c==="string" ? el("span",{text:c}) : c);
+    }
+  }
+}
+
 function certRowFor(srows){
   const n = srows.length;
   let withc=0, valid=0, inv=0, skip=0, bytes=0;
@@ -298,25 +367,9 @@ function cactus(rs){
 function renderOverview(){
   const st = state("overview");
   const rs = rowsAll(st);
-  const SV = dSolvers(), df = dFams();
+  const SV = dSolvers();
   const root = $("#overview"); root.textContent = "";
-  const fams = FAMILIES.filter(f=>st.fams.has(f) && df.has(f));
-
-  // per-family % solved
-  const nInst = {}; // family -> #unique paths
-  for (const f of fams)
-    nInst[f] = new Set(rs.filter(r=>r.family===f).map(r=>r.path)).size;
-  const famRows = fams.map(f=>{
-    const cells=[f];
-    for (const s of SV){
-      const ok = rs.filter(r=>r.family===f && r.solver===s && SOLVED.has(r.got)).length;
-      const n = nInst[f]||0;
-      cells.push(n?`${ok}/${n} (${Math.round(100*ok/n)}%)`:"-");
-    }
-    return cells;
-  });
-  root.appendChild(el("h3",{text:"% solved per family"}));
-  root.appendChild(tbl(["family",...SV], famRows));
+  updateFamStats("overview");
 
   // SAT vs UNSAT by expected
   const suRows=[];
@@ -366,19 +419,8 @@ function renderSingle(){
   const solo = $("#solo").value;
   const rs = rowsFor(solo, st);
   const root = $("#single"); root.textContent = "";
+  updateFamStats("single");
   root.appendChild(el("h3",{text:`Solver: ${solo} — ${rs.length} instances`}));
-
-  // per-family
-  const byFam = {};
-  for (const r of rs){
-    const f = byFam[r.family] ||= {n:0,sat:0,unsat:0,unknown:0,timeout:0,error:0};
-    f.n++; f[r.got] = (f[r.got]||0)+1;
-  }
-  const famRows = Object.keys(byFam).sort().map(f=>{
-    const d=byFam[f]; const solved=(d.sat||0)+(d.unsat||0);
-    return [f,d.n,solved,d.sat||0,d.unsat||0,d.unknown||0,d.timeout||0,d.error||0];
-  });
-  root.appendChild(tbl(["family","n","solved","sat","unsat","unknown","timeout","error"], famRows));
 
   // cert table
   const certRows=[];
@@ -426,6 +468,7 @@ function histogram(ts){
 function renderPair(){
   const st = state("pair");
   const root = $("#pair"); root.textContent = "";
+  updateFamStats("pair");
   const A=$("#cmpA").value, B=$("#cmpB").value;
   root.appendChild(el("h3",{text:`Compare: ${A} vs ${B}`}));
   const ra={}, rb={};
@@ -528,7 +571,6 @@ function wireFamTree(tree, render){
   const leavesOf = li => Array.from(li.querySelectorAll(".famchk-"+scope));
   const interiorsOf = li => Array.from(li.querySelectorAll(".famint-"+scope));
   function syncInterior(){
-    // bottom-up: each interior reflects its descendant leaves
     const ints = Array.from(tree.querySelectorAll(".famint-"+scope)).reverse();
     for(const cb of ints){
       const ls = leavesOf(cb.closest("li"));
@@ -537,7 +579,6 @@ function wireFamTree(tree, render){
       cb.indeterminate = on>0 && on<ls.length;
     }
   }
-  // interior toggle => set all descendant leaves
   for(const cb of tree.querySelectorAll(".famint-"+scope)){
     cb.addEventListener("change", ()=>{
       const li = cb.closest("li");
@@ -546,14 +587,12 @@ function wireFamTree(tree, render){
       syncInterior(); render();
     });
   }
-  // leaf change => resync interior
   for(const cb of tree.querySelectorAll(".famchk-"+scope)){
     cb.addEventListener("change", ()=>{ syncInterior(); render(); });
   }
-  // fold/unfold toggle on interior nodes
   function setFold(li, folded){
     const ul = li.querySelector(":scope > ul");
-    const tg = li.querySelector(":scope > .famfold");
+    const tg = li.querySelector(":scope > .famrow > .famfold");
     if(!ul || !tg || tg.classList.contains("famfold-none")) return;
     ul.classList.toggle("folded", folded);
     tg.textContent = folded ? "▸" : "▾";
@@ -566,7 +605,6 @@ function wireFamTree(tree, render){
       setFold(li, !ul.classList.contains("folded"));
     });
   }
-  // 'only' => uncheck all leaves in scope, check leaves under this <li>, expand it
   for(const a of tree.querySelectorAll("a.famonly")){
     a.addEventListener("click", ev=>{
       ev.preventDefault();
@@ -619,7 +657,7 @@ function applyDomain(){
     for(const cb of tree.querySelectorAll(".famchk-"+scope))
       cb.closest("li").style.display = df.has(cb.value) ? "" : "none";
     for(const li of [...tree.querySelectorAll("li")].reverse()){
-      if(li.querySelector(":scope > input.famchk-"+scope)) continue; // leaf handled
+      if(li.querySelector(":scope > .famrow > input.famchk-"+scope)) continue;
       const vis = [...li.querySelectorAll(".famchk-"+scope)]
         .some(l=>l.closest("li").style.display!=="none");
       li.style.display = vis ? "" : "none";
