@@ -628,6 +628,33 @@ it just colours the cell. The probe script does flag them; the agent
 running iters 5-8 missed it. Added to IMPROVEMENT_LOOP: `grep INVALID`
 after every probe.
 
+**Gotcha 2 (runner).** The 2 hwmc UNSAT-"invalid" certs were *stale
+.frp files* (47MB) left from an earlier iteration; current frust emits
+no cert via `Step::Unsat`, but `_run_one` read the leftover. Fixed:
+unlink templated cert paths before launching the solver (`0a54ad0`).
+
+## Refined-loop iteration 11: |E| gate raised; eager seed; flip-SAT→arbiter (2026-05-05)
+
+**Target**: `pec_circuits` (123 unsolved). Two constraints:
+(a) `|E|>1500` gate cut out alu_add_n20 (|E|=1828) — circuits, not
+the collatz n64 unrolled (|E|=30k+) the gate was meant for;
+(b) CEGAR at |E|~700-900 hits deadline ~1800-forcing-short of
+convergence.
+
+**Change** (`b9e7c69`):
+- Gate raised 1500→5000.
+- Round 1 of CEGAR seeds a forcing clause for *every* existential
+  (not just disagreeing y) so validity starts mostly constrained.
+- Exposed: Padoa-"defined" via linked-z is **not** dep(y)-alone-
+  defined; flip-check returns SAT and previously bailed. Now falls
+  through to arbiter allocation regardless of Padoa verdict.
+  `undef_set` is just a fast-path skip-flip hint.
+
+**Result: +23/-1 = +22 net**, 1732/2856. 0 INVALID. Gains all in
+`pec_circuits`; loss is one random_qbf borderline. fifo1_n20/n24
+(were timeout) now SAT in 573-658 rounds. alu_add_n20+ still
+diverges (16k forcing at 30s) — interpolation gap; cores are wide.
+
 ---
 
 ## Appendix: iteration tables
