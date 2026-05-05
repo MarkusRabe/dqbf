@@ -67,6 +67,21 @@ def registry() -> dict[str, Solver]:
             certs={"sat": "{certdir}/{stem}.aag", "unsat": "{certdir}/{stem}.frp"},
             available=_exists(str(ROOT / "provers/frust/target/release/frust")),
         ),
+        "frust-prev": Solver(
+            name="frust-prev",
+            cmd=[
+                "/tmp/frust-iter2",
+                "{file}",
+                "--timeout",
+                "{timeout}",
+                "--cert",
+                "{certdir}/{stem}.aag",
+                "--proof",
+                "{certdir}/{stem}.frp",
+            ],
+            certs={"sat": "{certdir}/{stem}.aag", "unsat": "{certdir}/{stem}.frp"},
+            available=_exists("/tmp/frust-iter2"),
+        ),
         "cadet": Solver(
             name="cadet",
             cmd=[cadet, "-c", "{certdir}/{stem}.aag", "{file}"],
