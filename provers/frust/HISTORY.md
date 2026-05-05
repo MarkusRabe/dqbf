@@ -450,6 +450,61 @@ produced identical orderings — likely the universals-only-satisfy
 heuristic is too coarse (most clauses have no universal lit after
 BCE).
 
+## Refined-loop iteration 3: definability mode for |U|>16 (2026-05-05, `2718668`)
+
+**Target**: `pec_circuits` — 145 unsolved, all SAT, all |U|>16, all
+heterogeneous deps. **Constraint named: architectural** —
+`Mode::Partial` is UNSAT-only, so frust had *no* SAT path here.
+dqbdd/hqs solve these in 0.1 s median; pedant in 1.2 s.
+
+**Hypothesis (validated by Python prototype + reading Pedant source)**:
+each existential is either *dep-definable* (Padoa: two-copy SAT
+sharing dep(y), `y_A∧¬y_B` UNSAT) or has a tiny choice-space. If all
+defined, the unique model-function is the only Skolem candidate;
+validate it via one co-SAT loop on `Tseitin(¬matrix) + forcing
+clauses`. Undefined-y become *arbiters* (one cell per dep-row, or one
+constant when |dep|>8) searched by a third CDCL.
+
+**Change** (4 sub-attempts, multi-file):
+- `definability.rs`: selector-gated 2-copy Padoa fixpoint.
+- `arbiter.rs`: validity-CEGAR with `analyze_final`-derived forcing
+  clauses + per-cell/constant arbiter backtrack.
+- `cdcl.rs`: `set_decision()` so unallocated arbiter slots aren't
+  decided (300× speedup vs naive pre-alloc).
+- `expand_state.rs`: `Mode::Definability` runs first when
+  `partial=true`; `Step::Sat(Option<Skolem>)` so SAT-no-cert is
+  expressible.
+
+**Result on 1517-overlap: +34/-20 = +14 net.** 0 INVALID; 27/27 new
+SAT verdicts confirmed by pedant.
+
+| where | gained | lost | note |
+|---|---:|---:|---|
+| pec_circuits/_complete | +22 SAT, +1 UNSAT | — | all SAT no-cert (max\|dep\|>20) |
+| random_qbf/v3/3qbf | +8 SAT | — | **with** valid cert (\|U\|=20) |
+| hwmcc_legacy / bmc / cbmc | +3 UNSAT | -20 | budget eaten by Padoa+CEGAR before fall-through |
+
+**Gotchas.**
+- `cmodel` was clobbered by per-y flip-checks → spurious arbiter
+  allocation (one (y, dep-row) showed 3885 cells for |dep|=24).
+  Separate `scratch` model.
+- Pre-allocating 20k arbiter vars made `pick_branch` decide all of
+  them — `set_decision(v, false)` skips them.
+- `cfg.extract_cert = cert_path.is_some()` means expand never runs
+  without `--cert` — bit me twice while testing.
+- Six fifo1 `_complete` instances are genuinely UNSAT (frp-validated)
+  despite the name — generator artefact, not a frust bug.
+- Forcing-clause core can include universals ∉ dep(y) only if
+  assumptions leaked — restricting flip-check assumptions to
+  `dep_lits` keeps the core ⊆ dep(y).
+
+**Left for iter 4.** CEGAR convergence is the bottleneck (1000+ rounds
+× |E| flip-checks; |E|>500 doesn't fit in 3.5 s). Recovering the 20
+lost UNSAT means gating definability on a quick "looks circuit-like"
+check (e.g., bail if |E|>2000 or unit-prop forces <80% of E). Cert at
+max|dep|>20 needs an AIGER-circuit emitter from forcing clauses
+instead of truth-tables.
+
 ---
 
 ## Appendix: iteration tables
