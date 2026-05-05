@@ -586,6 +586,21 @@ behaviour) since iter4's targeting doubled rounds for +0.
 
 **Result: +1/-0 = +1 net**, 1668/2856. Recovers iter6's noise loss.
 
+## Refined-loop iteration 8: definability for multi-key |U|≤16 (2026-05-05)
+
+**Target**: consistency-shape SAT (`hwmc_indinv`, `bmc/succinct`,
+`cbmc_v2/succinct`, `prog_equiv`). SlotDpll loops on these; arbiters
+should find the small Skolem.
+
+**Change**: `Mode::Definability` runs first whenever `!eae` (≥2 dep
+sizes), not only when `partial`. Falls through to SlotDpll (not
+Partial) when |U|≤16.
+
+**Result: +41/-2 = +39 net**, 1707/2856. 0 INVALID; 40/40 sampled
+no-cert verdicts match pedant. Gains across `bmc/succinct` (~25),
+`cbmc_v2/succinct` (~10), `hwmc_indinv` (+2), `collatz/v2` (+2).
+Losses are noise.
+
 ---
 
 ## Appendix: iteration tables
