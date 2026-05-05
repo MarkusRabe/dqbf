@@ -1,17 +1,19 @@
 # bmc_circuits_v3 — wider widths, new circuits, balanced safe/bug
 
-Third iteration of the parametric-circuit BMC family. Differs from
-v1/v2 in three ways:
+Third iteration of the parametric-circuit BMC family. Strict superset
+of v1/v2 at a wider grid:
 
 1. **11 new circuit types** not in v1/v2 — see table below.
-2. **Wider sweep**: `N ∈ {4,8,12,16,20,24,32}` × `k ∈ {8,24}`.
-3. **Paired safe/bug variants** per `(circuit, N)`. The `_safe` AIGER
-   satisfies its property (BMC is UNSAT for every k); the `_bug` AIGER
-   has one localised fault with a known reachability depth `k_bad`, so
-   `expected = sat if k ≥ k_bad else unsat` is set **by construction**.
+2. **All 16 v1+v2 circuits** regenerated under `legacy_*/` (safe-only).
+3. **Wider sweep**: `N ∈ {4,8,12,16,20,24,32}` × `k ∈ {8,24}`.
+4. **Paired safe/bug variants** per new `(circuit, N)`. The `_safe`
+   AIGER satisfies its property (BMC is UNSAT for every k); the `_bug`
+   AIGER has one localised fault with a known reachability depth
+   `k_bad`, so `expected = sat if k ≥ k_bad else unsat` is set
+   **by construction**.
 
-Default grid: 11 × 7 × 2 × 2 = 308 instances; 190 UNSAT / 118 SAT;
-253–36k vars.
+Default grid: 532 instances — 308 new (11 × 7 × 2 × 2; 190 UNSAT /
+118 SAT; 253–36k vars) + 224 legacy (16 × 7 × 2; expected=unknown).
 
 ## Circuits
 
@@ -32,10 +34,9 @@ Default grid: 11 × 7 × 2 × 2 = 308 instances; 190 UNSAT / 118 SAT;
 ## Generate
 
 ```bash
-python -m benchmarks.train.bmc_circuits_v3.generate          # 308 instances
+python -m benchmarks.train.bmc_circuits_v3.generate          # 532 instances
 # extras
 ... --indinv                        # +154 inductive-invariant variants
-... --include-legacy                # +v1/v2 circuits at this grid
 ... -N 4,8,12,16,20,24,32 -K 8,16,24 --max-vars 100000
 ```
 

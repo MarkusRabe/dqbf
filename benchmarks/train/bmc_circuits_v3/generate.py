@@ -9,8 +9,9 @@ Compared to v1/v2:
   UNSAT for all k; bug has a constructed ``k_bad`` so ``expected`` is
   derived (sat if k≥k_bad else unsat) without running a solver.
 - Instances over ``--max-vars`` (default 50k) are skipped.
-- ``--include-legacy`` additionally regenerates the v1+v2 circuits at
-  this grid (safe-only — those builders take no bug flag).
+- All v1+v2 circuits are also regenerated at this grid under
+  ``legacy_*/`` (safe-only — those builders take no bug flag), so v3 is
+  a strict superset of the earlier families at the same width sweep.
 """
 
 from __future__ import annotations
@@ -43,7 +44,6 @@ BOUNDS = (8, 24)
 @click.option("-K", "bounds", default=",".join(str(k) for k in BOUNDS))
 @click.option("--max-vars", default=50_000, help="skip instances above this size")
 @click.option("--max-per-circuit", default=0, help="cap instances per circuit dir (0 = none)")
-@click.option("--include-legacy", is_flag=True, help="also emit v1+v2 circuits at this grid")
 @click.option("--indinv/--no-indinv", default=False, help="also emit inductive-invariant variants")
 def main(
     out: str,
@@ -51,7 +51,6 @@ def main(
     bounds: str,
     max_vars: int,
     max_per_circuit: int,
-    include_legacy: bool,
     indinv: bool,
 ) -> None:
     base = Path(out)
@@ -125,36 +124,35 @@ def main(
         total += len(manifest)
         print(f"{name}: {len(manifest)} instances → {d}/")
 
-    if include_legacy:
-        legacy = {**REGISTRY, **REGISTRY_V2}
-        for name, lfn in sorted(legacy.items()):
-            d = base / f"legacy_{name}"
-            d.mkdir(parents=True, exist_ok=True)
-            manifest = []
-            for n in ws:
-                aag, comment = lfn(n)
-                (d / f"{name}_n{n}.aag").write_text(aag)
-                seq = parse_seq_aag(aag)
-                for k in ks:
-                    f = encode(seq, k=k, source=f"{name}_n{n}.aag")
-                    if f.n_vars > max_vars:
-                        skipped.append(f"legacy/{name} n={n} k={k} ({f.n_vars} vars)")
-                        continue
-                    inst = f"{name}_n{n}_k{k:03d}"
-                    with gzip.open(d / f"{inst}.dqdimacs.gz", "wt") as fp:
-                        fp.write(f"c bmc_circuits_v3/legacy_{name} N={n} k={k}: {comment}\n")
-                        fp.write(dqdimacs.dumps(f))
-                    manifest.append(
-                        {
-                            "path": f"{inst}.dqdimacs.gz",
-                            "expected": "unknown",
-                            "tags": ["bmc_circuits_v3", "legacy", name],
-                            "params": {"N": n, "k": k},
-                        }
-                    )
-            (d / "manifest.json").write_text(json.dumps(manifest, indent=2))
-            total += len(manifest)
-            print(f"legacy_{name}: {len(manifest)} instances → {d}/")
+    legacy = {**REGISTRY, **REGISTRY_V2}
+    for name, lfn in sorted(legacy.items()):
+        d = base / f"legacy_{name}"
+        d.mkdir(parents=True, exist_ok=True)
+        manifest = []
+        for n in ws:
+            aag, comment = lfn(n)
+            (d / f"{name}_n{n}.aag").write_text(aag)
+            seq = parse_seq_aag(aag)
+            for k in ks:
+                f = encode(seq, k=k, source=f"{name}_n{n}.aag")
+                if f.n_vars > max_vars:
+                    skipped.append(f"legacy/{name} n={n} k={k} ({f.n_vars} vars)")
+                    continue
+                inst = f"{name}_n{n}_k{k:03d}"
+                with gzip.open(d / f"{inst}.dqdimacs.gz", "wt") as fp:
+                    fp.write(f"c bmc_circuits_v3/legacy_{name} N={n} k={k}: {comment}\n")
+                    fp.write(dqdimacs.dumps(f))
+                manifest.append(
+                    {
+                        "path": f"{inst}.dqdimacs.gz",
+                        "expected": "unknown",
+                        "tags": ["bmc_circuits_v3", "legacy", name],
+                        "params": {"N": n, "k": k},
+                    }
+                )
+        (d / "manifest.json").write_text(json.dumps(manifest, indent=2))
+        total += len(manifest)
+        print(f"legacy_{name}: {len(manifest)} instances → {d}/")
 
     print(f"total: {total} instances; {len(skipped)} skipped (>{max_vars} vars)")
     for s in skipped[:20]:
