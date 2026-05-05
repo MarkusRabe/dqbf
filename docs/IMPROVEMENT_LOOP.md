@@ -1,159 +1,143 @@
 # Prover improvement loop
 
-The medium-term goal is a closed loop in which the `forkres` prover is
-iteratively improved against **scalable, generated** benchmark families,
-with every result independently verified so the loop never has to trust
-the prover.
+How to iterate on a DQBF prover without fooling yourself. This was
+written before `frust` existed; the "Lessons" section below is what we
+learned from actually running ~35 iterations on it.
 
 ```
-generate (EQFOB)  →  train families  →  run prover  →  verify each result
-        ↑                                                 │
-        └─────────── compare vs baseline, propose change ─┘
+generate (EQFOB/AIGER/TLSF)  →  train families  →  run prover  →  verify each result
+        ↑                                                              │
+        └──────────── per-instance diff vs baseline, propose change ───┘
 ```
 
-## Current state (2026-04)
+## Current state (2026-05)
 
-| Area | Status | Gap that blocks the loop |
-|---|---|---|
-| `core/` IR + DQDIMACS | working | — |
-| `forkres` rules | working | SFEx exists but is never invoked by search |
-| `forkres` search | partial | naive saturation; no heuristics; FEx only |
-| SAT certificate | partial | obtained by brute-force `find_skolem`, not from the proof — caps at ~20 vars |
-| `tools/verify` SAT | partial | enumerates 2^\|U\| universal assignments — caps at ~20 universals |
-| `tools/verify` UNSAT | working | proof replay scales linearly |
-| EQFOB compiler | working | `udiv urem`, signed cmp, variable shift unimplemented |
-| EQFOB families | stub | `bitwidth_scaling/generate.py` emits source text only; never compiles to `.dqdimacs` |
-| Runner | partial | runs + summarizes one JSONL; no two-run diff/regression |
-| Encoders (qbvf/bmc/ltlsynth) | stub | `NotImplementedError` |
-| Rust prover | stub | parser only; `solve` returns Unknown |
+| Area | Status |
+|---|---|
+| `tools/verify` SAT (DQDIMACS+AIGER → CNF, kissat) | working |
+| `tools/verify` UNSAT (`.frp` replay) | working |
+| `frust` | 1077/1517 train, 728 verified certs, 0 invalid; CDCL+expand+saturate interleaved |
+| `forkres` (Python reference) | 131/1517; correctness oracle, not speed |
+| Multi-solver runner + report (cactus, pairwise, cert table) | working |
+| Benchmark families | 27 train, 4 valid; 3 domains (DQBF/HWMC/SYNTCOMP) |
+| External solvers wired | dqbdd, hqs, pedant, caqe, cadet, abc-bmc/-pdr, strix |
+| HISTORY.md | per-iteration narrative for `frust` |
 
 ## Benchmark split — policy
 
-The loop must not optimize against the instances it will be evaluated on.
-
-```
-benchmarks/
-  test/       Competition sets (QBFLIB DQBF, SMT-LIB, future SYNTCOMP).
-              NEVER used inside the improvement loop. Touched only for
-              milestone evaluation runs that are reported, not iterated on.
-  train/      Scalable generated families. Each family is a generator
-              parameterized by at least one integer (bit-width N, BMC
-              bound k, state count n, …) so difficulty is a dial.
-  tiny/       Hand-sized correctness regressions (already in tests/integration).
-```
-
-A "training" family must:
-1. be **generated** (no fixed instance files committed; generator + manifest only),
-2. expose a **scale parameter** so the loop can ask "what is the largest N
-   solved within budget T?",
-3. have a **known expected result** (or be self-dual so SAT/UNSAT is
-   determined by construction),
-4. compile to DQDIMACS via EQFOB so the same pipeline produces every
-   instance.
-
-Initial families (all EQFOB-authored):
-- `bitwidth_scaling` — `∃f. ∀x[,y]. f(args) == op(args)` for each BV op,
-  swept over `N`.
-- `bmc_mutex` — k-step unrolling of a 2-process mutex with one black-box
-  arbiter.
-- `synthesis_invertibility` — `∃f. ∀x. op(f(x), x) == c` invertibility
-  conditions, swept over `N`.
-- `dep_cycle` — the §6 cycle counterexample, swept over width; exercises
-  SFEx specifically.
-
-## Prerequisites — what must land before the loop can run
-
-Ordered; each gates the next.
-
-### P1. Scalable SAT-certificate verification
-
-Replace enumeration in `tools/verify/sat.py` with the standard
-substitute-then-SAT-check:
-
-1. Represent the Skolem certificate as an AIGER circuit (already have a
-   writer in `core/aiger.py`; add a reader or keep an in-memory AIG).
-2. Substitute each existential's AIG into the matrix → a propositional
-   circuit over universals only.
-3. Tseitin-encode and hand `¬matrix` to a SAT solver (PySAT / CaDiCaL).
-   UNSAT ⇒ certificate valid.
-
-This removes the 2^\|U\| ceiling. UNSAT-side proof replay already
-scales.
-
-### P2. Certificate extraction from the prover (not brute force)
-
-`find_skolem` is double-exponential. Replace with extraction from the
-saturated clause set / proof structure:
-
-- On SAT (saturation reached), the clause database implicitly defines
-  each existential as a function of its dependency set. Extract per-
-  existential definitions by Shannon-style cofactoring against the
-  dependency set, or by recording which literals were "decided" during
-  saturation.
-- Short-term acceptable fallback: a per-existential SAT-based
-  interpolation against the saturated clause set.
-
-Without P2 the loop can verify UNSAT results at scale but not SAT
-results.
-
-### P3. Train-family generators end-to-end
-
-Wire `benchmarks/train/<family>/generate.py` to actually call
-`eqfob.parse → typecheck → bitblast → dqdimacs.dump`, write
-`.dqdimacs.gz` under a build dir, and emit a `manifest.json` the runner
-consumes. One family fully working (`bitwidth_scaling`) is the bar.
-
-### P4. Runner diff
-
-Add `benchmarks/runner/compare.py`:
-`compare(baseline.jsonl, candidate.jsonl) → {family: {Δsolved, Δmax_scale, Δmedian_time, regressions: [...]}}`.
-"Regression" = any instance that went ok→wrong or ok→timeout.
-
-### P5. SFEx in search
-
-`search.py` must apply `strong_fork_extend` when plain FEx makes no
-progress (dependency cycle). Without this the `dep_cycle` family is
-unsolvable at any width and the loop has nothing to push on for that
-family.
+Unchanged: `train/` (loop iterates here), `valid/` (seed-shifted spot
+check), `test/` (competition sets, evaluation only). Never feed `test/`
+results into a heuristic decision.
 
 ## The loop itself
 
-`scripts/improve_loop.py` (driver) + `benchmarks/runner/compare.py`:
+1. **Probe** — `scripts/frust_opt_loop.py`: full `train/` set, 10s, j=48,
+   every cert through `tools/verify`. Output: solved/total, INVALID
+   count, missing-cert count, slowest-small-instance list, **per-instance
+   diff vs the previous run**.
+2. **Hypothesise** — pick the smallest unsolved instance (by vars × time);
+   `--debug-expand` it; state what you think is the bottleneck.
+3. **Change** — one commit. `cargo test` + tiny-5 cert verify before
+   probing.
+4. **Probe again.** Any INVALID → revert immediately. Regression diff
+   tells you *which* instances flipped, not just how many.
+5. **Record** in `HISTORY.md`: bottleneck, observation, change, result.
+6. Periodically: 9-solver `dqbf-bench multi` for the cactus + cross-tool
+   disagreement check.
 
-1. **Generate** train instances at the current frontier: for each
-   family, generate `N ∈ {N₀, …, N_max_solved + Δ}`.
-2. **Baseline** — run current prover, budget `T` per instance, record
-   `baseline.jsonl`. Every result goes through `tools/verify`; any
-   `wrong` aborts the loop.
-3. **Propose** — a change to `provers/forkres/` (heuristic, ordering,
-   data structure). The change is a single commit on a scratch branch.
-4. **Candidate run** — same instances, same budget → `candidate.jsonl`,
-   same verification gate.
-5. **Compare** — `compare(baseline, candidate)`. Accept iff:
-   - zero `wrong` (already enforced by verify),
-   - zero ok→{wrong,error} regressions,
-   - net `Δsolved ≥ 0` and `Δmax_scale ≥ 0` summed across families.
-6. **Commit or revert.** On accept, fast-forward the working branch and
-   the new `candidate.jsonl` becomes the next baseline. On reject, note
-   the attempt in `docs/loop_log.md` and revert.
-7. Periodically (not every iteration) run against `benchmarks/test/`
-   and record — **never** feed test-set results back into step 3.
+---
 
-## Next concrete steps
+## Lessons from running the loop
 
-- [x] `benchmarks/{test,train}/` split; policy in top-level
-      `CLAUDE.md`.
-- [x] P0: verifiers decoupled from `provers/`. `tools/verify/unsat.py`
-      is self-contained; `tools/verify/sat.py` emits DIMACS CNF + var
-      map from a DQDIMACS+AIGER pair (any SAT solver checks it).
-- [ ] P1: wire a SAT solver (PySAT or shell-out to CaDiCaL) so the
-      runner can call `dqbf-verify sat` and get VALID/INVALID directly.
-- [ ] P3: `benchmarks/train/bitwidth_scaling/generate.py` writes real
-      `.dqdimacs.gz` + manifest; `dqbf-bench run --family
-      train/bitwidth_scaling -D N=2,4,8` works end to end.
-- [ ] P4: `benchmarks/runner/compare.py` + `dqbf-bench compare`.
-- [ ] P5: SFEx fallback in `search.py`; `dep_cycle` at N=1 returns
-      UNSAT with a verified proof.
-- [ ] P2: certificate extraction from saturation.
-- [ ] `scripts/improve_loop.py` wiring 1–6.
-- [ ] EQFOB: implement signed comparisons (needed by several families).
+What ~35 frust iterations taught us about the *loop*, not the solver.
+These are the things that, in hindsight, would have saved the most
+iterations.
+
+### Probe the full train set from iteration 0
+
+Iters 0-17 used a 344-instance subset. Widening to 804 at iter 18
+immediately surfaced `dep_cycle_n1` (11 variables — the paper's own
+counterexample) and a 74s-on-3s-timeout bug. Both were sitting there
+the whole time. The cost of probing 1500 instances at j=48 is ~5
+minutes; the cost of missing a bug for 18 iterations is days.
+
+### Per-instance regression diff, not just counts
+
+Iters 10, 13, 19, 20, 21, 25 each *lost* instances. The count drop
+told you something broke; the diff (`+ these / − those`) told you
+*why*. Once added, every "lost 3 instances" became immediately
+explainable instead of guesswork tuning. The diff is now in the probe
+output by default.
+
+### Never rebuild the binary while a benchmark is running
+
+Three runs were contaminated this way (the multi-solver bench takes
+~10 minutes; `cargo build` mid-run swaps the binary under it). Either
+use a copied binary path for the bench, or — simpler — don't start
+editing until the bench task notifies done.
+
+### Read the relevant paper before reimplementing
+
+Iters 8-13 groped toward what CAQE/iDQ already describe. The slot-DPLL
+at iter 16 *is* their abstraction-refinement loop. Reading those papers
+carefully at iter 4 (when ∀-expansion was introduced) would have saved
+roughly half the round-2 iterations.
+
+### Stricter cert checking from the start
+
+The `"VALID" in "INVALID"` substring bug (iter 5) and the
+"ever-decided" soundness bug (iter 13) both slipped because the probe
+used grep-style checks. The tiny `fork_unsat` instance that exposed
+iter 13 should have been a unit test for `expand` from the moment
+expand was written. **Rule**: every soundness-critical code path gets a
+hand-built tiny instance in `tests/integration/tiny/`.
+
+### Verify your worked examples with the brute-force oracle
+
+The first DQBF-BCE example I wrote was wrong (claimed UNSAT, actually
+SAT). `core.semantics.is_true` exists exactly for this — three lines
+of Python, settles it. Any worked example in a `.md` file should have
+been checked.
+
+### Fixed time-budgets create cactus shelves
+
+The 1-second saturation window after expand-UNSAT made ~180 instances
+finish at exactly ~1s — a visible flat shelf in the cactus. Adaptive
+budgets (proportional to time-spent-so-far, geometrically growing
+slices) give a continuous curve and don't penalise the easy cases.
+
+### A `--debug` flag for the search core
+
+Rebuilt-with-eprintln a dozen times to see slot counts, which strategy
+fired, where it bailed. A structured `--debug-expand` dump halved each
+"examine" step once added.
+
+### Two soundness gates, not one
+
+Per-iteration: tiny-5 verify + INVALID count in the probe. Per-batch:
+cross-solver disagreement check (`dqbf-bench multi` with hqs/pedant).
+The second one catches unsound UNSAT-without-proof verdicts that the
+first can't. The runner cert-path collision bug (`bmc_circuits/` vs
+`bmc_circuits_succinct/` shared stems) was caught by the per-batch
+check showing both frust *and* pedant with INVALID certs — which
+pointed at the runner, not either solver.
+
+### Preprocessing as a one-shot stage is a smell
+
+BCE was a one-shot upfront pass for 8 iterations before being pulled
+into the scheduler loop. Any "do X once at the start" step should be
+asked: would re-running X after the solver makes progress change
+anything? Usually yes.
+
+### Track where the next architecture change is, separately from tuning
+
+Iters 6-10 and 19-20 were spent tuning constants (conflict caps, slice
+budgets) when the actual blocker was architectural (CDCL, resumable
+expand). A "Next" section in CLAUDE.md naming the *structural* change
+keeps tuning from filling the iteration budget.
+
+## Gate (unchanged)
+
+Accept a change iff: zero INVALID certs, zero ok→{wrong,error}
+regressions in the diff, net Δsolved ≥ 0. A speed-only change (same
+solved, faster) is fine if it doesn't add code complexity you'll regret.
