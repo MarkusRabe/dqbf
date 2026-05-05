@@ -79,3 +79,28 @@ def load(k: str) -> dict | None:
 def store(k: str, row: dict) -> None:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     (CACHE_DIR / f"{k}.json").write_text(json.dumps(row))
+
+
+def backfill(jsonl_path: Path, timeout_s: float) -> tuple[int, int]:
+    """Seed the cache from an existing run's JSONL. Hashes the binaries
+    currently in the registry, so only valid when the binaries haven't
+    changed since that run. Returns (stored, skipped)."""
+    from benchmarks.runner.solvers import registry
+
+    reg = registry()
+    shash = {n: solver_hash(sv.cmd) for n, sv in reg.items() if sv.available}
+    stored = skipped = 0
+    for ln in jsonl_path.read_text().splitlines():
+        if not ln.strip():
+            continue
+        r = json.loads(ln)
+        sv = r["solver"]
+        p = Path(r["path"])
+        if sv not in shash or not p.exists():
+            skipped += 1
+            continue
+        k = key(shash[sv], instance_hash(p), timeout_s)
+        r.setdefault("cached", False)
+        store(k, r)
+        stored += 1
+    return stored, skipped

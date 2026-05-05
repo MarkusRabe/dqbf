@@ -141,6 +141,17 @@ Three runs were contaminated this way (the multi-solver bench takes
 use a copied binary path for the bench, or — simpler — don't start
 editing until the bench task notifies done.
 
+### Result cache makes re-baselining cheap
+
+`dqbf-bench multi` caches results under `results/.bench_cache/` keyed
+on `sha256(binary, instance, timeout)`. After a frust rebuild, only
+the frust column re-runs; pedant/dqbdd/hqs hit the cache. To compare
+two frust versions side-by-side, register the old binary as
+`frust-prev` (already in `solvers.py` pointing at `/tmp/frust-iter2`);
+copy the binary there before rebuilding. `--no-cache` forces a fresh
+run; `python -c 'from benchmarks.runner.cache import backfill; ...'`
+seeds the cache from an existing JSONL.
+
 ### Read the relevant paper before reimplementing
 
 Iters 8-13 groped toward what CAQE/iDQ already describe. The slot-DPLL
