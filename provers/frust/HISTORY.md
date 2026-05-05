@@ -735,6 +735,32 @@ clauses intact.
 **Result: +35 net**, 1949/2856. 0 INVALID. Gains across the iter15
 near-misses (`bmc/succinct` bcd_ctr/prio_enc, larger pec_circuits).
 
+## Refined-loop iteration 17: stall detection (reverted, −206) (2026-05-05)
+
+**Hypothesis**: bmc/succinct CEGAR churns 5000+ dead rounds after
+arbiter saturation; bail when (n_arb, n_forcing) plateau 256 rounds.
+**Wrong** — when arbsolve is searching (consist-UNSAT → re-pick),
+neither metric changes but progress *is* being made. −206. Tracking
+`arbsolve.n_learned` too still has FPs (`indinv_mutex_n4` bails at
+116). **Reverted.** Core minimization also tried/reverted —
+analyze_final cores already 1-4 lits.
+
+## Refined-loop iteration 18: two-tier cell gate (2026-05-05)
+
+**Target**: pec instances gated at est_cells>8192 (e.g.,
+`pec_fifo1_n4_k8_bb3`, 58 undef) that *would* converge.
+**Change**: gate becomes `est_cells>8192 && |undef|>100` — pec-style
+(few undef, mixed dep) goes through; bmc/succinct-style (≥150 undef,
+arbsolve wall) still falls to SlotDpll.
+
+**Result: +2 net**, 1951/2856. 0 INVALID. Dropping the gate entirely
+was −38 (CEGAR starves SlotDpll on bmc/hwmcc/collatz it can't solve).
+
+**Constraint named: research-approach.** ~700/905 remaining are
+arbsolve-exponential (many undef = transition function search) or
+forcing-clause-explosive (defined-y chain needs interpolation). Both
+need compact Skolem repr — interpolation or BDDs.
+
 ---
 
 ## Appendix: iteration tables
