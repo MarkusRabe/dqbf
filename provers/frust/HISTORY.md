@@ -554,6 +554,31 @@ their .frp cert (verdict still correct).
 hwmc_indinv — another **hqs unsoundness instance** alongside the
 earlier dqbdd one. pedant remains the only trustworthy reference.
 
+## Refined-loop iteration 6: analyze_final core fix; slot-CDCL dead-end (2026-05-05)
+
+**Target**: consistency-shape UNSAT (`dep_cycle_n2+`, `bmc/succinct`).
+SlotDpll's slot count blows up (n2: 8→24 slots after r1).
+
+**Change kept**: `cdcl.rs::analyze_final` now includes the violated
+assumption itself in the returned core (Minisat parity). The previous
+omission meant callers testing `core.contains(x)` missed the case
+where `x` *is* the assumption that was found false. Affects
+OuterCegar's deletion-core and the slot-CDCL attempt below.
+
+**Change reverted**: slot-CDCL (one Cdcl over slot-space, learn
+row-core clauses on prune). Hit a soundness bug on `indinv_mutex_n4`
+(frust UNSAT, pedant SAT cert-verified). Root-causing showed each
+learned clause `cl` is individually sound, yet sc-UNSAT contradicts
+the verified Skolem — left as an open inconsistency. Reverted; the
+analyze_final fix exposed the bug usefully.
+
+**Result: +9/-1 = +8 net**, 1667/2856. 0 INVALID. Gains in
+`conjunction` (+2), `bmc/succinct/shift_reg` (+3), `hwmc_indinv` (+1).
+
+**Gotcha.** Resolving the slot-CDCL unsoundness needs either pinning
+*partial* slot models (DPLL-style) inside the CDCL loop, or proving
+that `cert_bce` doesn't invalidate the row-prune→slot-clause map.
+
 ---
 
 ## Appendix: iteration tables
