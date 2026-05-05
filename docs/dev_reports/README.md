@@ -2,6 +2,7 @@
 
 | date | label | view |
 |---|---|---|
+| 2026-05-05_0512 | iter5-slotdpll-unsat | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-05_0512_iter5-slotdpll-unsat.html) · [source](2026-05-05_0512_iter5-slotdpll-unsat.html) |
 | 2026-05-05_0449 | iter4-gate-target | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-05_0449_iter4-gate-target.html) · [source](2026-05-05_0449_iter4-gate-target.html) |
 | 2026-05-05_0429 | iter3-rebaseline-2851 | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-05_0429_iter3-rebaseline-2851.html) · [source](2026-05-05_0429_iter3-rebaseline-2851.html) |
 | 2026-05-05_0259 | refined-loop-iter2 | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-05_0259_refined-loop-iter2.html) · [source](2026-05-05_0259_refined-loop-iter2.html) |
