@@ -229,6 +229,23 @@ impl ExpandState {
                         s.defined.len(),
                         s.undefined.len()
                     );
+                    let est_cells: usize = s
+                        .undefined
+                        .iter()
+                        .map(|y| 1usize << f.deps[y].len().min(8))
+                        .sum();
+                    // Two-tier gate: pec-style (≤~60 undef, mixed dep)
+                    // converges via forcing; bmc/succinct-style (≥150
+                    // undef, uniform small dep) hits the arbsolve wall
+                    // and starves SlotDpll. Allow the former through.
+                    if est_cells > 8192 && s.undefined.len() > 100 {
+                        self.mode = if nu_full > self.expand_us.len() {
+                            Mode::Partial
+                        } else {
+                            Mode::SlotDpll
+                        };
+                        return self.step(f, cdcl, deadline, start, debug);
+                    }
                     self.cegar = Some(crate::arbiter::CegarState::new(f, &s.undefined));
                 }
                 None => {
