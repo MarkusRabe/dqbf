@@ -202,85 +202,82 @@ pub fn validity_cegar(
         }
 
         // ---- learn forcing / allocate arbiters -----------------------
+        // Round 1: seed with a forcing clause per existential so
+        // validity starts close to fully constrained. Later rounds
+        // only refine where vmodel still disagrees.
+        let eager = rounds == 1;
         let mut learned_any = false;
         for &y in &exs {
             let want = cmodel[y as usize];
             let got = vmodel[y as usize];
-            if want == got && got != 0 {
+            if !eager && want == got && got != 0 {
                 continue;
             }
             let dep_lits: Vec<Lit> = dep_set[&y]
                 .iter()
                 .map(|&u| if cmodel[u as usize] > 0 { u as Lit } else { -(u as Lit) })
                 .collect();
-            if undef_set.contains(&y) {
-                // Undefined-y with large dep: per-cell arbiters can't
-                // saturate. Use a single *constant* arbiter (y ↔ a)
-                // instead — sound when some constant Skolem works,
-                // which is the common case for don't-care/miter bits.
-                let cell_dep = if dep_lits.len() > 8 { vec![] } else { dep_lits.clone() };
-                let key = (y, cell_dep.clone());
-                let ai = *arb_of.entry(key.clone()).or_insert_with(|| {
-                    arb_meta.push((y, cell_dep.clone()));
-                    let idx = arb_meta.len() - 1;
-                    if idx >= ARB_BUDGET {
-                        return idx;
-                    }
-                    let av = (arb_base + idx) as Lit;
-                    let ac = (n + idx) as Lit;
-                    // cell_dep ∧ a → y  /  cell_dep ∧ ¬a → ¬y
-                    let mut c1: Vec<Lit> = cell_dep.iter().map(|&l| -l).collect();
-                    let mut c2 = c1.clone();
-                    c1.push(-av); c1.push(y as Lit);
-                    c2.push(av);  c2.push(-(y as Lit));
-                    validity.add_external(&c1);
-                    validity.add_external(&c2);
-                    let mut d1: Vec<Lit> = cell_dep.iter().map(|&l| -l).collect();
-                    let mut d2 = d1.clone();
-                    d1.push(-ac); d1.push(y as Lit);
-                    d2.push(ac);  d2.push(-(y as Lit));
-                    consist.add_external(&d1);
-                    consist.add_external(&d2);
-                    arbsolve.set_decision(idx as u32, true);
-                    arbsolve.set_phase(idx as u32, want);
-                    arb_assump.push(if want > 0 { av } else { -av });
-                    idx
-                });
-                if ai >= ARB_BUDGET {
-                    if debug {
-                        let mut by_y: HashMap<Var, usize> = HashMap::new();
-                        for (yy, _) in &arb_meta[1..] { *by_y.entry(*yy).or_default() += 1; }
-                        eprintln!("c [def] cegar arbiter budget exhausted at round {}: by_y={:?}", rounds, by_y);
-                    }
+            // Try a forcing clause first unless Padoa already ruled y
+            // undefined (then the flip-check is wasted work).
+            if !undef_set.contains(&y) {
+                let mut a = dep_lits.clone();
+                a.push(if want > 0 { -(y as Lit) } else { y as Lit });
+                let flip_sat = consist.solve(&a, &mut scratch, 10_000);
+                if consist.budget_hit {
                     return CegarOut::Bail;
                 }
-                learned_any = true;
-                continue;
+                if !flip_sat {
+                    let then = if want > 0 { y as Lit } else { -(y as Lit) };
+                    let ante: Vec<Lit> = consist
+                        .last_core()
+                        .iter()
+                        .copied()
+                        .filter(|&l| univ.contains(&var(l)))
+                        .collect();
+                    let fc: Vec<Lit> =
+                        ante.iter().map(|&l| -l).chain(std::iter::once(then)).collect();
+                    validity.add_external(&fc);
+                    forcing.get_mut(&y).unwrap().push((ante, then));
+                    learned_any = true;
+                    continue;
+                }
+                // flip-SAT: y not determined by dep(y) alone (Padoa's
+                // fixpoint linked extra z's). Fall through to arbiter.
             }
-            // Defined y: extract forcing clause via core.
-            let mut a = dep_lits.clone();
-            a.push(if want > 0 { -(y as Lit) } else { y as Lit });
-            let flip_sat = consist.solve(&a, &mut scratch, 10_000);
-            if consist.budget_hit {
-                return CegarOut::Bail;
-            }
-            if flip_sat {
-                // Padoa missed this y. Treat as undefined from here on.
+            // Arbiter: per-cell when |dep|≤8, else a single constant.
+            let cell_dep = if dep_lits.len() > 8 { vec![] } else { dep_lits.clone() };
+            let key = (y, cell_dep.clone());
+            let ai = *arb_of.entry(key.clone()).or_insert_with(|| {
+                arb_meta.push((y, cell_dep.clone()));
+                let idx = arb_meta.len() - 1;
+                if idx >= ARB_BUDGET {
+                    return idx;
+                }
+                let av = (arb_base + idx) as Lit;
+                let ac = (n + idx) as Lit;
+                let mut c1: Vec<Lit> = cell_dep.iter().map(|&l| -l).collect();
+                let mut c2 = c1.clone();
+                c1.push(-av); c1.push(y as Lit);
+                c2.push(av);  c2.push(-(y as Lit));
+                validity.add_external(&c1);
+                validity.add_external(&c2);
+                let mut d1: Vec<Lit> = cell_dep.iter().map(|&l| -l).collect();
+                let mut d2 = d1.clone();
+                d1.push(-ac); d1.push(y as Lit);
+                d2.push(ac);  d2.push(-(y as Lit));
+                consist.add_external(&d1);
+                consist.add_external(&d2);
+                arbsolve.set_decision(idx as u32, true);
+                arbsolve.set_phase(idx as u32, want);
+                arb_assump.push(if want > 0 { av } else { -av });
+                idx
+            });
+            if ai >= ARB_BUDGET {
                 if debug {
-                    eprintln!("c [def] cegar: y={} not actually defined; bail", y);
+                    eprintln!("c [def] cegar arbiter budget exhausted at round {}", rounds);
                 }
                 return CegarOut::Bail;
             }
-            let then = if want > 0 { y as Lit } else { -(y as Lit) };
-            let ante: Vec<Lit> = consist
-                .last_core()
-                .iter()
-                .copied()
-                .filter(|&l| univ.contains(&var(l)))
-                .collect();
-            let fc: Vec<Lit> = ante.iter().map(|&l| -l).chain(std::iter::once(then)).collect();
-            validity.add_external(&fc);
-            forcing.get_mut(&y).unwrap().push((ante, then));
             learned_any = true;
         }
         if !learned_any {

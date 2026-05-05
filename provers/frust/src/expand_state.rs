@@ -202,8 +202,8 @@ impl ExpandState {
         // unrolled instances (collatz n64, hwmcc) burn budget here for
         // nothing and miss the Partial-mode UNSAT they'd otherwise hit.
         let nu_full = f.universals.len();
-        if f.deps.len() > 1500 {
-            dbg_ex!(debug, "definability: |E|={} >1500, skip", f.deps.len());
+        if f.deps.len() > 5000 {
+            dbg_ex!(debug, "definability: |E|={} >5000, skip", f.deps.len());
             self.mode = if nu_full > self.expand_us.len() {
                 Mode::Partial
             } else {
