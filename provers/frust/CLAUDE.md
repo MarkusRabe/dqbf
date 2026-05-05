@@ -28,6 +28,9 @@ short derived clauses).
 
 ## Optimization loop
 
+See [`../../docs/IMPROVEMENT_LOOP.md`](../../docs/IMPROVEMENT_LOOP.md)
+for the methodology and the lessons learned from running it.
+
 Each iteration: state hypothesis → implement → `cargo test --release`
 → tiny-5 cert verification → probe → record. **Any INVALID cert
 reverts immediately.** The probe is `scripts/frust_opt_loop.py`
@@ -51,8 +54,10 @@ for f in tests/integration/tiny/*.dqdimacs; do rm -f /tmp/c.aag /tmp/p.frp; \
 
 ## Docs
 
-- [`HISTORY.md`](HISTORY.md) — full development narrative with the
-  iteration table.
+- [`HISTORY.md`](HISTORY.md) — **read this first.** Full development
+  narrative with the iteration table; explains why each piece exists.
+- [`../../docs/IMPROVEMENT_LOOP.md`](../../docs/IMPROVEMENT_LOOP.md) —
+  the loop methodology and what running it taught us.
 - [`FRUST_v1.0.md`](FRUST_v1.0.md) — architecture snapshot at the
   v1.0 commit.
 - [`BCE.md`](BCE.md) — DQBF-BCE soundness, reconstruction, fire rate.
