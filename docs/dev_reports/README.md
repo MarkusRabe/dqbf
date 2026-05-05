@@ -2,6 +2,7 @@
 
 | date | label | view |
 |---|---|---|
+| 2026-05-05_0259 | refined-loop-iter2 | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-05_0259_refined-loop-iter2.html) · [source](2026-05-05_0259_refined-loop-iter2.html) |
 | 2026-05-05_0248 | refined-loop-iter1 | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-05_0248_refined-loop-iter1.html) · [source](2026-05-05_0248_refined-loop-iter1.html) |
 | 2026-05-04_2214 | frust-opt3b-interleaved | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-04_2214_frust-opt3b-interleaved.html) · [source](2026-05-04_2214_frust-opt3b-interleaved.html) |
 | 2026-05-04_0737 | frust-v1-plus-bce-phase | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-04_0737_frust-v1-plus-bce-phase.html) · [source](2026-05-04_0737_frust-v1-plus-bce-phase.html) |
