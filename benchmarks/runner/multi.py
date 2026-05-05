@@ -201,6 +201,10 @@ def _run_one(
         "kp1": str(k + 1) if isinstance(k, int) else "1001",
     }
     cmd = [t.format(**fmt) for t in solver.cmd]
+    # Clear stale certs so a no-cert verdict isn't misread as the
+    # previous run's (possibly invalid) certificate.
+    for tmpl in solver.certs.values():
+        Path(tmpl.format(**fmt)).unlink(missing_ok=True)
     t0 = time.monotonic()
     try:
         cp = subprocess.run(
