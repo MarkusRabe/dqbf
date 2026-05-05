@@ -601,6 +601,33 @@ no-cert verdicts match pedant. Gains across `bmc/succinct` (~25),
 `cbmc_v2/succinct` (~10), `hwmc_indinv` (+2), `collatz/v2` (+2).
 Losses are noise.
 
+## Refined-loop iterations 9-10: Padoa budget; CEGAR-UNSAT; cell-cert fix (2026-05-05)
+
+**iter 9** (`678d97b`): Padoa is just an early-out (CEGAR's
+flip-check rediscovers definedness). Shrink Padoa share to 0.2× slice
+so CEGAR gets 0.7×.
+
+**iter 10** (`f7571c8`): when consist's UNSAT-core under (U*,arbiters)
+contains *no* arbiter assumptions, the row is propositionally UNSAT
+under matrix alone — that's `CegarOut::Unsat`, not `Bail`. Replaces
+the deepening-partial-scan UNSAT path for definability-mode instances.
+
+**iter 10b (cert fix, this commit)**: `forcing_to_skolem` mapped a
+constant arbiter (empty `cell_dep`, used when |dep(y)|>8) to *row 0
+only* of y's table. The arbiter actually fixes y across **every** row.
+This produced one verifiably-invalid SAT cert
+(`pec_fifo1_n4_k2_bb3_complete`; verdict still correct per pedant).
+Now iterates `0..n_rows` masked by `cell_dep`.
+
+**Result: +5/-2 = +3 net**, 1710/2856. **0 INVALID after fix.** Gains
+in `hwmc_indinv` and `pec_circuits`; the −2 are borderline.
+
+**Gotcha.** Hard-gate violation slipped through iter8's report (3
+INVALID) because the multi-solver report doesn't *fail* on invalid —
+it just colours the cell. The probe script does flag them; the agent
+running iters 5-8 missed it. Added to IMPROVEMENT_LOOP: `grep INVALID`
+after every probe.
+
 ---
 
 ## Appendix: iteration tables

@@ -321,17 +321,33 @@ pub fn forcing_to_skolem(f: &Formula, cert: &ForcingCert, max_dep: usize) -> Opt
                 }
             }
         }
-        for (cy, dep, val) in &cert.cells {
-            if *cy != y || !*val {
+        // A cell's `dep` lits may be a strict subset of dep(y) (the
+        // constant-arbiter case for |dep|>8). The cell then fixes y
+        // across *every* row consistent with that partial assignment,
+        // not just the one row whose other bits are 0.
+        for (cy, cdep, val) in &cert.cells {
+            if *cy != y {
                 continue;
             }
-            let mut r = 0usize;
-            for &l in dep {
+            let mut fixed_mask = 0usize;
+            let mut fixed_bits = 0usize;
+            for &l in cdep {
+                let i = didx[&var(l)];
+                fixed_mask |= 1 << i;
                 if l > 0 {
-                    r |= 1 << didx[&var(l)];
+                    fixed_bits |= 1 << i;
                 }
             }
-            tbl[r / 64] |= 1u64 << (r % 64);
+            for r in 0..n_rows {
+                if r & fixed_mask != fixed_bits {
+                    continue;
+                }
+                if *val {
+                    tbl[r / 64] |= 1u64 << (r % 64);
+                } else {
+                    tbl[r / 64] &= !(1u64 << (r % 64));
+                }
+            }
         }
         sk.insert(y, (tbl, nd));
     }
