@@ -129,15 +129,31 @@ into the scheduler loop. Any "do X once at the start" step should be
 asked: would re-running X after the solver makes progress change
 anything? Usually yes.
 
-### Track where the next architecture change is, separately from tuning
+### Architecture changes make bigger jumps than tuning constants
 
-Iters 6-10 and 19-20 were spent tuning constants (conflict caps, slice
-budgets) when the actual blocker was architectural (CDCL, resumable
-expand). A "Next" section in CLAUDE.md naming the *structural* change
-keeps tuning from filling the iteration budget.
+The iteration record is unambiguous on this: ∀-expansion (+18),
+slot-DPLL (+9), CDCL (+4), expand-UNSAT verdict (+160), outer-CEGAR
+(+15), BCE (+14). Every constant-tuning iteration was ±0-3. Iters 6-10
+and 19-20 were spent on conflict caps and slice budgets when the actual
+blocker was architectural. A "Next" section in CLAUDE.md naming the
+*structural* change keeps tuning from filling the iteration budget. If
+you find yourself adjusting a number for the third time, the number is
+not the problem.
 
-## Gate (unchanged)
+## Gate
 
-Accept a change iff: zero INVALID certs, zero ok→{wrong,error}
-regressions in the diff, net Δsolved ≥ 0. A speed-only change (same
-solved, faster) is fine if it doesn't add code complexity you'll regret.
+The hard line is **zero INVALID certs** — that never bends.
+
+Beyond that, accept a change when it's a net improvement *in
+expectation*, not strictly Δsolved ≥ 0. Losing a handful of instances
+is fine when:
+- the gains elsewhere are substantially larger (option 3b: −6 on
+  `random_bv` for a continuous architecture), or
+- the change deletes code (simplification round: −515 LoC, +2 solved),
+  or
+- the lost instances are borderline-timing noise (±1 at j=48 is noise).
+
+What you *do* want to understand is *which* instances were lost and
+why — the per-instance diff makes that cheap. A loss you can explain
+("the ported outer-CEGAR is missing min-change re-pick") is a TODO; a
+loss you can't is a bug.
