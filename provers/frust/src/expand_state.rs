@@ -193,6 +193,14 @@ impl ExpandState {
         // falls through to Partial if this doesn't pan out.
         let now = start.elapsed().as_secs_f64();
         let sub_deadline = now + (deadline - now) * 0.5;
+        // Gate: definability is for circuit-like matrices. Large
+        // unrolled instances (collatz n64, hwmcc) burn budget here for
+        // nothing and miss the Partial-mode UNSAT they'd otherwise hit.
+        if f.deps.len() > 1500 {
+            dbg_ex!(debug, "definability: |E|={} >1500, skip", f.deps.len());
+            self.mode = Mode::Partial;
+            return self.step_partial(f, cdcl, deadline, start, debug);
+        }
         dbg_ex!(debug, "definability: padoa+cegar, deadline {:.2}s", sub_deadline);
         if let Some(s) = crate::definability::padoa_split(f, sub_deadline, start, debug) {
             dbg_ex!(

@@ -194,8 +194,28 @@ pub fn validity_cegar(
         }
 
         // ---- learn forcing / allocate arbiters -----------------------
+        // Target only existentials that *fix a violated clause*: for
+        // each aux_i true in vmodel, pick one existential lit in
+        // clause_i that cmodel satisfies. Pinning that lit via a
+        // forcing clause repairs the counterexample with one
+        // flip-check, instead of one per disagreeing existential.
+        let mut targets: Vec<Var> = Vec::new();
+        for (i, c) in f.clauses.iter().enumerate() {
+            if vmodel[n + 1 + i] <= 0 {
+                continue;
+            }
+            for &l in c {
+                let v = var(l);
+                if dep_set.contains_key(&v) && (cmodel[v as usize] > 0) == (l > 0) {
+                    targets.push(v);
+                    break;
+                }
+            }
+        }
+        targets.sort_unstable();
+        targets.dedup();
         let mut learned_any = false;
-        for &y in &exs {
+        for &y in &targets {
             let want = cmodel[y as usize];
             let got = vmodel[y as usize];
             if want == got && got != 0 {
