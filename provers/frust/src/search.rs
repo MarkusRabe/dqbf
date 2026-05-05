@@ -240,7 +240,10 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
             let mut sk = crate::aiger::Skolem::new();
             for (&y, d) in &f.deps {
                 let nd = d.len();
-                sk.insert(y, (vec![0u64; ((1usize << nd) + 63) / 64], nd));
+                sk.insert(
+                    y,
+                    crate::aiger::SkolemFn::Table(vec![0u64; ((1usize << nd) + 63) / 64], nd),
+                );
             }
             crate::bce::reconstruct(&mut sk, f, &sat_bce.stack);
             return Output {

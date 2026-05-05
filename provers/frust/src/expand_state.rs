@@ -229,12 +229,9 @@ impl ExpandState {
                 match crate::arbiter::validity_cegar(f, &s.undefined, sub_deadline, start, debug) {
                     CegarOut::Sat(cert) => {
                         self.mode = Mode::Exhausted;
-                        if let Some(mut sk) = crate::arbiter::forcing_to_skolem(f, &cert, 20) {
-                            crate::bce::reconstruct(&mut sk, f, &self.bce_stack);
-                            return Step::Sat(Some(sk));
-                        }
-                        dbg_ex!(debug, "definability SAT, no cert (max|dep|>20)");
-                        return Step::Sat(None);
+                        let mut sk = crate::arbiter::forcing_to_skolem(f, &cert, 20).unwrap();
+                        crate::bce::reconstruct(&mut sk, f, &self.bce_stack);
+                        return Step::Sat(Some(sk));
                     }
                     CegarOut::Unsat => {
                         self.mode = Mode::Exhausted;

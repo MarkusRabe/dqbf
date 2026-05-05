@@ -307,64 +307,54 @@ pub fn validity_cegar(
     }
 }
 
-/// Convert forcing clauses + arbiter cells to a truth-table Skolem when
-/// every dep set fits; otherwise None (caller emits SAT-no-cert).
+/// Build a Skolem from forcing clauses + arbiter cells. Uses truth
+/// tables for |dep|≤max_dep (BDD-memoized in AIGER); larger deps go
+/// out as a priority-decoder circuit so cert size stays linear in the
+/// number of forcing clauses rather than 2^|dep|.
 pub fn forcing_to_skolem(f: &Formula, cert: &ForcingCert, max_dep: usize) -> Option<Skolem> {
+    use crate::aiger::SkolemFn;
     let mut sk = Skolem::new();
     for (&y, d) in &f.deps {
         let nd = d.len();
-        if nd > max_dep {
-            return None;
+        // Clause-form: forcing clauses first (defined-y), then arbiter
+        // cells (undefined-y). validity-CEGAR guarantees the regions
+        // don't conflict, so first-match is well-defined.
+        let mut cubes: Vec<(Vec<Lit>, bool)> = Vec::new();
+        if let Some(fcs) = cert.clauses.get(&y) {
+            for (ante, then) in fcs {
+                cubes.push((ante.clone(), *then > 0));
+            }
         }
+        for (cy, cdep, val) in &cert.cells {
+            if *cy == y {
+                cubes.push((cdep.clone(), *val));
+            }
+        }
+        if nd > max_dep {
+            sk.insert(y, SkolemFn::Clauses(cubes));
+            continue;
+        }
+        // Small dep: materialise the table so BCE-reconstruct (which
+        // only handles tables) and the Shannon-memo cert path apply.
         let dvec: Vec<Var> = d.iter().copied().collect();
         let didx: HashMap<Var, usize> =
             dvec.iter().enumerate().map(|(i, &v)| (v, i)).collect();
         let n_rows = 1usize << nd;
-        let mut tbl = vec![0u64; (n_rows + 63) / 64];
-        if let Some(fcs) = cert.clauses.get(&y) {
-            'row: for r in 0..n_rows {
-                for (ante, then) in fcs {
-                    if ante
-                        .iter()
-                        .all(|&l| ((r >> didx[&var(l)]) & 1 == 1) == (l > 0))
-                    {
-                        if *then > 0 {
-                            tbl[r / 64] |= 1u64 << (r % 64);
-                        }
-                        continue 'row;
+        let mut tbl = vec![0u64; n_rows.div_ceil(64)];
+        'row: for r in 0..n_rows {
+            for (ante, val) in &cubes {
+                if ante
+                    .iter()
+                    .all(|&l| ((r >> didx[&var(l)]) & 1 == 1) == (l > 0))
+                {
+                    if *val {
+                        tbl[r / 64] |= 1u64 << (r % 64);
                     }
+                    continue 'row;
                 }
             }
         }
-        // A cell's `dep` lits may be a strict subset of dep(y) (the
-        // constant-arbiter case for |dep|>8). The cell then fixes y
-        // across *every* row consistent with that partial assignment,
-        // not just the one row whose other bits are 0.
-        for (cy, cdep, val) in &cert.cells {
-            if *cy != y {
-                continue;
-            }
-            let mut fixed_mask = 0usize;
-            let mut fixed_bits = 0usize;
-            for &l in cdep {
-                let i = didx[&var(l)];
-                fixed_mask |= 1 << i;
-                if l > 0 {
-                    fixed_bits |= 1 << i;
-                }
-            }
-            for r in 0..n_rows {
-                if r & fixed_mask != fixed_bits {
-                    continue;
-                }
-                if *val {
-                    tbl[r / 64] |= 1u64 << (r % 64);
-                } else {
-                    tbl[r / 64] &= !(1u64 << (r % 64));
-                }
-            }
-        }
-        sk.insert(y, (tbl, nd));
+        sk.insert(y, SkolemFn::Table(tbl, nd));
     }
     Some(sk)
 }

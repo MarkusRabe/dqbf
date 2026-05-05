@@ -333,9 +333,13 @@ pub fn reconstruct(sk: &mut Skolem, f: &Formula, stack: &[(Clause, Lit)]) {
         dmask[y as usize] = ds.iter().map(|&u| 1u32 << u_idx[u as usize]).sum();
     }
     // Snapshot sk into a flat Vec so the inner loop avoids BTreeMap lookups.
+    // Clause-form entries only arise when max|dep|>20, but nu>20 returned
+    // above, so every entry here is a Table.
     let mut bits: Vec<Vec<u64>> = vec![Vec::new(); n + 1];
-    for (&y, (b, _)) in sk.iter() {
-        bits[y as usize] = b.clone();
+    for (&y, sf) in sk.iter() {
+        if let crate::aiger::SkolemFn::Table(b, _) = sf {
+            bits[y as usize] = b.clone();
+        }
     }
     let lit_val = |bits: &[Vec<u64>], l: Lit, ub: u32| -> bool {
         let v = var(l) as usize;
@@ -366,8 +370,10 @@ pub fn reconstruct(sk: &mut Skolem, f: &Formula, stack: &[(Clause, Lit)]) {
             }
         }
     }
-    for (&y, (b, _)) in sk.iter_mut() {
-        *b = std::mem::take(&mut bits[y as usize]);
+    for (&y, sf) in sk.iter_mut() {
+        if let crate::aiger::SkolemFn::Table(b, _) = sf {
+            *b = std::mem::take(&mut bits[y as usize]);
+        }
     }
 }
 

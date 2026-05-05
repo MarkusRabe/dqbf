@@ -599,7 +599,7 @@ pub fn build_skolem(exs: &[Var], dep_lists: &[Vec<Var>], tables: &[Vec<i8>]) -> 
                 bits[j / 64] |= 1u64 << (j % 64);
             }
         }
-        sk.insert(y, (bits, nd));
+        sk.insert(y, crate::aiger::SkolemFn::Table(bits, nd));
     }
     sk
 }

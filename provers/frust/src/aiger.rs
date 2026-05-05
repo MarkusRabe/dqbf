@@ -1,11 +1,19 @@
 //! Minimal .aag writer for Skolem certificates.
 
-use crate::formula::{Formula, Var};
+use crate::formula::{var, Formula, Lit, Var};
 use std::collections::BTreeMap;
 use std::io::Write;
 
-/// Per-existential: (truth-table bitmap of length 2^ndeps bits, ndeps).
-pub type Skolem = BTreeMap<Var, (Vec<u64>, usize)>;
+/// One Skolem function. `Table` is a 2^ndeps-bit truth table; `Clauses`
+/// is a priority list of `(ante, polarity)` cubes over dep(y) — the
+/// first matching cube fixes y's value, default 0. Clauses avoids the
+/// 2^|dep| blow-up for large dep sets (forcing-clause certs).
+pub enum SkolemFn {
+    Table(Vec<u64>, usize),
+    Clauses(Vec<(Vec<Lit>, bool)>),
+}
+
+pub type Skolem = BTreeMap<Var, SkolemFn>;
 
 struct Aig {
     n_inputs: usize,
@@ -118,14 +126,39 @@ pub fn write_skolem_aag<W: Write>(w: &mut W, f: &Formula, sk: &Skolem) -> std::i
         .map(|(i, &u)| (u, aig.lit_input(i)))
         .collect();
     let mut outputs: Vec<(Var, u32)> = Vec::new();
-    for (&y, (bits, ndeps)) in sk {
-        let deps: Vec<Var> = f
-            .deps
-            .get(&y)
-            .map(|d| d.iter().copied().collect())
-            .unwrap_or_default();
-        let ins: Vec<u32> = deps.iter().take(*ndeps).map(|d| u_lit[d]).collect();
-        let out = shannon(&mut aig, bits, ins.len(), &ins);
+    for (&y, fn_) in sk {
+        let out = match fn_ {
+            SkolemFn::Table(bits, ndeps) => {
+                let deps: Vec<Var> = f
+                    .deps
+                    .get(&y)
+                    .map(|d| d.iter().copied().collect())
+                    .unwrap_or_default();
+                let ins: Vec<u32> = deps.iter().take(*ndeps).map(|d| u_lit[d]).collect();
+                shannon(&mut aig, bits, ins.len(), &ins)
+            }
+            SkolemFn::Clauses(cubes) => {
+                // Priority decoder: scan cubes in order; first hit
+                // wins. y = ⋁ [hitᵢ ∧ valᵢ ∧ ⋀_{j<i} ¬hitⱼ]. With
+                // default 0 the negative cubes only contribute the
+                // "stop here" guard.
+                let mut acc = 0u32; // default false
+                let mut not_yet = 1u32; // ⋀ ¬hitⱼ so far (true)
+                for (ante, val) in cubes {
+                    let mut hit = 1u32;
+                    for &l in ante {
+                        let ul = u_lit[&var(l)] ^ if l < 0 { 1 } else { 0 };
+                        hit = aig.mk_and(hit, ul);
+                    }
+                    if *val {
+                        let take = aig.mk_and(not_yet, hit);
+                        acc = aig.mk_or(acc, take);
+                    }
+                    not_yet = aig.mk_and(not_yet, hit ^ 1);
+                }
+                acc
+            }
+        };
         outputs.push((y, out));
     }
     let m = aig.max_var();
