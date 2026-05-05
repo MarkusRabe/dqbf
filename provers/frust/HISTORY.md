@@ -417,6 +417,39 @@ For BMC-succinct, roots = initial-state bits (~n_latches), trajectory
 follows. This is Pedant's definition extraction lifted to the slot
 level.
 
+## Refined-loop iteration 2: layered slot propagation (2026-05-05)
+
+Same `bmc_circuits_succinct` family. **Hypothesis**: layer slot
+existentials by var-id; decide one layer's slots, propagate (run all
+rows pinning what's filled), move to next layer.
+
+**Attempt 1 — layered scan.** Layer 0 fills all 37 existentials in one
+pass (good); but the in-layer slice-deadline check bailed before
+validation. Removed the check.
+
+**Attempt 2 — looped core-drop.** One-shot retry → looped retry until
+core has no existential pins. counter_n2: 306 core-drops, validation
+fails at row 16 (the first transition row t=0,t'=1). Non-transition
+rows 0-15 filled garbage l(t),l'(0); row 16 needs l'(1)=δ(l(0)), pins
+conflict.
+
+**Attempt 3 — constraint-density row ordering.** Process
+most-constrained rows first (count active clauses per row). Identical
+core-drop counts — ordering had no observable effect.
+
+**Result: +0, all reverted.** Constraint upgraded from architectural
+to **research-approach**: greedy SAT-based table reconstruction
+without table-level *learning* can't converge here. The right
+approach is to encode cross-row consistency into one SAT instance
+(iDQ/Pedant) — a substantially different SAT problem per slot, not
+just a different scan order.
+
+**Gotchas.** `git checkout --` to revert kept `cdcl.rs` analyzeFinal
+(committed in iter 1). The constraint-density closure compiled but
+produced identical orderings — likely the universals-only-satisfy
+heuristic is too coarse (most clauses have no universal lit after
+BCE).
+
 ---
 
 ## Appendix: iteration tables
