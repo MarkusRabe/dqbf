@@ -229,19 +229,6 @@ impl ExpandState {
                         s.defined.len(),
                         s.undefined.len()
                     );
-                    let est_cells: usize = s
-                        .undefined
-                        .iter()
-                        .map(|y| 1usize << f.deps[y].len().min(8))
-                        .sum();
-                    if est_cells > 8192 {
-                        self.mode = if nu_full > self.expand_us.len() {
-                            Mode::Partial
-                        } else {
-                            Mode::SlotDpll
-                        };
-                        return self.step(f, cdcl, deadline, start, debug);
-                    }
                     self.cegar = Some(crate::arbiter::CegarState::new(f, &s.undefined));
                 }
                 None => {
