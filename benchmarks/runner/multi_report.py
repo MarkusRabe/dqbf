@@ -706,9 +706,16 @@ def render(rows: list[dict], out: Path, timeout_s: float) -> None:
         f'B <select id="cmpB">{_opts(solvers, b_default)}</select></fieldset>',
     )
 
+    import datetime
+    import subprocess
+
+    head = subprocess.run(
+        ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True
+    ).stdout.strip()
+    stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     html = f"""<!doctype html><meta charset=utf-8><title>multi-solver report</title>
 <style>{CSS}</style>
-<h1>Multi-solver report</h1>
+<h1>Multi-solver report <small style="color:#888;font-size:.55em">@ {_esc(head)} · {_esc(stamp)}</small></h1>
 {_warnings(rows, solvers)}
 {data_block}
 {_domain_selector(domains)}
