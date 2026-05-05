@@ -527,6 +527,33 @@ clause yet). A middle ground — all disagreeing vars *in any* violated
 clause — might recover the per-round breadth. Kept the changes (no
 regression); iter 5 retargets.
 
+## Refined-loop iteration 5: SlotDpll-exhausted ⇒ UNSAT; FEx-var panics (2026-05-05)
+
+**Target**: tiny instances (`dep_cycle_n1` 11 vars, `hwmc_indinv` 20-50
+vars) timing out at 10 s. **Constraint named: implementation** — two
+panics + a missing terminal case, not an algorithmic gap.
+
+**Change**:
+- `search.rs`: cross-feed `cdcl.add_external` and `incremental_bce`
+  both indexed past `value[n_vars]` when saturate's FEx forks created
+  vars beyond the original count. Panics were swallowed by the runner
+  as "error".
+- `expand_state.rs`: SlotDpll exhaustion with `added.is_empty()`
+  returned `Done` (fall to saturate). But exhausted-with-no-new-slot
+  *is* DQBF-UNSAT (every slot-assignment row-pruned, slots are
+  necessary cross-row constraints). New `Step::Unsat` (no .frp).
+  Guard: inconclusive if any prune was via CDCL budget.
+
+**Result: +10/-1 = +9 net**, 1659/2856. 0 INVALID; 8/8 new UNSAT
+match pedant. Gains in `dep_cycle` (+1), `hwmc_indinv` (+5),
+`bmc_circuits/succinct` (+2). Side-effect: `fork_unsat` /
+`wrongdep_unsat` tiny tests now exit via `Step::Unsat` and lose
+their .frp cert (verdict still correct).
+
+**Gotcha.** pedant=UNSAT vs hqs=SAT on dep_cycle_n1 and several
+hwmc_indinv — another **hqs unsoundness instance** alongside the
+earlier dqbdd one. pedant remains the only trustworthy reference.
+
 ---
 
 ## Appendix: iteration tables
