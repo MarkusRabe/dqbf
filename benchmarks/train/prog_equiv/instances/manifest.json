@@ -1,0 +1,362 @@
+[
+  {
+    "path": "pe_swap_tmp__swap_tmp_w1_a1_k004.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "prog_equiv",
+      "swap_tmp",
+      "swap_tmp",
+      "bounded"
+    ],
+    "params": {
+      "W": 1,
+      "A": 1,
+      "K": 4
+    }
+  },
+  {
+    "path": "pe_swap_tmp__swap_tmp_w2_a2_k004.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "prog_equiv",
+      "swap_tmp",
+      "swap_tmp",
+      "bounded"
+    ],
+    "params": {
+      "W": 2,
+      "A": 2,
+      "K": 4
+    }
+  },
+  {
+    "path": "pe_swap_tmp__swap_tmp_w2_a2_k008.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "prog_equiv",
+      "swap_tmp",
+      "swap_tmp",
+      "bounded"
+    ],
+    "params": {
+      "W": 2,
+      "A": 2,
+      "K": 8
+    }
+  },
+  {
+    "path": "pe_swap_tmp__swap_tmp_w2_a2_k016.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "prog_equiv",
+      "swap_tmp",
+      "swap_tmp",
+      "bounded"
+    ],
+    "params": {
+      "W": 2,
+      "A": 2,
+      "K": 16
+    }
+  },
+  {
+    "path": "pe_swap_tmp__swap_tmp_w4_a3_k008.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "prog_equiv",
+      "swap_tmp",
+      "swap_tmp",
+      "bounded"
+    ],
+    "params": {
+      "W": 4,
+      "A": 3,
+      "K": 8
+    }
+  },
+  {
+    "path": "pe_swap_tmp__swap_tmp_w4_a3_k016.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "prog_equiv",
+      "swap_tmp",
+      "swap_tmp",
+      "bounded"
+    ],
+    "params": {
+      "W": 4,
+      "A": 3,
+      "K": 16
+    }
+  },
+  {
+    "path": "pe_swap_tmp__swap_xor_w1_a1_k004.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "prog_equiv",
+      "swap_tmp",
+      "swap_xor",
+      "bounded"
+    ],
+    "params": {
+      "W": 1,
+      "A": 1,
+      "K": 4
+    }
+  },
+  {
+    "path": "pe_swap_tmp__swap_xor_w2_a2_k004.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "prog_equiv",
+      "swap_tmp",
+      "swap_xor",
+      "bounded"
+    ],
+    "params": {
+      "W": 2,
+      "A": 2,
+      "K": 4
+    }
+  },
+  {
+    "path": "pe_swap_tmp__swap_xor_w2_a2_k008.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "prog_equiv",
+      "swap_tmp",
+      "swap_xor",
+      "bounded"
+    ],
+    "params": {
+      "W": 2,
+      "A": 2,
+      "K": 8
+    }
+  },
+  {
+    "path": "pe_swap_tmp__swap_xor_w2_a2_k016.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "prog_equiv",
+      "swap_tmp",
+      "swap_xor",
+      "bounded"
+    ],
+    "params": {
+      "W": 2,
+      "A": 2,
+      "K": 16
+    }
+  },
+  {
+    "path": "pe_swap_tmp__swap_xor_w4_a3_k008.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "prog_equiv",
+      "swap_tmp",
+      "swap_xor",
+      "bounded"
+    ],
+    "params": {
+      "W": 4,
+      "A": 3,
+      "K": 8
+    }
+  },
+  {
+    "path": "pe_swap_tmp__swap_xor_w4_a3_k016.dqdimacs.gz",
+    "expected": "sat",
+    "tags": [
+      "prog_equiv",
+      "swap_tmp",
+      "swap_xor",
+      "bounded"
+    ],
+    "params": {
+      "W": 4,
+      "A": 3,
+      "K": 16
+    }
+  },
+  {
+    "path": "pe_sum_iter__sum_unroll_w1_a1_k004.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "prog_equiv",
+      "sum_iter",
+      "sum_unroll",
+      "bounded"
+    ],
+    "params": {
+      "W": 1,
+      "A": 1,
+      "K": 4
+    }
+  },
+  {
+    "path": "pe_sum_iter__sum_unroll_w2_a2_k004.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "prog_equiv",
+      "sum_iter",
+      "sum_unroll",
+      "bounded"
+    ],
+    "params": {
+      "W": 2,
+      "A": 2,
+      "K": 4
+    }
+  },
+  {
+    "path": "pe_sum_iter__sum_unroll_w2_a2_k008.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "prog_equiv",
+      "sum_iter",
+      "sum_unroll",
+      "bounded"
+    ],
+    "params": {
+      "W": 2,
+      "A": 2,
+      "K": 8
+    }
+  },
+  {
+    "path": "pe_sum_iter__sum_unroll_w2_a2_k016.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "prog_equiv",
+      "sum_iter",
+      "sum_unroll",
+      "bounded"
+    ],
+    "params": {
+      "W": 2,
+      "A": 2,
+      "K": 16
+    }
+  },
+  {
+    "path": "pe_sum_iter__sum_unroll_w4_a3_k008.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "prog_equiv",
+      "sum_iter",
+      "sum_unroll",
+      "bounded"
+    ],
+    "params": {
+      "W": 4,
+      "A": 3,
+      "K": 8
+    }
+  },
+  {
+    "path": "pe_sum_iter__sum_unroll_w4_a3_k016.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "prog_equiv",
+      "sum_iter",
+      "sum_unroll",
+      "bounded"
+    ],
+    "params": {
+      "W": 4,
+      "A": 3,
+      "K": 16
+    }
+  },
+  {
+    "path": "pe_memcpy_fwd__memcpy_bwd_w1_a1_k004.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "prog_equiv",
+      "memcpy_fwd",
+      "memcpy_bwd",
+      "bounded"
+    ],
+    "params": {
+      "W": 1,
+      "A": 1,
+      "K": 4
+    }
+  },
+  {
+    "path": "pe_memcpy_fwd__memcpy_bwd_w2_a2_k004.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "prog_equiv",
+      "memcpy_fwd",
+      "memcpy_bwd",
+      "bounded"
+    ],
+    "params": {
+      "W": 2,
+      "A": 2,
+      "K": 4
+    }
+  },
+  {
+    "path": "pe_memcpy_fwd__memcpy_bwd_w2_a2_k008.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "prog_equiv",
+      "memcpy_fwd",
+      "memcpy_bwd",
+      "bounded"
+    ],
+    "params": {
+      "W": 2,
+      "A": 2,
+      "K": 8
+    }
+  },
+  {
+    "path": "pe_memcpy_fwd__memcpy_bwd_w2_a2_k016.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "prog_equiv",
+      "memcpy_fwd",
+      "memcpy_bwd",
+      "bounded"
+    ],
+    "params": {
+      "W": 2,
+      "A": 2,
+      "K": 16
+    }
+  },
+  {
+    "path": "pe_memcpy_fwd__memcpy_bwd_w4_a3_k008.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "prog_equiv",
+      "memcpy_fwd",
+      "memcpy_bwd",
+      "bounded"
+    ],
+    "params": {
+      "W": 4,
+      "A": 3,
+      "K": 8
+    }
+  },
+  {
+    "path": "pe_memcpy_fwd__memcpy_bwd_w4_a3_k016.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "prog_equiv",
+      "memcpy_fwd",
+      "memcpy_bwd",
+      "bounded"
+    ],
+    "params": {
+      "W": 4,
+      "A": 3,
+      "K": 16
+    }
+  }
+]
