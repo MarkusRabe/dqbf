@@ -2,6 +2,7 @@
 
 | date | label | view |
 |---|---|---|
+| 2026-05-05_0551 | iter8-def-multikey | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-05_0551_iter8-def-multikey.html) · [source](2026-05-05_0551_iter8-def-multikey.html) |
 | 2026-05-05_0533 | iter6-analyzefinal | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-05_0533_iter6-analyzefinal.html) · [source](2026-05-05_0533_iter6-analyzefinal.html) |
 | 2026-05-05_0512 | iter5-slotdpll-unsat | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-05_0512_iter5-slotdpll-unsat.html) · [source](2026-05-05_0512_iter5-slotdpll-unsat.html) |
 | 2026-05-05_0449 | iter4-gate-target | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-05_0449_iter4-gate-target.html) · [source](2026-05-05_0449_iter4-gate-target.html) |
