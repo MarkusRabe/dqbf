@@ -505,6 +505,28 @@ check (e.g., bail if |E|>2000 or unit-prop forces <80% of E). Cert at
 max|dep|>20 needs an AIGER-circuit emitter from forcing clauses
 instead of truth-tables.
 
+## Refined-loop iteration 4: |E| gate + violated-clause CEGAR (2026-05-05, `47cc9d2`)
+
+**Target**: recover lost UNSAT, capture more pec_circuits via faster
+CEGAR.
+
+**Change**: (a) skip definability when |E|>1500; (b) per CEGAR round,
+flip-check only existentials that *fix the violated clause* (the one
+`aux_i` true in vmodel) instead of every disagreeing y.
+
+**Result: +2/-2 = net 0.** Change (b) trades fewer flip-checks/round
+for more rounds (alu_add 1049→2012); single-var targeting learns one
+forcing clause where the all-disagreeing scan learned ~|E|. mutex_n12
+solves on the sample but not consistently under j=48 contention. The
+4 "lost" collatz are |E|=30-45k borderline noise (frust-prev also
+times out standalone). 0 INVALID.
+
+**Gotcha.** Targeting one var per violated clause means CEGAR never
+learns enough about *unconstrained* existentials (those in no violated
+clause yet). A middle ground — all disagreeing vars *in any* violated
+clause — might recover the per-round breadth. Kept the changes (no
+regression); iter 5 retargets.
+
 ---
 
 ## Appendix: iteration tables
