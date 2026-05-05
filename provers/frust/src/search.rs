@@ -335,8 +335,11 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
         }
 
         // ---- Cross-feed: short Q-resolution-derived clauses → CDCL ----
+        // Saturate's FEx/SFEx forks introduce vars beyond expand-CDCL's
+        // n_vars; clauses mentioning those would index past `value[]`.
+        let nv = f.n_vars as Lit;
         for c in &db.clauses[fed_upto..] {
-            if c.len() <= 4 {
+            if c.len() <= 4 && c.iter().all(|&l| crate::formula::var(l) as Lit <= nv) {
                 cdcl.add_external(c);
             }
         }
@@ -506,9 +509,16 @@ fn incremental_bce(db: &mut Db, f: &Formula) -> usize {
     if live.is_empty() {
         return 0;
     }
-    // Build a temp Formula with the live clauses + original prefix.
+    // Build a temp Formula with the live clauses + original prefix. FEx
+    // forks introduce vars > f.n_vars; size for those (BCE treats them
+    // as existentials with empty dep, so they're never the witness).
+    let max_var = live
+        .iter()
+        .flat_map(|(_, c)| c.iter().map(|&l| crate::formula::var(l)))
+        .max()
+        .unwrap_or(f.n_vars);
     let tmp = Formula::new(
-        f.n_vars,
+        max_var.max(f.n_vars),
         f.universals.clone(),
         f.deps.clone(),
         live.iter().map(|(_, c)| c.clone()).collect(),
