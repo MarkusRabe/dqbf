@@ -85,11 +85,13 @@ def main() -> None:
     for fam in ["tests/integration/tiny", "benchmarks/train"]:
         for ext in ("*.dqdimacs", "*.dqdimacs.gz", "*.qdimacs"):
             insts += sorted((ROOT / fam).rglob(ext))
-    print(f"running {len(insts)} instances on {BIN.name}...")
+    print(f"running {len(insts)} instances on {BIN.name}...", flush=True)
     results = []
     with ProcessPoolExecutor(max_workers=48) as ex:
         for fut in as_completed([ex.submit(run_one, p) for p in insts]):
             results.append(fut.result())
+            if len(results) % 200 == 0:
+                print(f"  [{len(results)}/{len(insts)}]", flush=True)
     n_sat = sum(1 for r in results if r["got"] == "sat")
     n_unsat = sum(1 for r in results if r["got"] == "unsat")
     n_unk = sum(1 for r in results if r["got"] == "unknown")
