@@ -102,7 +102,11 @@ impl ExpandState {
             .filter(|&i| f.deps[&exs[i]].is_empty())
             .collect();
         let eae = dep_mask.iter().all(|&m| m == 0 || m == full_mask);
-        let mode = if partial {
+        // Definability runs first whenever there are ≥2 distinct dep
+        // sizes — covers partial (|U|>16) AND consistency-shape
+        // (|U|≤16 with multiple keys, where SlotDpll often loops).
+        let multi_key = !eae;
+        let mode = if partial || multi_key {
             Mode::Definability
         } else if nu > 16 && eae && !outer.is_empty() {
             Mode::OuterCegar
@@ -197,10 +201,15 @@ impl ExpandState {
         // Gate: definability is for circuit-like matrices. Large
         // unrolled instances (collatz n64, hwmcc) burn budget here for
         // nothing and miss the Partial-mode UNSAT they'd otherwise hit.
+        let nu_full = f.universals.len();
         if f.deps.len() > 1500 {
             dbg_ex!(debug, "definability: |E|={} >1500, skip", f.deps.len());
-            self.mode = Mode::Partial;
-            return self.step_partial(f, cdcl, deadline, start, debug);
+            self.mode = if nu_full > self.expand_us.len() {
+                Mode::Partial
+            } else {
+                Mode::SlotDpll
+            };
+            return self.step(f, cdcl, deadline, start, debug);
         }
         dbg_ex!(debug, "definability: padoa+cegar, deadline {:.2}s", sub_deadline);
         if let Some(s) = crate::definability::padoa_split(f, sub_deadline, start, debug) {
@@ -224,8 +233,12 @@ impl ExpandState {
                 }
             }
         }
-        self.mode = Mode::Partial;
-        self.step_partial(f, cdcl, deadline, start, debug)
+        self.mode = if nu_full > self.expand_us.len() {
+            Mode::Partial
+        } else {
+            Mode::SlotDpll
+        };
+        self.step(f, cdcl, deadline, start, debug)
     }
 
     fn step_partial(

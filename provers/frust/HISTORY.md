@@ -579,6 +579,13 @@ analyze_final fix exposed the bug usefully.
 *partial* slot models (DPLL-style) inside the CDCL loop, or proving
 that `cert_bce` doesn't invalidate the row-prune→slot-clause map.
 
+## Refined-loop iteration 7: revert iter4 single-var targeting (2026-05-05)
+
+**Change**: arbiter.rs back to per-y disagreement scan (iter3
+behaviour) since iter4's targeting doubled rounds for +0.
+
+**Result: +1/-0 = +1 net**, 1668/2856. Recovers iter6's noise loss.
+
 ---
 
 ## Appendix: iteration tables
