@@ -255,7 +255,13 @@ pub fn validity_cegar(
                     continue;
                 }
                 // flip-SAT: y not determined by dep(y) alone (Padoa's
-                // fixpoint linked extra z's). Fall through to arbiter.
+                // fixpoint linked extra z's). At |dep|>8 a constant
+                // arbiter would block arbsolve-UNSAT soundness; skip
+                // and retry once enough linked-z's are pinned. At
+                // |dep|≤8 fall through to a per-cell arbiter.
+                if dep_lits.len() > 8 {
+                    continue;
+                }
             }
             // Arbiter: per-cell when |dep|≤8, else a single constant.
             let cell_dep = if dep_lits.len() > 8 {
