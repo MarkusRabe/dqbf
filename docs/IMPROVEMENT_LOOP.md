@@ -90,8 +90,25 @@ results into a heuristic decision.
    misled you. Those notes save the next iteration from re-discovering
    them.
 
-6. Periodically: 9-solver `dqbf-bench multi` for the cactus + cross-tool
-   disagreement check.
+6. **Regenerate the report.** After each batch (or any architectural
+   change), run the multi-solver benchmark and archive the HTML:
+
+   ```sh
+   rm -rf results/
+   python -m benchmarks.runner.cli multi --root benchmarks/train \
+     --solvers frust,dqbdd,pedant,hqs --timeout 10 -j 48 \
+     -o results/train.jsonl --report results/train.html \
+     --certdir results/certs --verify-certs
+   cp results/train.html "docs/dev_reports/$(date +%Y-%m-%d_%H%M)_<slug>.html"
+   python -c "from scripts.make_report import write_index; write_index()"
+   git add docs/dev_reports && git commit -m "<slug> report"
+   ```
+
+   The cactus shows whether the *shape* changed (shelves, phase
+   boundaries); the cert table catches anything the per-iter probe
+   missed; the disagreement section is the second soundness gate.
+   Don't edit the solver while this runs — contaminated reports have
+   bitten us three times.
 
 ---
 
