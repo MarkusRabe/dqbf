@@ -318,6 +318,13 @@ pub fn validity_cegar(
                 dep_lits.clone()
             };
             let key = (y, cell_dep.clone());
+            // Budget full → stop *new* allocations; existing keys
+            // still hit. validity-UNSAT under partial cells is sound
+            // (uncovered cells leave y free → any value works).
+            if !arb_of.contains_key(&key) && arb_meta.len() >= ARB_BUDGET {
+                *any_const_arbiter = true;
+                continue;
+            }
             let ai = *arb_of.entry(key.clone()).or_insert_with(|| {
                 arb_meta.push((y, cell_dep.clone()));
                 let idx = arb_meta.len() - 1;
@@ -343,12 +350,7 @@ pub fn validity_cegar(
                 arb_assump.push(if want > 0 { av } else { -av });
                 idx
             });
-            if ai >= ARB_BUDGET {
-                if debug {
-                    eprintln!("c [def] cegar arbiter budget exhausted at round {}", rounds);
-                }
-                return CegarOut::Bail;
-            }
+            let _ = ai;
             learned_any = true;
         }
         if !learned_any {
