@@ -31,13 +31,19 @@ pub struct ForcingCert {
     pub rounds: usize,
 }
 
+pub enum CegarOut {
+    Sat(ForcingCert),
+    Unsat,
+    Bail,
+}
+
 pub fn validity_cegar(
     f: &Formula,
     undefined: &[Var],
     deadline: f64,
     start: &std::time::Instant,
     debug: bool,
-) -> Option<ForcingCert> {
+) -> CegarOut {
     let n = f.n_vars as usize;
     let m = f.clauses.len();
     let undef_set: BTreeSet<Var> = undefined.iter().copied().collect();
@@ -109,14 +115,14 @@ pub fn validity_cegar(
                     forcing.values().map(|v| v.len()).sum::<usize>()
                 );
             }
-            return None;
+            return CegarOut::Bail;
         }
         rounds += 1;
 
         // ---- validity counterexample under current arbiters ----------
         let sat = validity.solve(&arb_assump, &mut vmodel, conf_budget);
         if validity.budget_hit {
-            return None;
+            return CegarOut::Bail;
         }
         if !sat {
             // ¬matrix unreachable under encoded Skolem → DQBF SAT.
@@ -139,7 +145,7 @@ pub fn validity_cegar(
                     (y, dep, val)
                 })
                 .collect();
-            return Some(ForcingCert { clauses: forcing, cells, rounds });
+            return CegarOut::Sat(ForcingCert { clauses: forcing, cells, rounds });
         }
         let u_assump: Vec<Lit> = f
             .universals
@@ -156,7 +162,7 @@ pub fn validity_cegar(
         }
         let row_sat = consist.solve(&ca, &mut cmodel, conf_budget);
         if consist.budget_hit {
-            return None;
+            return CegarOut::Bail;
         }
         if !row_sat {
             // Conflict between U* and arbiter choices. Core ⊆ ca.
@@ -170,11 +176,13 @@ pub fn validity_cegar(
                 })
                 .collect();
             if arb_core.is_empty() {
-                // Genuine UNSAT row (matrix[U*,·] propositionally UNSAT).
+                // Core ⊆ universals: matrix[U*,·] propositionally
+                // UNSAT under consist (which has only original clauses
+                // + arbiter links; links inactive when arb_core empty).
                 if debug {
-                    eprintln!("c [def] cegar genuine UNSAT row at round {}", rounds);
+                    eprintln!("c [def] cegar UNSAT row at round {}", rounds);
                 }
-                return None;
+                return CegarOut::Unsat;
             }
             // Learn ¬arb_core in arbsolve; re-pick arbiters.
             let conflict: Vec<Lit> = arb_core.iter().map(|&l| -l).collect();
@@ -183,7 +191,7 @@ pub fn validity_cegar(
                 if debug {
                     eprintln!("c [def] cegar arbiter space exhausted → no Skolem");
                 }
-                return None;
+                return CegarOut::Bail;
             }
             arb_assump.clear();
             for i in 1..arb_meta.len() {
@@ -244,7 +252,7 @@ pub fn validity_cegar(
                         for (yy, _) in &arb_meta[1..] { *by_y.entry(*yy).or_default() += 1; }
                         eprintln!("c [def] cegar arbiter budget exhausted at round {}: by_y={:?}", rounds, by_y);
                     }
-                    return None;
+                    return CegarOut::Bail;
                 }
                 learned_any = true;
                 continue;
@@ -254,14 +262,14 @@ pub fn validity_cegar(
             a.push(if want > 0 { -(y as Lit) } else { y as Lit });
             let flip_sat = consist.solve(&a, &mut scratch, 10_000);
             if consist.budget_hit {
-                return None;
+                return CegarOut::Bail;
             }
             if flip_sat {
                 // Padoa missed this y. Treat as undefined from here on.
                 if debug {
                     eprintln!("c [def] cegar: y={} not actually defined; bail", y);
                 }
-                return None;
+                return CegarOut::Bail;
             }
             let then = if want > 0 { y as Lit } else { -(y as Lit) };
             let ante: Vec<Lit> = consist
@@ -279,7 +287,7 @@ pub fn validity_cegar(
             if debug {
                 eprintln!("c [def] cegar stalled at round {}", rounds);
             }
-            return None;
+            return CegarOut::Bail;
         }
     }
 }
