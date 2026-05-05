@@ -761,6 +761,29 @@ arbsolve-exponential (many undef = transition function search) or
 forcing-clause-explosive (defined-y chain needs interpolation). Both
 need compact Skolem repr — interpolation or BDDs.
 
+## Refined-loop iteration 19: budget-continue (reverted, −31) (2026-05-05)
+
+**Hypothesis**: continuing past ARB_BUDGET (stop allocating, keep
+forcing) lets validity-UNSAT fire under partial cells. **Wrong** —
+loop never falls through to SlotDpll. −31. Const-undef-free fallback
+also tried (validity with large-dep undef y unconstrained); fires
+~never. **Reverted.**
+
+## Refined-loop iteration 20: dynamic per-cell threshold (2026-05-05)
+
+**Change**: `cell_dep_cap = log2(ARB_BUDGET / |undef|)` capped at 12.
+2-undef instances at |dep|∈[9,12] get per-cell instead of const.
+
+**Result: +9 net**, 1960/2856. 0 INVALID. 20/20 sampled match pedant.
+Gains across `bmc_circuits/succinct` and `cbmc_v2/succinct` where the
+fixed threshold-8 was forcing const at |dep|=10.
+
+**Gap analysis**: of frust's 905 unsolved, pedant solves 230 (the
+interpolation gap), dqbdd 254 (the BDD gap), 552 nobody solves.
+frust uniquely solves 59. The next architectural step is
+proof-logging CDCL + McMillan interpolation in `definability.rs` to
+extract circuit definitions instead of per-row forcing clauses.
+
 ---
 
 ## Appendix: iteration tables
