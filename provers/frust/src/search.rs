@@ -205,6 +205,15 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
     };
     let nu_expand = g.universals.len().min(16);
     let cert_bce = crate::bce::dqbf_bce(&g, nu_expand);
+    if cfg.debug_expand {
+        eprintln!(
+            "c [bce] |C|={}→{} (sat_bce removed {}, cert_bce removed {})",
+            g.clauses.len(),
+            sat_bce.clauses.len(),
+            sat_bce.stack.len(),
+            cert_bce.stack.len()
+        );
+    }
     for c in &sat_bce.clauses {
         if is_tautology(c) {
             continue;
@@ -252,6 +261,7 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
     let mut cdcl = crate::cdcl::Cdcl::new(f.n_vars as usize, &cert_bce.clauses);
     let mut ex = crate::expand_state::ExpandState::new(f, cert_bce.stack);
     let mut fed_upto = 0usize;
+    let mut last_bce_at = db.clauses.len();
     let mut known_unsat = false;
     let mut expand_done = !cfg.extract_cert;
 
@@ -331,6 +341,22 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
             }
         }
         fed_upto = db.clauses.len();
+
+        // ---- Incremental BCE on the live Db (saturate's working set) ----
+        // Derived clauses can render earlier ones blocked. Sound: BCE
+        // preserves equisat; .frp steps stay (they're already recorded),
+        // we just stop those clauses participating in future resolutions.
+        if db.clauses.len() > last_bce_at + last_bce_at / 2 + 256 {
+            let n_killed = incremental_bce(&mut db, f);
+            if cfg.debug_expand && n_killed > 0 {
+                eprintln!(
+                    "c [bce-inc] killed {} of {} live clauses",
+                    n_killed,
+                    db.clauses.len()
+                );
+            }
+            last_bce_at = db.clauses.len();
+        }
 
         if first {
             slice = (cfg.timeout_s * 0.1).clamp(0.2, 1.0);
@@ -465,6 +491,39 @@ fn saturate(
             return None;
         }
     }
+}
+
+/// Re-run BCE on Db's live clause set; mark newly-blocked clauses dead.
+/// Returns how many were killed.
+fn incremental_bce(db: &mut Db, f: &Formula) -> usize {
+    let live: Vec<(usize, Clause)> = db
+        .clauses
+        .iter()
+        .enumerate()
+        .filter(|&(ci, _)| !db.dead[ci])
+        .map(|(ci, c)| (ci, c.clone()))
+        .collect();
+    if live.is_empty() {
+        return 0;
+    }
+    // Build a temp Formula with the live clauses + original prefix.
+    let tmp = Formula::new(
+        f.n_vars,
+        f.universals.clone(),
+        f.deps.clone(),
+        live.iter().map(|(_, c)| c.clone()).collect(),
+    );
+    let res = crate::bce::dqbf_bce(&tmp, 0);
+    // Surviving clauses by content; kill the rest in Db.
+    let survived: std::collections::HashSet<Clause> = res.clauses.into_iter().collect();
+    let mut n = 0usize;
+    for (ci, c) in live {
+        if !survived.contains(&c) {
+            db.dead[ci] = true;
+            n += 1;
+        }
+    }
+    n
 }
 
 fn bail(db: &Db, forks: usize, known_unsat: bool) -> Output {

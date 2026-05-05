@@ -34,6 +34,12 @@ reverts immediately.** The probe is `scripts/frust_opt_loop.py`
 (full train set, 10s, j=48); it now prints a per-instance regression
 diff so any flip from solved→unknown is visible.
 
+**Keep `HISTORY.md` up-to-date.** After each batch of iterations or
+architectural change, append a paragraph in the same style (anchor on
+the bottleneck instance, what was tried, what stuck, with numbers and
+the commit hash). The iteration table at the end of HISTORY.md is the
+quick-reference; the prose is the actual record.
+
 ```sh
 for f in tests/integration/tiny/*.dqdimacs; do rm -f /tmp/c.aag /tmp/p.frp; \
   provers/frust/target/release/frust "$f" --cert /tmp/c.aag --proof /tmp/p.frp >/dev/null 2>&1; rc=$?; \
