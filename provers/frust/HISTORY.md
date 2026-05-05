@@ -721,6 +721,20 @@ hit deadline at 5-7k rounds with 3-6k arbiters — within reach.
 between `bmc_circuits/updown/X` and `bmc_circuits/succinct/updown/X`
 (same stem, j=48 race). Fixed with sha1(path) suffix.
 
+## Refined-loop iteration 16: persist CegarState across slices (2026-05-05, `d73a6ab`)
+
+**Target**: iter15's near-misses (5-7k rounds at deadline). The
+3.5 s sub-slice rebuilds validity/consist/forcing from scratch each
+call — burns the first ~400 rounds redoing the same forcing clauses.
+
+**Change**: `CegarState` lives on `ExpandState`; `step_definability`
+returns `Pending` (not `Bail`) on deadline so the next slice resumes
+mid-CEGAR with all forcing clauses, arbiters, and CDCL learned
+clauses intact.
+
+**Result: +35 net**, 1949/2856. 0 INVALID. Gains across the iter15
+near-misses (`bmc/succinct` bcd_ctr/prio_enc, larger pec_circuits).
+
 ---
 
 ## Appendix: iteration tables
