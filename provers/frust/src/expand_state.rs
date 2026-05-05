@@ -60,6 +60,10 @@ pub struct ExpandState {
     outer_pins: Vec<(Var, i8)>,
     bad_rows: Vec<u32>,
 
+    // Definability-CEGAR persisted state (built lazily; resumes
+    // across slices instead of rebuilding three CDCL instances).
+    cegar: Option<crate::arbiter::CegarState>,
+
     // Scratch
     tables: Vec<Vec<i8>>,
     model: Vec<i8>,
@@ -144,6 +148,7 @@ impl ExpandState {
             outer_learned: Vec::new(),
             outer_pins,
             bad_rows: Vec::new(),
+            cegar: None,
             model: vec![0i8; n],
         }
     }
@@ -211,50 +216,67 @@ impl ExpandState {
             };
             return self.step(f, cdcl, deadline, start, debug);
         }
-        // Padoa was a fast-reject (bail if too many undefined). The
-        // CEGAR's flip-check rediscovers definedness on demand and
-        // promotes to arbiter when not defined, so a quick Padoa
-        // suffices: cap at 0.2× slice; the rest goes to CEGAR.
-        let padoa_dl = now + (deadline - now) * 0.2;
-        dbg_ex!(debug, "definability: padoa→{:.2}s cegar→{:.2}s", padoa_dl, sub_deadline);
-        if let Some(s) = crate::definability::padoa_split(f, padoa_dl, start, debug) {
-            dbg_ex!(
-                debug,
-                "padoa: {} defined, {} undefined",
-                s.defined.len(),
-                s.undefined.len()
-            );
-            // Gate on estimated arbiter cells, not raw undefined count:
-            // bmc/succinct has 200+ undefined but |dep|=4-5 each, so
-            // total cells fit comfortably.
-            let est_cells: usize = s
-                .undefined
-                .iter()
-                .map(|y| 1usize << f.deps[y].len().min(8))
-                .sum();
-            if est_cells <= 8192 {
-                use crate::arbiter::CegarOut;
-                match crate::arbiter::validity_cegar(f, &s.undefined, sub_deadline, start, debug) {
-                    CegarOut::Sat(cert) => {
-                        self.mode = Mode::Exhausted;
-                        let mut sk = crate::arbiter::forcing_to_skolem(f, &cert, 20).unwrap();
-                        crate::bce::reconstruct(&mut sk, f, &self.bce_stack);
-                        return Step::Sat(Some(sk));
+        // Build CegarState once (Padoa + 3×CDCL); subsequent slices
+        // resume the same instance.
+        if self.cegar.is_none() {
+            let padoa_dl = now + (deadline - now) * 0.2;
+            dbg_ex!(debug, "definability: padoa→{:.2}s", padoa_dl);
+            match crate::definability::padoa_split(f, padoa_dl, start, debug) {
+                Some(s) => {
+                    dbg_ex!(
+                        debug,
+                        "padoa: {} defined, {} undefined",
+                        s.defined.len(),
+                        s.undefined.len()
+                    );
+                    let est_cells: usize = s
+                        .undefined
+                        .iter()
+                        .map(|y| 1usize << f.deps[y].len().min(8))
+                        .sum();
+                    if est_cells > 8192 {
+                        self.mode = if nu_full > self.expand_us.len() {
+                            Mode::Partial
+                        } else {
+                            Mode::SlotDpll
+                        };
+                        return self.step(f, cdcl, deadline, start, debug);
                     }
-                    CegarOut::Unsat => {
-                        self.mode = Mode::Exhausted;
-                        return Step::Unsat;
-                    }
-                    CegarOut::Bail => {}
+                    self.cegar = Some(crate::arbiter::CegarState::new(f, &s.undefined));
+                }
+                None => {
+                    self.mode = if nu_full > self.expand_us.len() {
+                        Mode::Partial
+                    } else {
+                        Mode::SlotDpll
+                    };
+                    return self.step(f, cdcl, deadline, start, debug);
                 }
             }
         }
-        self.mode = if nu_full > self.expand_us.len() {
-            Mode::Partial
-        } else {
-            Mode::SlotDpll
-        };
-        self.step(f, cdcl, deadline, start, debug)
+        use crate::arbiter::CegarOut;
+        let cs = self.cegar.as_mut().unwrap();
+        match crate::arbiter::validity_cegar(cs, f, sub_deadline, start, debug) {
+            CegarOut::Sat(cert) => {
+                self.mode = Mode::Exhausted;
+                let mut sk = crate::arbiter::forcing_to_skolem(f, &cert, 20).unwrap();
+                crate::bce::reconstruct(&mut sk, f, &self.bce_stack);
+                Step::Sat(Some(sk))
+            }
+            CegarOut::Unsat => {
+                self.mode = Mode::Exhausted;
+                Step::Unsat
+            }
+            CegarOut::Pending => Step::Pending,
+            CegarOut::Bail => {
+                self.mode = if nu_full > self.expand_us.len() {
+                    Mode::Partial
+                } else {
+                    Mode::SlotDpll
+                };
+                self.step(f, cdcl, deadline, start, debug)
+            }
+        }
     }
 
     fn step_partial(

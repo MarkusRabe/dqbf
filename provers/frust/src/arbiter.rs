@@ -35,93 +35,142 @@ pub enum CegarOut {
     Sat(ForcingCert),
     Unsat,
     Bail,
+    Pending,
+}
+
+/// Persisted validity-CEGAR state so slices accumulate instead of
+/// restarting (iter16: bcd_ctr needs ~12s of arbsolve search; one
+/// 4.9 s slice isn't enough but three are).
+pub struct CegarState {
+    n: usize,
+    arb_base: usize,
+    validity: Cdcl,
+    vmodel: Vec<i8>,
+    consist: Cdcl,
+    cmodel: Vec<i8>,
+    scratch: Vec<i8>,
+    arbsolve: Cdcl,
+    amodel: Vec<i8>,
+    exs: Vec<Var>,
+    dep_set: HashMap<Var, BTreeSet<Var>>,
+    univ: BTreeSet<Var>,
+    undef_set: BTreeSet<Var>,
+    forcing: HashMap<Var, Vec<(Vec<Lit>, Lit)>>,
+    arb_of: HashMap<(Var, Vec<Lit>), usize>,
+    arb_meta: Vec<(Var, Vec<Lit>)>,
+    arb_assump: Vec<Lit>,
+    any_const_arbiter: bool,
+    rounds: usize,
+}
+
+impl CegarState {
+    pub fn new(f: &Formula, undefined: &[Var]) -> Self {
+        let n = f.n_vars as usize;
+        let m = f.clauses.len();
+        let mut vclauses: Vec<Clause> = Vec::with_capacity(m + 1);
+        let mut all_aux: Clause = Vec::with_capacity(m);
+        for (i, c) in f.clauses.iter().enumerate() {
+            let aux = (n + 1 + i) as Lit;
+            for &l in c {
+                vclauses.push(vec![-aux, -l]);
+            }
+            all_aux.push(aux);
+        }
+        vclauses.push(all_aux);
+        let arb_base = n + m;
+        let nv = arb_base + ARB_BUDGET;
+        let mut validity = Cdcl::new(nv, &vclauses);
+        for i in 1..=ARB_BUDGET {
+            validity.set_decision((arb_base + i) as u32, false);
+        }
+        let nc = n + ARB_BUDGET;
+        let mut consist = Cdcl::new(nc, &f.clauses);
+        for i in 1..=ARB_BUDGET {
+            consist.set_decision((n + i) as u32, false);
+        }
+        let mut arbsolve = Cdcl::new(ARB_BUDGET, &[]);
+        for i in 1..=ARB_BUDGET {
+            arbsolve.set_decision(i as u32, false);
+        }
+        let exs: Vec<Var> = f.deps.keys().copied().collect();
+        Self {
+            n,
+            arb_base,
+            vmodel: vec![0i8; nv + 1],
+            validity,
+            cmodel: vec![0i8; nc + 1],
+            scratch: vec![0i8; nc + 1],
+            consist,
+            amodel: vec![0i8; ARB_BUDGET + 1],
+            arbsolve,
+            dep_set: exs.iter().map(|&y| (y, f.deps[&y].clone())).collect(),
+            univ: f.universals.iter().copied().collect(),
+            undef_set: undefined.iter().copied().collect(),
+            forcing: exs.iter().map(|&y| (y, Vec::new())).collect(),
+            exs,
+            arb_of: HashMap::new(),
+            arb_meta: vec![(0, vec![])],
+            arb_assump: Vec::new(),
+            any_const_arbiter: false,
+            rounds: 0,
+        }
+    }
 }
 
 pub fn validity_cegar(
+    st: &mut CegarState,
     f: &Formula,
-    undefined: &[Var],
     deadline: f64,
     start: &std::time::Instant,
     debug: bool,
 ) -> CegarOut {
-    let n = f.n_vars as usize;
-    let m = f.clauses.len();
-    let undef_set: BTreeSet<Var> = undefined.iter().copied().collect();
-
-    // --- validity solver: Tseitin(¬matrix) over (U,E,aux,arbiters) -----
-    let mut vclauses: Vec<Clause> = Vec::with_capacity(m + 1);
-    let mut all_aux: Clause = Vec::with_capacity(m);
-    for (i, c) in f.clauses.iter().enumerate() {
-        let aux = (n + 1 + i) as Lit;
-        for &l in c {
-            vclauses.push(vec![-aux, -l]);
-        }
-        all_aux.push(aux);
-    }
-    vclauses.push(all_aux);
-    let arb_base = n + m;
-    let nv = arb_base + ARB_BUDGET;
-    let mut validity = Cdcl::new(nv, &vclauses);
-    for i in 1..=ARB_BUDGET {
-        validity.set_decision((arb_base + i) as u32, false);
-    }
-    let mut vmodel = vec![0i8; nv + 1];
-
-    // --- consistency solver: matrix(U,E) + arbiter links --------------
-    let nc = n + ARB_BUDGET;
-    let mut consist = Cdcl::new(nc, &f.clauses);
-    for i in 1..=ARB_BUDGET {
-        consist.set_decision((n + i) as u32, false);
-    }
-    let mut cmodel = vec![0i8; nc + 1];
-    let mut scratch = vec![0i8; nc + 1];
-
-    // --- arbiter solver: pure arbiter conflict clauses ----------------
-    let mut arbsolve = Cdcl::new(ARB_BUDGET, &[]);
-    for i in 1..=ARB_BUDGET {
-        arbsolve.set_decision(i as u32, false);
-    }
-    let mut amodel = vec![0i8; ARB_BUDGET + 1];
-
-    let exs: Vec<Var> = f.deps.keys().copied().collect();
-    let dep_set: HashMap<Var, BTreeSet<Var>> =
-        exs.iter().map(|&y| (y, f.deps[&y].clone())).collect();
-    let univ: BTreeSet<Var> = f.universals.iter().copied().collect();
-
-    let mut forcing: HashMap<Var, Vec<(Vec<Lit>, Lit)>> =
-        exs.iter().map(|&y| (y, Vec::new())).collect();
-    // (y, dep_row_key) → arbiter var index (1-based into arb space)
-    let mut arb_of: HashMap<(Var, Vec<Lit>), usize> = HashMap::new();
-    let mut arb_meta: Vec<(Var, Vec<Lit>)> = vec![(0, vec![])]; // 1-indexed
-    let mut arb_assump: Vec<Lit> = Vec::new();
-    let mut any_const_arbiter = false;
-
+    let CegarState {
+        n,
+        arb_base,
+        validity,
+        vmodel,
+        consist,
+        cmodel,
+        scratch,
+        arbsolve,
+        amodel,
+        exs,
+        dep_set,
+        univ,
+        undef_set,
+        forcing,
+        arb_of,
+        arb_meta,
+        arb_assump,
+        any_const_arbiter,
+        rounds,
+    } = st;
+    let (n, arb_base) = (*n, *arb_base);
     let conf_budget: u64 = 100_000;
-    let mut rounds = 0usize;
-    if debug {
+    if debug && *rounds == 0 {
         eprintln!(
             "c [def] cegar start: |E|={} |undef|={} |C|={}",
             exs.len(),
-            undefined.len(),
-            m
+            undef_set.len(),
+            f.clauses.len()
         );
     }
     loop {
         if start.elapsed().as_secs_f64() >= deadline {
             if debug {
                 eprintln!(
-                    "c [def] cegar deadline: {} rounds, {} arbiters, {} forcing",
+                    "c [def] cegar pending: {} rounds, {} arbiters, {} forcing",
                     rounds,
                     arb_meta.len() - 1,
                     forcing.values().map(|v| v.len()).sum::<usize>()
                 );
             }
-            return CegarOut::Bail;
+            return CegarOut::Pending;
         }
-        rounds += 1;
+        *rounds += 1;
 
         // ---- validity counterexample under current arbiters ----------
-        let sat = validity.solve(&arb_assump, &mut vmodel, conf_budget);
+        let sat = validity.solve(&arb_assump, vmodel, conf_budget);
         if validity.budget_hit {
             return CegarOut::Bail;
         }
@@ -146,7 +195,11 @@ pub fn validity_cegar(
                     (y, dep, val)
                 })
                 .collect();
-            return CegarOut::Sat(ForcingCert { clauses: forcing, cells, rounds });
+            return CegarOut::Sat(ForcingCert {
+                clauses: std::mem::take(forcing),
+                cells,
+                rounds: *rounds,
+            });
         }
         let u_assump: Vec<Lit> = f
             .universals
@@ -156,12 +209,12 @@ pub fn validity_cegar(
 
         // ---- row model under U* + current arbiters -------------------
         let mut ca: Vec<Lit> = u_assump.clone();
-        for &l in &arb_assump {
+        for &l in arb_assump.iter() {
             // remap validity-space arbiter lit → consist-space (n+i)
             let ai = var(l) as usize - arb_base;
             ca.push(if l > 0 { (n + ai) as Lit } else { -((n + ai) as Lit) });
         }
-        let row_sat = consist.solve(&ca, &mut cmodel, conf_budget);
+        let row_sat = consist.solve(&ca, cmodel, conf_budget);
         if consist.budget_hit {
             return CegarOut::Bail;
         }
@@ -188,7 +241,7 @@ pub fn validity_cegar(
             // Learn ¬arb_core in arbsolve; re-pick arbiters.
             let conflict: Vec<Lit> = arb_core.iter().map(|&l| -l).collect();
             arbsolve.add_external(&conflict);
-            if !arbsolve.solve(&[], &mut amodel, conf_budget) {
+            if !arbsolve.solve(&[], amodel, conf_budget) {
                 // Every per-cell arbiter assignment hits some U* with
                 // matrix[U*, cells, rest-free] UNSAT — so every Skolem
                 // fails. Sound only when arbiters cover full cells:
@@ -200,7 +253,7 @@ pub fn validity_cegar(
                         any_const_arbiter
                     );
                 }
-                return if any_const_arbiter {
+                return if *any_const_arbiter {
                     CegarOut::Bail
                 } else {
                     CegarOut::Unsat
@@ -218,9 +271,9 @@ pub fn validity_cegar(
         // Round 1: seed with a forcing clause per existential so
         // validity starts close to fully constrained. Later rounds
         // only refine where vmodel still disagrees.
-        let eager = rounds == 1;
+        let eager = *rounds == 1;
         let mut learned_any = false;
-        for &y in &exs {
+        for &y in exs.iter() {
             let want = cmodel[y as usize];
             let got = vmodel[y as usize];
             if !eager && want == got && got != 0 {
@@ -235,7 +288,7 @@ pub fn validity_cegar(
             if !undef_set.contains(&y) {
                 let mut a = dep_lits.clone();
                 a.push(if want > 0 { -(y as Lit) } else { y as Lit });
-                let flip_sat = consist.solve(&a, &mut scratch, 10_000);
+                let flip_sat = consist.solve(&a, scratch, 10_000);
                 if consist.budget_hit {
                     return CegarOut::Bail;
                 }
@@ -259,7 +312,7 @@ pub fn validity_cegar(
             }
             // Arbiter: per-cell when |dep|≤8, else a single constant.
             let cell_dep = if dep_lits.len() > 8 {
-                any_const_arbiter = true;
+                *any_const_arbiter = true;
                 vec![]
             } else {
                 dep_lits.clone()
