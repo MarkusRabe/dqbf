@@ -41,6 +41,10 @@ pub fn reprove_row_unsat(f: &Formula, row: &[Lit], max_steps: usize) -> Option<P
         cdcl.set_decision(u, false);
     }
     let mut model = vec![0i8; f.n_vars as usize + 1];
+    // Conflict budget stays modest: the verdict is already known, so a
+    // hard-to-reprove row should give up quickly rather than blow the
+    // outer wall clock. The *step* cap (max_steps) is independent — a
+    // 50 k-conflict refutation can still emit >>50 k res steps.
     if cdcl.solve(row, &mut model, 50_000) || cdcl.budget_hit {
         return None;
     }
