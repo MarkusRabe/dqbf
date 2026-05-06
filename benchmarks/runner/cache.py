@@ -37,8 +37,14 @@ def _sha(data: bytes) -> str:
 
 
 def solver_hash(cmd: list[str]) -> str:
-    """Hash the executable part of a solver invocation."""
+    """Hash the executable + non-templated args of a solver invocation.
+    Two solvers sharing one binary (e.g. `abc -q 'bmc3 ...'` vs
+    `abc -q 'pdr ...'`) must not collide."""
     h = hashlib.sha256()
+    # Args after the executable: distinguishes `abc -q bmc3` from
+    # `abc -q pdr`. Placeholders ({file}, {timeout}) are identical
+    # across solvers, so including them is harmless.
+    h.update("|".join(cmd[1:]).encode())
     exe = cmd[0]
     p = Path(exe)
     if p.is_file():
