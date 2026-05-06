@@ -247,10 +247,6 @@ impl ExpandState {
                         .iter()
                         .map(|y| 1usize << f.deps[y].len().min(8))
                         .sum();
-                    // Two-tier gate: pec-style (≤~60 undef, mixed dep)
-                    // converges via forcing; bmc/succinct-style (≥150
-                    // undef, uniform small dep) hits the arbsolve wall
-                    // and starves SlotDpll. Allow the former through.
                     if est_cells > 8192 && s.undefined.len() > 100 {
                         self.mode = if nu_full > self.expand_us.len() {
                             Mode::Partial

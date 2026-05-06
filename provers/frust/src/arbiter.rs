@@ -68,7 +68,7 @@ pub struct CegarState {
     /// formula encodes `(⋀ d_i↔d'_i) → (y↔y')`. One arbiter cell
     /// then links both — halves the cell count and lets arbsolve see
     /// the cross-row constraint directly instead of via |dep| rounds.
-    partner: HashMap<Var, (Var, Vec<(Var, Var)>)>,
+    pub partner: HashMap<Var, (Var, Vec<(Var, Var)>)>,
     rounds: usize,
 }
 
