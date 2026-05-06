@@ -202,10 +202,12 @@ impl ExpandState {
         start: &std::time::Instant,
         debug: bool,
     ) -> Step {
-        // Budget: at most half the slice for Padoa+CEGAR; the rest
-        // falls through to Partial if this doesn't pan out.
+        // Budget: most of the slice for Padoa+CEGAR; the rest falls
+        // through to Partial if this doesn't pan out. 0.7 left CEGAR
+        // ~4.9 s of a 7 s slice — instances exhausting at ~5.5 s went
+        // Pending and finished at the wall clock instead of slice 1.
         let now = start.elapsed().as_secs_f64();
-        let sub_deadline = now + (deadline - now) * 0.7;
+        let sub_deadline = now + (deadline - now) * 0.9;
         // Gate: definability is for circuit-like matrices. Large
         // unrolled instances (collatz n64, hwmcc) burn budget here for
         // nothing and miss the Partial-mode UNSAT they'd otherwise hit.

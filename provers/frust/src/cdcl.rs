@@ -82,6 +82,10 @@ pub struct Cdcl {
     decide: Vec<bool>,
     core: Vec<Lit>,
     pub proof: Option<ProofLog>,
+    /// First unit-vs-unit conflict detected during clause loading, before
+    /// proof logging is enabled. `enable_proof_log` re-seats it as a cref
+    /// so `solve()` can emit a chain instead of a bare `ok=false`.
+    init_unit_conflict: ILit,
 }
 
 impl Cdcl {
@@ -108,6 +112,7 @@ impl Cdcl {
             decide: vec![true; n_vars + 1],
             core: Vec::new(),
             proof: None,
+            init_unit_conflict: 0,
         };
         for c in clauses {
             let lits: Vec<ILit> = c.iter().map(|&l| ilit(l)).collect();
@@ -117,10 +122,38 @@ impl Cdcl {
     }
 
     pub fn enable_proof_log(&mut self) {
-        self.proof = Some(ProofLog {
+        // `new()` ran with proof=None, so input units took the v1.20
+        // fast path (reason=UNDEF, no cref). Re-seat them now so chains
+        // can reference them as axioms.
+        for i in 0..self.trail.len() {
+            let l = self.trail[i];
+            let v = ivar(l);
+            if self.reason[v] == UNDEF && self.level[v] == 0 {
+                let cr = self.arena.len() as u32;
+                self.arena.push(1);
+                self.arena.push(l);
+                self.crefs.push(cr);
+                self.reason[v] = cr;
+            }
+        }
+        let mut pl = ProofLog {
             n_input: self.crefs.len(),
             ..Default::default()
-        });
+        };
+        if !self.ok && self.init_unit_conflict != 0 {
+            let cr = self.arena.len() as u32;
+            self.arena.push(1);
+            self.arena.push(self.init_unit_conflict);
+            self.crefs.push(cr);
+            pl.n_input = self.crefs.len();
+            self.proof = Some(pl);
+            let (fc, ch) = self.extract_unsat_chain(cr);
+            let p = self.proof.as_mut().unwrap();
+            p.final_clause = fc;
+            p.final_chain = ch;
+            return;
+        }
+        self.proof = Some(pl);
     }
 
     pub fn clause_lits(&self, cr: u32) -> Vec<Lit> {
@@ -161,6 +194,23 @@ impl Cdcl {
     fn add_clause(&mut self, lits: &[ILit], learned: bool) -> u32 {
         if lits.is_empty() {
             self.ok = false;
+            return UNDEF;
+        }
+        // Units only need a cref when proof-logging (so chains can
+        // reference them as axioms). Without logging, v1.20's behaviour
+        // — enqueue with reason=UNDEF and skip the arena — keeps the
+        // many-row arbiter CDCLs at v1.20 speed.
+        if lits.len() == 1 && self.proof.is_none() {
+            match self.val_lit(lits[0]) {
+                0 => self.enqueue(lits[0], UNDEF),
+                -1 => {
+                    if self.init_unit_conflict == 0 {
+                        self.init_unit_conflict = lits[0];
+                    }
+                    self.ok = false;
+                }
+                _ => {}
+            }
             return UNDEF;
         }
         let cr = self.arena.len() as u32;
@@ -362,7 +412,7 @@ impl Cdcl {
     /// 1-UIP. Returns (learned, backtrack_level, chain).
     fn analyze(&mut self, mut cr: u32) -> (Vec<ILit>, u32, Chain) {
         let logging = self.proof.is_some();
-        let mut chain: Chain = vec![(cr, 0)];
+        let mut chain: Chain = if logging { vec![(cr, 0)] } else { Chain::new() };
         let mut lvl0: Vec<usize> = Vec::new();
         let dl = self.dl();
         let mut learned: Vec<ILit> = vec![0]; // hole for asserting lit
@@ -414,7 +464,9 @@ impl Cdcl {
                 break;
             }
             cr = self.reason[v];
-            chain.push((cr, v as u32));
+            if logging {
+                chain.push((cr, v as u32));
+            }
         }
         learned[0] = neg(p);
         // Proof: resolve away every level-0 lit touched. Process in
@@ -643,6 +695,12 @@ impl Cdcl {
                     p.ante.insert(cr, chain);
                 }
                 if !self.ok {
+                    if self.proof.is_some() && cr != UNDEF {
+                        let (fc, ch) = self.extract_unsat_chain(cr);
+                        let p = self.proof.as_mut().unwrap();
+                        p.final_clause = fc;
+                        p.final_chain = ch;
+                    }
                     return false;
                 }
                 if learned.len() > 1 {

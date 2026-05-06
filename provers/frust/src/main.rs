@@ -91,7 +91,7 @@ fn main() -> ExitCode {
         aiger::write_skolem_aag(&mut w, &f, sk).expect("write aag");
     }
     if let (Verdict::Unsat, Some(pp), Some(pr)) = (&out.verdict, &proof_path, &out.proof) {
-        let mut w = fs::File::create(pp).expect("proof");
+        let mut w = std::io::BufWriter::new(fs::File::create(pp).expect("proof"));
         pr.write_json(&mut w).expect("write frp");
     }
     let _ = std::io::stdout().flush();
