@@ -943,6 +943,26 @@ the 10s budget.
 
 **Result: +8**, 2774/4350. 0 INVALID.
 
+## Refined-loop iteration 30: indexed VSIDS heap (2026-05-06, `c0a3f3d`)
+
+**Target**: `circuit_synth` and CEGIS-heavy instances. perf showed 67%
+in `Cdcl::solve` with `pick_branch`'s linear `1..=n_vars` scan hot.
+The CEGIS picker accumulates row-matrix copies, so n_vars grows per
+round; the scan is O(n_vars × n_conflicts).
+
+**Change**: Minisat-style indexed binary max-heap over `activity[v]`.
+Ties break on lower var index so the pre-conflict pop order matches
+the old first-unset scan (free-pass / SlotDpll determinism kept).
+`bump` percolates up; `cancel_until` reinserts unassigned vars;
+`set_decision(true)` reinserts. The hybrid `vsids: bool` argument is
+gone — heap covers both modes.
+
+**Result: +120**, 2894/4350. 0 INVALID. 0/15 sampled new SAT contradict
+pedant (5/15 pedant times out where frust now solves — circuit_synth).
+csg_lt2_k005: 10.5 s→0.02 s. Gains spread across `bmc_circuits/succinct`
+(+50), `pec_circuits/miter` (+30), `circuit_synth` (+42), `cbmc/succinct`
+(+11).
+
 ---
 
 ## Appendix: iteration tables
