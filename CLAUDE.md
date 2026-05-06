@@ -68,7 +68,7 @@ pytest tests/integration  # e2e (slow)
 Run a single benchmark family:
 
 ```bash
-dqbf-bench run --family train/bitwidth_scaling/v1/build --prover forkres -j 8
+dqbf-bench run --family train/bitwidth_scaling/build --prover forkres -j 8
 ```
 
 ## When adding a feature

@@ -1,4 +1,4 @@
-"""C-algorithm-style sequential circuits for the cbmc_v2 benchmark family.
+"""C-algorithm-style sequential circuits for the cbmc benchmark family.
 
 Each entry models a small single-loop C program at the bit level: state
 variables become latches, the loop body becomes the transition relation,

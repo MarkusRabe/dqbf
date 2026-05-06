@@ -8,14 +8,16 @@ Consolidated family — supersedes the old v1/v2/v3 + _succinct split.
 - 16 single-variant (``circuits`` + ``circuits_v2``): expected =
   unknown (reachability of bad depends on N,k).
 
-Each (circuit, N, k, variant) is emitted in **both** encodings:
+Each (circuit, N, k, variant) is emitted in **three** encodings:
 
 - ``{name}/``           — unrolled (`encode`, O(k·|circ|) vars)
 - ``succinct/{name}/``  — universal step-counter (`encode_succinct`,
                           O(|circ|+log k) vars; genuine DQBF)
+- ``indinv/{name}/``    — inductive-invariant search (`encode_indinv`,
+                          k-independent; SAT ⇔ property holds)
 
 Default grid N∈{4,8,12,16,20,24,32} × k∈{8,24}: 532 unrolled +
-532 succinct = 1064 instances.
+532 succinct + 266 indinv = 1330 instances.
 """
 
 from __future__ import annotations
@@ -32,12 +34,8 @@ from tools.bmc2dqbf.circuits import REGISTRY
 from tools.bmc2dqbf.circuits_v2 import REGISTRY_V2
 from tools.bmc2dqbf.circuits_v3 import REGISTRY_V3
 from tools.bmc2dqbf.encode import encode, encode_succinct
+from tools.hwmc2dqbf_indinv.encode import encode_indinv_aig
 from tools.pec2dqbf.aiger_seq import SeqAig, parse_seq_aag
-
-try:
-    from tools.hwmc2dqbf_indinv.encode import encode_indinv_aig as _encode_indinv
-except ImportError:
-    _encode_indinv = None  # type: ignore[assignment]
 
 WIDTHS = (4, 8, 12, 16, 20, 24, 32)
 BOUNDS = (8, 24)
@@ -54,6 +52,15 @@ def _expected(variant: str, k: int, k_bad: int | None) -> str:
     return "unknown"
 
 
+def _expected_indinv(variant: str) -> str:
+    # Semantics flip: SAT = inductive invariant exists = property holds.
+    if variant == "safe":
+        return "sat"
+    if variant == "bug":
+        return "unsat"
+    return "unknown"
+
+
 @click.command()
 @click.option("--out", type=click.Path(), default="benchmarks/train/bmc_circuits")
 @click.option("-N", "widths", default=",".join(str(w) for w in WIDTHS))
@@ -61,7 +68,7 @@ def _expected(variant: str, k: int, k_bad: int | None) -> str:
 @click.option("--max-vars", default=50_000)
 @click.option("--max-per-circuit", default=0)
 @click.option("--succinct/--no-succinct", default=True)
-@click.option("--indinv/--no-indinv", default=False)
+@click.option("--indinv/--no-indinv", default=True)
 def main(
     out: str,
     widths: str,
@@ -74,7 +81,6 @@ def main(
     base = Path(out)
     ws = [int(x) for x in widths.split(",")]
     ks = [int(x) for x in bounds.split(",")]
-    do_indinv = indinv and _encode_indinv is not None
     encoders: list[tuple[str, Path]] = [("unrolled", base)]
     if succinct:
         encoders.append(("succinct", base / "succinct"))
@@ -122,13 +128,12 @@ def main(
                     }
                 )
                 total += 1
-        if do_indinv:
-            assert _encode_indinv is not None
+        if indinv:
             d = base / "indinv" / name
             d.mkdir(parents=True, exist_ok=True)
             try:
-                fi = _encode_indinv(seq, source=src)
-            except Exception as e:
+                fi = encode_indinv_aig(seq, source=src)
+            except ValueError as e:
                 skipped.append(f"indinv/{name} n={n} {variant} ({e})")
                 return
             if fi.n_vars > max_vars:
@@ -144,7 +149,7 @@ def main(
             manifests.setdefault(("indinv", name), []).append(
                 {
                     "path": f"{inst}.dqdimacs.gz",
-                    "expected": "unknown",
+                    "expected": _expected_indinv(variant),
                     "tags": ["bmc_circuits", name, variant or "single", "indinv"],
                     "params": {"N": n, "variant": variant},
                 }
