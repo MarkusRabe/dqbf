@@ -861,6 +861,17 @@ frust-v2.0 = **2731/4165** (ties pedant), 1982 valid certs (+652 vs
 v1.20). One spurious INVALID traced to /tmp full during verify
 (probe certs accumulated; fixed in `frust_opt_loop.py`).
 
+## Refined-loop iteration 25: SFEx ungated for |db|<200 (2026-05-06)
+
+`dep_cycle_n4` (47 vars, the journal §6 example): CEGAR bails with
+const arbiters → SlotDpll 256 slots → never reaches `known_unsat` →
+SFEx never fires. **Change**: enable SFEx scan when `|db|<200` even
+without known_unsat.
+
+**Result: ±0 net**, 2752/4350. 0 INVALID. dep_cycle_n1,n2 → 0.06s
+UNSAT with `.frp`. n4,n8 still UNKNOWN (saturate doesn't find the
+right partition heuristically; needs the §6 specific construction).
+
 ---
 
 ## Appendix: iteration tables
