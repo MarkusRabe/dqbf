@@ -499,13 +499,6 @@ pub fn validity_cegar(
         let eager = *rounds == 1;
         let mut learned_any = false;
         for &y in exs.iter() {
-            // Interpolated y is already Tseitinized into validity;
-            // vmodel[y] is its definition under U*, so a forcing clause
-            // is redundant (eager round paid |defs| × consist.solve for
-            // nothing — ~0.4 s on fifo1_n24 with 857 interpolants).
-            if defs.contains_key(&y) {
-                continue;
-            }
             let want = cmodel[y as usize];
             let got = vmodel[y as usize];
             if !eager && want == got && got != 0 {
