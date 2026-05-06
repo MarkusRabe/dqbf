@@ -287,9 +287,10 @@ def run_multi(
             if hit is not None:
                 hit["cached"] = True
                 hit["cert_path"] = None
-                # Path/family/expected may have moved or been re-tagged
-                # since caching; the verdict is keyed on content, so
-                # refresh the metadata from the current discovery.
+                # Metadata is per-request, not per-cache-entry: the same
+                # binary may be registered under several names, and the
+                # instance may have moved or been re-tagged.
+                hit["solver"] = sv.name
                 hit["path"] = str(inst)
                 hit["family"] = fam
                 hit["expected"] = exp

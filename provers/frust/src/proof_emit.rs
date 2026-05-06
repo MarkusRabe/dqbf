@@ -34,21 +34,40 @@ fn resolve(a: &BTreeSet<Lit>, b: &[Lit], pivot: u32) -> Option<BTreeSet<Lit>> {
 /// every CDCL pivot is existential. Returns `None` only if the row is
 /// somehow not UNSAT under the original matrix (e.g., the original
 /// witness depended on a saturate-cross-feed clause).
-pub fn reprove_row_unsat(f: &Formula, row: &[Lit], max_steps: usize) -> Option<Proof> {
+pub fn reprove_row_unsat(
+    f: &Formula,
+    row: &[Lit],
+    max_steps: usize,
+    deadline: f64,
+    start: &std::time::Instant,
+) -> Option<Proof> {
     let mut cdcl = Cdcl::new(f.n_vars as usize, &f.clauses);
     cdcl.enable_proof_log();
     for &u in &f.universals {
         cdcl.set_decision(u, false);
     }
     let mut model = vec![0i8; f.n_vars as usize + 1];
-    // Conflict budget stays modest: the verdict is already known, so a
-    // hard-to-reprove row should give up quickly rather than blow the
-    // outer wall clock. The *step* cap (max_steps) is independent — a
-    // 50 k-conflict refutation can still emit >>50 k res steps.
-    if cdcl.solve(row, &mut model, 50_000) || cdcl.budget_hit {
+    // The verdict is already known; reprove is best-effort cert recovery.
+    // A 50 k-conflict refutation can still emit >>50 k res steps and
+    // (with proof-log bookkeeping) take seconds — under j=48 contention
+    // that turns 60 ms verdicts into 10 s timeouts. Cap at the deadline.
+    let mut spent = 0u64;
+    loop {
+        if !cdcl.solve(row, &mut model, 5_000) {
+            break;
+        }
+        spent += 5_000;
+        if cdcl.budget_hit && start.elapsed().as_secs_f64() < deadline && spent < 50_000 {
+            continue;
+        }
         return None;
     }
-    cdcl_row_unsat_to_frp(f, &cdcl, max_steps)
+    if start.elapsed().as_secs_f64() >= deadline {
+        return None;
+    }
+    let mut p = cdcl_row_unsat_to_frp(f, &cdcl, max_steps)?;
+    p.compact();
+    Some(p)
 }
 
 /// Emit a `.frp` for a CDCL refutation under universal-only assumptions.
