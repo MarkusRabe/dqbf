@@ -48,9 +48,10 @@ def run_one(path: Path) -> dict:
     wall = time.monotonic() - t0
     nv = n_vars_of(path)
     cert_status = "n/a"
+    vcnf = Path(f"/tmp/frust_{h}_v.cnf")
     if rc == 10 and cert.exists():
         vc = [sys.executable, "-m", "tools.verify.cli", "sat", str(path), str(cert)]
-        vc += ["-o", "/tmp/v.cnf", "--solve"]
+        vc += ["-o", str(vcnf), "--solve"]
         v = subprocess.run(vc, capture_output=True, text=True, cwd=ROOT)
         cert_status = (
             "valid"
@@ -69,6 +70,9 @@ def run_one(path: Path) -> dict:
             if v.stdout.strip().endswith("VALID") and "INVALID" not in v.stdout
             else "INVALID"
         )
+    cert.unlink(missing_ok=True)
+    frp.unlink(missing_ok=True)
+    vcnf.unlink(missing_ok=True)
     return {
         "path": str(path.relative_to(ROOT)),
         "n_vars": nv,
