@@ -814,6 +814,19 @@ circuit_synth/gates 18→45, circuit_synth/depth 16→33; `csg_maj2`
 went 10s timeout → 0.01s. Still 223 circuit_synth unsolved (the
 larger ones at |U|≥4 where deletion-core scales poorly).
 
+## Refined-loop iteration 22: seed deletion-min from analyze_final (2026-05-06)
+
+**Target**: larger circuit_synth (`csg_inc4_k008`, 357 outer-∃) and
+`random_qbf/3qbf` — deletion-core does up to |outer| solves/round.
+
+**Change**: re-solve once with full pins to populate `last_core()`,
+filter pins to those in the core, *then* deletion-min. Typical seed
+shrinks 357→~40.
+
+**Result: +23 net**, 2651/4350. 0 INVALID. `3qbf_s31024` 10s→6.8s.
+csg_inc4 still UNKNOWN (3500+ rounds; pedant also UNKNOWN at 30s —
+genuinely hard synthesis).
+
 ---
 
 ## Appendix: iteration tables
