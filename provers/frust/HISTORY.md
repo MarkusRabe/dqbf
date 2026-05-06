@@ -1004,6 +1004,16 @@ upfront — one picker solve then decides. csg_and8_k007: UNKNOWN →
 2087 valid certs — **passes hqs (2877)** for the first time. Only
 dqbdd (3023, known-unsound) ahead.
 
+## Refined-loop iteration 33: Luby restarts in CDCL (2026-05-06)
+
+`cancel_until(|assumps|)` at 100×luby(i) conflicts. csg_and8_k007:
+8.9 s → 1.6 s; lt2_k005: 0.10 → 0.01 s. **Result: +2**, 2899/4350.
+0 INVALID. +29/−27 — restarts help ringbuf and small circuit_synth
+SAT but iter32's full-expand makes the larger circuit_synth picker
+SAT instances harder (more constraints upfront vs CEGIS's lazy row
+addition); restarts don't fully recover. The remaining UNSAT side
+(csg_and8_k006) needs learned-clause deletion.
+
 ---
 
 ## Appendix: iteration tables
