@@ -29,6 +29,18 @@ corpus can also feed an inductive-invariant encoding.
 Convention (both encodings): SAT ⇔ assertion can fail ⇔ buggy variant.
 So `_ok` → expected unsat, `_bug` → expected sat.
 
+## Compare against
+
+CBMC itself (`cbmc x.c --unwind k`) on the rendered C — registered as
+`domain="cbmc"`. ESBMC, 2LS, CPAchecker on the same C. For the
+succinct encoding there is no native counterpart; compare across DQBF
+solvers and against the equisatisfiable `flat/` instance.
+
+## Literature
+
+Kroening, Tautschnig, *CBMC — C Bounded Model Checker* (TACAS'14);
+Gitina et al. (ICCD'13) for the succinct encoding pattern.
+
 To regenerate:
 
 ```sh

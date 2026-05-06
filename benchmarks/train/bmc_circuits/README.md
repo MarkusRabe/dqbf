@@ -62,6 +62,35 @@ python -m benchmarks.train.bmc_circuits.generate            # 1064 instances
 ... -N 4,8,12,16,20,24,32 -K 8,16,24 --max-vars 100000
 ```
 
+## Compare against
+
+The committed `.aag` sources can be fed directly to native HW model
+checkers for an apples-to-apples comparison on the same circuits:
+**ABC** (`abc -c "read x.aag; bmc3 -F k"` or `pdr`), **nuXmv**
+(`read_aiger; check_ltlspec_bmc`), **AVR**, **rIC3**. The runner
+registers `abc-bmc` / `abc-pdr` under `domain="hwmc"`. The succinct
+encoding has no native counterpart — it is the DQBF-specific
+contribution; compare succinct-vs-unrolled within DQBF solvers.
+
+## Alternative encodings
+
+- Unrolled ↔ succinct (this directory).
+- Inductive-invariant search: `--indinv` emits via
+  `tools/hwmc2dqbf_indinv` (SAT ⇔ property holds; see
+  `../hwmc_indinv/`). PR #2 makes this a default subdirectory.
+- k-induction: not yet implemented; would lift the succinct encoding
+  with a `k`-step antecedent.
+
+## Literature
+
+- Biere et al., *Symbolic Model Checking without BDDs* (TACAS'99) —
+  the original BMC.
+- Biere–Heljanko–Wieringa, *AIGER 1.9 and Beyond* — the `.aag` format.
+- Gitina et al., *Equivalence Checking of Partial Designs Using DQBF*
+  (ICCD'13) — the succinct universal-index encoding pattern.
+- Bradley, *SAT-Based Model Checking without Unrolling* (VMCAI'11) —
+  IC3/PDR, the unbounded baseline.
+
 ## Pipeline
 
 ```

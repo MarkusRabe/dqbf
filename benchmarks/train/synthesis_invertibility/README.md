@@ -19,5 +19,14 @@ left-inverse-like witness; the answer is determined by the algebra of
 Swept over `N ∈ {4,8,16}`. The `.eqfob` source is committed alongside
 each `.dqdimacs.gz` per the repo's provenance rules.
 
-Reference: Niemetz, Preiner, Reynolds, Barrett, Tinelli — *Solving
-Quantified Bit-Vectors Using Invertibility Conditions* (CAV 2018).
+**Encoding.** EQFOB `fun f : bv[N]→bv[N]`; each output bit has
+`dep = {x}`. Single-dep-set ⇒ effectively 2QBF.
+
+**Compare against.** cvc5 / z3 with quantified BV — these instances
+are exactly the unit tests for invertibility-condition synthesis in
+those solvers. cadet/caqe on the QDIMACS.
+
+**Literature.** Niemetz, Preiner, Reynolds, Barrett, Tinelli —
+*Solving Quantified Bit-Vectors Using Invertibility Conditions* (CAV
+2018); Preiner, Niemetz, Biere — *Counterexample-Guided Model
+Synthesis* (TACAS'17).

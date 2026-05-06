@@ -39,6 +39,21 @@ one-hot decoder, one Feistel round, and tiny floating-point add
 (E2M3/E3M2). Bitwidths sweep `{2,4,8,16,32,64}` per a per-function
 cap.
 
+## Compare against
+
+Kulikov-style **exact-synthesis SAT encodings** (one propositional
+instance per truth-table row) are the established baseline; ABC's
+`exact` command implements this. SyGuS solvers (cvc5 `--sygus`)
+handle the same problem with grammar-guided search. An
+apples-to-apples comparison: DQBF on this encoding vs ABC `exact` on
+the same `f` and `k`.
+
+## Alternatives
+
+`circuit_synth_depth/` is the depth-constrained dual. A QBF
+relaxation gives every topology existential `dep = {x}`, losing the
+"same circuit on every input" constraint and becoming trivially SAT.
+
 ## References
 
 - Kojevnikov, Kulikov, Yaroslavtsev. *Finding Efficient Circuits Using

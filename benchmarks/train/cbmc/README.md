@@ -23,3 +23,14 @@ python -m benchmarks.train.cbmc.generate
 The runner can register `cbmc` itself as a `domain="cbmc"` cross-check
 solver (consumes the source `.c`, not the `.dqdimacs`) — same pattern
 as abc for HWMC and strix for SYNTCOMP.
+
+## See also
+
+[`../cbmc_v2/`](../cbmc_v2/README.md) — twelve algorithm families with
+paired ok/bug variants and a DQBF-native succinct encoding.
+
+## Literature
+
+Clarke, Kroening, Lerda, *A Tool for Checking ANSI-C Programs*
+(TACAS'04) — CBMC; Kroening–Tautschnig, *CBMC — C Bounded Model
+Checker* (TACAS'14).

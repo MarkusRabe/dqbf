@@ -29,6 +29,29 @@ are incomparable).
 5 widths × 9 variants = 45 instances. `expected` is set in the manifest
 by construction (no solver probe).
 
+## Compare against
+
+The same `.aag` sources feed **IC3/PDR** directly (ABC `pdr`, rIC3,
+AVR, nuXmv `check_property_as_invar_ic3`). PDR computes the same
+inductive invariant by clause-learning instead of synthesis; an
+apples-to-apples comparison is "DQBF solver on `encode_indinv(circ)`
+vs PDR on `circ.aag`". `bmc_circuits/` covers the bounded dual.
+
+## Alternatives
+
+- k-induction: replace single-step consecution with a k-step
+  antecedent — not yet encoded.
+- Property-directed reachability with lemmas: would need extension
+  variables for the lemma definitions.
+
+## Literature
+
+- Bradley, *SAT-Based Model Checking without Unrolling* (VMCAI'11).
+- Eén, Mishchenko, Brayton, *Efficient Implementation of Property
+  Directed Reachability* (FMCAD'11).
+- Sheeran, Singh, Stålmarck, *Checking Safety Properties Using
+  Induction and a SAT-Solver* (FMCAD'00).
+
 ## What it stresses
 
 A SAT certificate is the invariant itself — a single-bit Skolem
