@@ -786,6 +786,36 @@ extract circuit definitions instead of per-row forcing clauses.
 
 ---
 
+## v2.0: `.frp` UNSAT certs (2026-05-06, `911426f`..`8643b29`)
+
+(Separate from the loop; see commits for details.) CDCL proof-logging
++ `cdcl_row_unsat_to_frp` recover `.frp` for row-UNSAT and
+saturate-closeable arbsolve-UNSAT. Missing certs 933→686 on the
+restructured 4350-instance set; the regression-fix at `8643b29`
+(BufWriter — unbuffered `.frp` writes were 40% of wall time — and
+proof-log bookkeeping only when `proof.is_some()`) brings v2.0 to
+**2604/4350**, ~on par with v1.20.
+
+## Refined-loop iteration 21: OuterCegar at small |U| (2026-05-06)
+
+**Target**: `circuit_synth/{gates,depth}` — 272 unsolved at 66-78
+vars. ∃(topology)∀x∃(values) with ~55 outer-∃ at |U|=2. Mode select
+sent these to SlotDpll (since `nu≤16 && eae`), where 2^55 slot search
+times out.
+
+**Change**: route to OuterCegar whenever `outer.len()>12 && n_inner>0`
+regardless of nu. The `n_inner>0` guard matters: |U|=0 propositional
+instances (`bmc_circuits/unrolled`, 3826 outer-∃) are pure SAT and the
+OuterCegar deletion-core does 3826 solves/round there; first attempt
+without the guard regressed −258.
+
+**Result: +24 net**, 2628/4350. 0 INVALID. 3/3 sampled match pedant.
+circuit_synth/gates 18→45, circuit_synth/depth 16→33; `csg_maj2`
+went 10s timeout → 0.01s. Still 223 circuit_synth unsolved (the
+larger ones at |U|≥4 where deletion-core scales poorly).
+
+---
+
 ## Appendix: iteration tables
 
 Quick-reference; see the corresponding prose section for context.
