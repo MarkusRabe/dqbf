@@ -916,6 +916,22 @@ circuit_synth 100→114. xor8/and8 still UNKNOWN — synthesis at 8
 inputs is hard SAT for the picker (KKY'09 use binary-encoded
 selectors; that's an encoder change, not solver).
 
+## Refined-loop iteration 28: dead-ends recorded (2026-05-06)
+
+**Targets explored, all reverted**:
+- `collatz/tonly` (60/60 unsolved, pedant also UNKNOWN): 234 undef
+  hit gate; partner-aware gate counted only ~20% paired (Tseitin aux
+  not directly consistent). **Research-approach.**
+- Large `bmc_circuits/succinct` UNSAT (>150 undef): arbsolve over
+  4037 cells with |arb_core|=7-10 conflicts; deletion-min and
+  validity-block both ±0 or worse. **Research-approach.**
+- `pec_circuits/miter` |E|>2000: CEGAR converges (~5 forcing/round)
+  but doesn't fit in 10s. **Algorithmic** — would need fewer rounds
+  via batched forcing or interpolation.
+
+**Result: −6 (variance)**, 2766/4350. 0 INVALID. iter28 is the
+report milestone; no kept change.
+
 ---
 
 ## Appendix: iteration tables
