@@ -113,9 +113,15 @@ impl ExpandState {
         // sizes — covers partial (|U|>16) AND consistency-shape
         // (|U|≤16 with multiple keys, where SlotDpll often loops).
         let multi_key = !eae;
+        let n_inner = exs.len() - outer.len();
         let mode = if partial || multi_key {
             Mode::Definability
-        } else if nu > 16 && eae && !outer.is_empty() {
+        } else if eae && !outer.is_empty() && (nu > 16 || (outer.len() > 12 && n_inner > 0)) {
+            // OuterCegar searches outer-∃ via blocking-clause CDCL,
+            // which scales where SlotDpll's 2^|outer| slot search
+            // doesn't (circuit_synth has ~55 outer-∃ at |U|=2). At
+            // n_inner=0 the problem is pure SAT and SlotDpll's single
+            // free-pass solve is correct.
             Mode::OuterCegar
         } else {
             Mode::SlotDpll
@@ -202,12 +208,10 @@ impl ExpandState {
         start: &std::time::Instant,
         debug: bool,
     ) -> Step {
-        // Budget: most of the slice for Padoa+CEGAR; the rest falls
-        // through to Partial if this doesn't pan out. 0.7 left CEGAR
-        // ~4.9 s of a 7 s slice — instances exhausting at ~5.5 s went
-        // Pending and finished at the wall clock instead of slice 1.
+        // Budget: at most half the slice for Padoa+CEGAR; the rest
+        // falls through to Partial if this doesn't pan out.
         let now = start.elapsed().as_secs_f64();
-        let sub_deadline = now + (deadline - now) * 0.9;
+        let sub_deadline = now + (deadline - now) * 0.7;
         // Gate: definability is for circuit-like matrices. Large
         // unrolled instances (collatz n64, hwmcc) burn budget here for
         // nothing and miss the Partial-mode UNSAT they'd otherwise hit.
