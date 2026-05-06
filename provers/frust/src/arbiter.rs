@@ -23,11 +23,16 @@ use std::collections::{BTreeSet, HashMap};
 
 const ARB_BUDGET: usize = 8192;
 
+use crate::definability::Def;
+
 pub struct ForcingCert {
     /// `(ante, then)` with `var(then) = y`, every `var(ante[i]) ∈ dep(y)`.
     pub clauses: HashMap<Var, Vec<(Vec<Lit>, Lit)>>,
     /// `(y, dep_row_lits, value)` — explicit table cells for undefined y.
     pub cells: Vec<(Var, Vec<Lit>, bool)>,
+    /// y → McMillan interpolant `I(dep(y) ∪ {linked z})` already
+    /// Tseitinized into validity. The Skolem for these y is the AIG.
+    pub defs: HashMap<Var, Def>,
     pub rounds: usize,
 }
 
@@ -78,6 +83,10 @@ pub struct CegarState {
     /// genuine-UNSAT row (matrix(U,·) has no model there) isn't masked.
     mc_sel: Lit,
     mc_added: bool,
+    /// McMillan interpolants `y ↔ I(dep(y))` already Tseitinized into
+    /// validity at construction. Stored here so the cert can emit each
+    /// such y as its AIG instead of (now-absent) forcing clauses.
+    pub defs: HashMap<Var, Def>,
     rounds: usize,
 }
 
@@ -164,7 +173,11 @@ fn detect_partners(f: &Formula, undef: &[Var]) -> HashMap<Var, (Var, Vec<(Var, V
 }
 
 impl CegarState {
-    pub fn new(f: &Formula, undefined: &[Var]) -> Self {
+    pub fn new(
+        f: &Formula,
+        undefined: &[Var],
+        defs: &HashMap<Var, crate::definability::Def>,
+    ) -> Self {
         let n = f.n_vars as usize;
         let m = f.clauses.len();
         let mut vclauses: Vec<Clause> = Vec::with_capacity(m + 1);
@@ -182,9 +195,47 @@ impl CegarState {
         let mc_sel = (n + m + 1) as Lit;
         let copy_base = n + m + 1;
         let arb_base = copy_base + n;
-        let nv = arb_base + ARB_BUDGET;
+        // Interpolant gates live above arbiters.
+        let itp_base = arb_base + ARB_BUDGET;
+        let n_itp_gates: usize = defs.values().map(|d| d.itp.gates.len()).sum();
+        let nv = itp_base + n_itp_gates;
+        // Tseitinize each interpolant: inputs map to formula vars
+        // (dep(y) or linked-z); gates → fresh vars; root ↔ y.
+        use crate::interpolant::NodeKind;
+        let mut next_g = itp_base;
+        for (&y, d) in defs {
+            let gate0 = next_g;
+            let mut gv = vec![0 as Lit; d.itp.gates.len()];
+            let to_v = |l: u32, gv: &[Lit]| -> Lit {
+                let base = match d.itp.node_kind(l) {
+                    NodeKind::Const => unreachable!(),
+                    NodeKind::Input(i) => d.itp.inputs[i] as Lit,
+                    NodeKind::Gate(k) => gv[k],
+                };
+                if l & 1 == 0 { base } else { -base }
+            };
+            for (k, &(a, b)) in d.itp.gates.iter().enumerate() {
+                let g = (gate0 + 1 + k) as Lit;
+                gv[k] = g;
+                let (la, lb) = (to_v(a, &gv), to_v(b, &gv));
+                vclauses.push(vec![-g, la]);
+                vclauses.push(vec![-g, lb]);
+                vclauses.push(vec![g, -la, -lb]);
+            }
+            next_g += d.itp.gates.len();
+            let yl = y as Lit;
+            match d.root {
+                0 => vclauses.push(vec![-yl]),
+                1 => vclauses.push(vec![yl]),
+                r => {
+                    let lr = to_v(r, &gv);
+                    vclauses.push(vec![-yl, lr]);
+                    vclauses.push(vec![yl, -lr]);
+                }
+            }
+        }
         let mut validity = Cdcl::new(nv, &vclauses);
-        for i in (n + m + 1)..=(arb_base + ARB_BUDGET) {
+        for i in (n + m + 1)..=nv {
             validity.set_decision(i as u32, false);
         }
         let nc = n + ARB_BUDGET;
@@ -223,6 +274,7 @@ impl CegarState {
             partner: detect_partners(f, undefined),
             mc_sel,
             mc_added: false,
+            defs: HashMap::new(),
             rounds: 0,
         }
     }
@@ -267,7 +319,12 @@ pub fn validity_cegar(
     // Matrix-copy only when arbiter exhaustion is plausibly reachable
     // (|undef| small) — it accelerates arbsolve-UNSAT but doubles
     // validity solves on the SAT path.
-    if st.rounds >= 256 && !st.mc_added && st.undef_set.len() <= 16 {
+    // With interpolants, the few non-interpolated defined-y are free in
+    // validity and generate spurious counterexamples; the matrix-copy
+    // block pins them. Without interpolants, defer to round 256 so easy
+    // instances pay no overhead.
+    let mc_at = if st.defs.is_empty() { 256 } else { 0 };
+    if st.rounds >= mc_at && !st.mc_added && st.undef_set.len() <= 16 {
         st.add_matrix_copy(f);
     }
     let CegarState {
@@ -293,6 +350,7 @@ pub fn validity_cegar(
         partner,
         mc_sel,
         mc_added,
+        defs,
         rounds,
     } = st;
     let cell_dep_cap = *cell_dep_cap;
@@ -364,6 +422,7 @@ pub fn validity_cegar(
             return CegarOut::Sat(ForcingCert {
                 clauses: std::mem::take(forcing),
                 cells,
+                defs: std::mem::take(defs),
                 rounds: *rounds,
             });
         }
@@ -557,21 +616,26 @@ pub fn validity_cegar(
 /// tables for |dep|≤max_dep (BDD-memoized in AIGER); larger deps go
 /// out as a priority-decoder circuit so cert size stays linear in the
 /// number of forcing clauses rather than 2^|dep|.
-pub fn forcing_to_skolem(f: &Formula, cert: &ForcingCert, max_dep: usize) -> Option<Skolem> {
+pub fn forcing_to_skolem(f: &Formula, cert: ForcingCert, max_dep: usize) -> Option<Skolem> {
     use crate::aiger::SkolemFn;
     let mut sk = Skolem::new();
+    let ForcingCert { clauses, cells, mut defs, .. } = cert;
     for (&y, d) in &f.deps {
+        if let Some(def) = defs.remove(&y) {
+            sk.insert(y, SkolemFn::Aig(def.itp, def.root));
+            continue;
+        }
         let nd = d.len();
         // Clause-form: forcing clauses first (defined-y), then arbiter
         // cells (undefined-y). validity-CEGAR guarantees the regions
         // don't conflict, so first-match is well-defined.
         let mut cubes: Vec<(Vec<Lit>, bool)> = Vec::new();
-        if let Some(fcs) = cert.clauses.get(&y) {
+        if let Some(fcs) = clauses.get(&y) {
             for (ante, then) in fcs {
                 cubes.push((ante.clone(), *then > 0));
             }
         }
-        for (cy, cdep, val) in &cert.cells {
+        for (cy, cdep, val) in &cells {
             if *cy == y {
                 cubes.push((cdep.clone(), *val));
             }

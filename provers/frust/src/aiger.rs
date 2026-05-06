@@ -5,12 +5,14 @@ use std::collections::BTreeMap;
 use std::io::Write;
 
 /// One Skolem function. `Table` is a 2^ndeps-bit truth table; `Clauses`
-/// is a priority list of `(ante, polarity)` cubes over dep(y) — the
-/// first matching cube fixes y's value, default 0. Clauses avoids the
-/// 2^|dep| blow-up for large dep sets (forcing-clause certs).
+/// is a priority list of `(ante, polarity)` cubes over dep(y) (first
+/// match wins, default 0). `Aig` is a McMillan interpolant — inputs may
+/// be universals *or other existentials* (with smaller dep), so the
+/// writer must emit those first and reference their output gates.
 pub enum SkolemFn {
     Table(Vec<u64>, usize),
     Clauses(Vec<(Vec<Lit>, bool)>),
+    Aig(crate::interpolant::Itp, u32),
 }
 
 pub type Skolem = BTreeMap<Var, SkolemFn>;
@@ -126,7 +128,49 @@ pub fn write_skolem_aag<W: Write>(w: &mut W, f: &Formula, sk: &Skolem) -> std::i
         .map(|(i, &u)| (u, aig.lit_input(i)))
         .collect();
     let mut outputs: Vec<(Var, u32)> = Vec::new();
-    for (&y, fn_) in sk {
+    let mut out_lit: HashMap<Var, u32> = HashMap::new();
+    // `Aig` inputs may reference other existentials z (via linked-z
+    // interpolation). DFS post-order over the y→z reference graph.
+    let order: Vec<Var> = {
+        let refs: HashMap<Var, Vec<Var>> = sk
+            .iter()
+            .map(|(&y, fn_)| {
+                let r = if let SkolemFn::Aig(itp, _) = fn_ {
+                    itp.inputs.iter().copied().filter(|v| sk.contains_key(v)).collect()
+                } else {
+                    Vec::new()
+                };
+                (y, r)
+            })
+            .collect();
+        let mut order = Vec::with_capacity(sk.len());
+        let mut state: HashMap<Var, u8> = HashMap::new();
+        let mut stack: Vec<(Var, usize)> = Vec::new();
+        for &y0 in sk.keys() {
+            if state.contains_key(&y0) {
+                continue;
+            }
+            stack.push((y0, 0));
+            while let Some(&mut (y, ref mut i)) = stack.last_mut() {
+                state.insert(y, 1);
+                let r = &refs[&y];
+                if *i < r.len() {
+                    let z = r[*i];
+                    *i += 1;
+                    if !state.contains_key(&z) {
+                        stack.push((z, 0));
+                    }
+                } else {
+                    order.push(y);
+                    state.insert(y, 2);
+                    stack.pop();
+                }
+            }
+        }
+        order
+    };
+    for &y in &order {
+        let fn_ = &sk[&y];
         let out = match fn_ {
             SkolemFn::Table(bits, ndeps) => {
                 let deps: Vec<Var> = f
@@ -136,6 +180,29 @@ pub fn write_skolem_aag<W: Write>(w: &mut W, f: &Formula, sk: &Skolem) -> std::i
                     .unwrap_or_default();
                 let ins: Vec<u32> = deps.iter().take(*ndeps).map(|d| u_lit[d]).collect();
                 shannon(&mut aig, bits, ins.len(), &ins)
+            }
+            SkolemFn::Aig(itp, root) => {
+                use crate::interpolant::NodeKind;
+                let map_in = |v: Var| -> u32 {
+                    u_lit
+                        .get(&v)
+                        .or_else(|| out_lit.get(&v))
+                        .copied()
+                        .unwrap_or_else(|| panic!("interpolant for {y} references {v} not yet emitted"))
+                };
+                let mut gate_lit = vec![0u32; itp.gates.len()];
+                let to_aig = |l: u32, gate_lit: &[u32]| -> u32 {
+                    let base = match itp.node_kind(l) {
+                        NodeKind::Const => return l,
+                        NodeKind::Input(i) => map_in(itp.inputs[i]),
+                        NodeKind::Gate(k) => gate_lit[k],
+                    };
+                    base ^ (l & 1)
+                };
+                for (k, &(a, b)) in itp.gates.iter().enumerate() {
+                    gate_lit[k] = aig.mk_and(to_aig(a, &gate_lit), to_aig(b, &gate_lit));
+                }
+                to_aig(*root, &gate_lit)
             }
             SkolemFn::Clauses(cubes) => {
                 // Priority decoder: scan cubes in order; first hit
@@ -159,6 +226,7 @@ pub fn write_skolem_aag<W: Write>(w: &mut W, f: &Formula, sk: &Skolem) -> std::i
                 acc
             }
         };
+        out_lit.insert(y, out);
         outputs.push((y, out));
     }
     let m = aig.max_var();

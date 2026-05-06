@@ -6,6 +6,7 @@ mod definability;
 mod expand;
 mod expand_state;
 mod formula;
+mod interpolant;
 mod parse;
 mod proof;
 mod proof_emit;

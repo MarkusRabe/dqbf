@@ -255,7 +255,14 @@ impl ExpandState {
                         };
                         return self.step(f, cdcl, deadline, start, debug);
                     }
-                    self.cegar = Some(crate::arbiter::CegarState::new(f, &s.undefined));
+                    let itp_dl = start.elapsed().as_secs_f64() + (deadline - now) * 0.3;
+                    let defs = crate::definability::extract_interpolants(
+                        f, &s.defined, itp_dl, start, debug,
+                    );
+                    self.cegar = Some(crate::arbiter::CegarState::new(
+                        f, &s.undefined, &defs,
+                    ));
+                    self.cegar.as_mut().unwrap().defs = defs;
                 }
                 None => {
                     self.mode = if nu_full > self.expand_us.len() {
@@ -272,8 +279,10 @@ impl ExpandState {
         match crate::arbiter::validity_cegar(cs, f, sub_deadline, start, debug) {
             CegarOut::Sat(cert) => {
                 self.mode = Mode::Exhausted;
-                let mut sk = crate::arbiter::forcing_to_skolem(f, &cert, 20).unwrap();
-                crate::bce::reconstruct(&mut sk, f, &self.bce_stack);
+                // CEGAR runs on f.clauses (original, not post-BCE), so
+                // the Skolem already satisfies the original matrix —
+                // bce::reconstruct is unnecessary (and can't handle Aig).
+                let sk = crate::arbiter::forcing_to_skolem(f, cert, 20).unwrap();
                 Step::Sat(Some(sk))
             }
             CegarOut::UnsatRow(row) => {
