@@ -142,8 +142,15 @@ pub fn choose_fork(f: &mut Formula, c: &Clause) -> Option<(Clause, ForkResult)> 
         .collect();
     let d1 = f.clause_dep(&part);
     let d2 = f.clause_dep(&c2);
+    let inter: BTreeSet<Var> = d1.intersection(&d2).copied().collect();
+    // If the fresh var's dep equals one side, FEx doesn't shrink (the
+    // §6 dependency-cycle case). Signal no-progress so saturate falls
+    // through to SFEx.
+    if inter == d1 || inter == d2 {
+        return None;
+    }
     let x = f.n_vars + 1;
-    f.add_existential(x, d1.intersection(&d2).copied().collect());
+    f.add_existential(x, inter);
     let mut left = part.clone();
     left.push(x as Lit);
     left.sort_unstable();
@@ -177,4 +184,60 @@ pub fn find_information_fork(f: &Formula, c: &Clause) -> Option<(Var, Var)> {
         }
     }
     None
+}
+
+/// SFEx on `c` to *break a dependency cycle* (journal §6). Triggers when
+/// FEx alone can't shrink any dep — i.e. every information-fork pair's
+/// intersection equals one side. Picks an existential `a` whose dep is
+/// minimal but not ⊆ any other existential's dep, picks `c3 = {u}` for
+/// some universal `u ∈ dep(rest) \ dep(a)`, so the fresh var's dep is
+/// `dep(a) ∩ dep(rest) \ {u}` — strictly smaller than `dep(a)`. Two
+/// applications with complementary `c3` per Lemma `lem:elimstrongforks`
+/// suffice to eliminate any strong fork; saturate naturally finds the
+/// second on a later pass.
+pub fn choose_sfork(f: &mut Formula, c: &Clause) -> Option<(Clause, Vec<Lit>, ForkResult)> {
+    let exs: Vec<Var> = c
+        .iter()
+        .map(|&l| var(l))
+        .filter(|&v| f.is_existential(v))
+        .collect();
+    if exs.len() < 2 {
+        return None;
+    }
+    // Pick `a` with smallest dep (ties → first).
+    let a = *exs.iter().min_by_key(|&&v| f.deps[&v].len())?;
+    let da = f.deps[&a].clone();
+    let part: Clause = c
+        .iter()
+        .copied()
+        .filter(|&l| var(l) == a || f.dep(var(l)).is_subset(&da))
+        .collect();
+    let part_set: BTreeSet<Lit> = part.iter().copied().collect();
+    let c2: Clause = c.iter().copied().filter(|l| !part_set.contains(l)).collect();
+    if c2.is_empty() {
+        return None;
+    }
+    let d1 = f.clause_dep(&part);
+    let d2 = f.clause_dep(&c2);
+    let inter: BTreeSet<Var> = d1.intersection(&d2).copied().collect();
+    // FEx would give dep = inter. To shrink, drop one universal in inter
+    // that's also in d2 (so the c3 lit is "covered" by rest's dep).
+    let u = *inter.iter().find(|u| d2.contains(u))?;
+    let c3: Vec<Lit> = vec![u as Lit];
+    let x = f.n_vars + 1;
+    let new_dep: BTreeSet<Var> = inter.iter().copied().filter(|&v| v != u).collect();
+    if new_dep.len() >= da.len() {
+        // No shrink — SFEx wouldn't make progress here.
+        return None;
+    }
+    f.add_existential(x, new_dep);
+    let mut left: Clause = c3.iter().copied().chain(part.iter().copied()).collect();
+    left.push(x as Lit);
+    left.sort_unstable();
+    left.dedup();
+    let mut right: Clause = c3.iter().copied().chain(c2.iter().copied()).collect();
+    right.push(-(x as Lit));
+    right.sort_unstable();
+    right.dedup();
+    Some((part, c3, ForkResult { fresh: x, left, right }))
 }

@@ -318,9 +318,10 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
         // ---- Saturate slice ----
         let now = start.elapsed().as_secs_f64();
         let sat_slice = if known_unsat {
-            // We already know UNSAT; spend the rest of the budget on a
-            // .frp, capped so we still return promptly.
-            (cfg.timeout_s - now).min(now * 1.5).clamp(0.05, 0.5)
+            // Verdict known; spend up to the remaining budget on a .frp.
+            // Cap at 2s so a hard-to-saturate instance still returns
+            // (the runner sees UNSAT-no-cert, not timeout).
+            (cfg.timeout_s - now).clamp(0.05, 2.0)
         } else {
             slice.min(cfg.timeout_s - now)
         };
@@ -456,7 +457,11 @@ fn saturate(
         if found_empty {
             return Some(Output {
                 verdict: Verdict::Unsat,
-                proof: Some(std::mem::take(&mut db.proof)),
+                proof: {
+                    let mut p = std::mem::take(&mut db.proof);
+                    p.compact();
+                    Some(p)
+                },
                 skolem: None,
                 stats: format!("⊥ after {} clauses, {} forks", db.clauses.len(), forks),
             });
@@ -483,6 +488,26 @@ fn saturate(
                 }
                 forked = true;
                 break;
+            }
+        }
+        // FEx made no progress (dependency cycle, journal §6). Try SFEx.
+        if !forked {
+            for &i in &order {
+                let c = db.clauses[i].clone();
+                if let Some((part, c3, fr)) = crate::rules::choose_sfork(g, &c) {
+                    let src = db.idx[&c];
+                    for cl in [&fr.left, &fr.right] {
+                        db.record(cl, Step::sfex(cl, src, part.clone(), c3.clone(), fr.fresh));
+                        let rcl = universal_reduce(g, cl);
+                        if rcl != *cl {
+                            let pi = db.idx[cl];
+                            db.record(&rcl, Step::ured(&rcl, pi));
+                        }
+                        db.activate(rcl);
+                    }
+                    forked = true;
+                    break;
+                }
             }
         }
         if !forked {

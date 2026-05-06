@@ -43,6 +43,13 @@ impl Step {
         s.fresh = Some(fresh);
         s
     }
+    pub fn sfex(c: &Clause, src: usize, part: Vec<Lit>, c3: Vec<Lit>, fresh: Var) -> Self {
+        let mut s = Self::new(c.clone(), "sfex", vec![src]);
+        s.part = Some(part);
+        s.c3 = Some(c3);
+        s.fresh = Some(fresh);
+        s
+    }
 }
 
 #[derive(Default)]
@@ -54,6 +61,44 @@ impl Proof {
     pub fn add(&mut self, s: Step) -> usize {
         self.steps.push(s);
         self.steps.len() - 1
+    }
+
+    /// Keep only steps reachable from the first ⊥ via `premises`. Saturate
+    /// records every derived clause; only a fraction actually contributes
+    /// to the refutation.
+    pub fn compact(&mut self) {
+        let n = self.steps.len();
+        let root = match self.steps.iter().position(|s| s.clause.is_empty()) {
+            Some(i) => i,
+            None => return,
+        };
+        let mut keep = vec![false; n];
+        let mut stack = vec![root];
+        while let Some(i) = stack.pop() {
+            if keep[i] {
+                continue;
+            }
+            keep[i] = true;
+            for &p in &self.steps[i].premises {
+                if p < n && !keep[p] {
+                    stack.push(p);
+                }
+            }
+        }
+        let mut new_idx = vec![usize::MAX; n];
+        let mut out: Vec<Step> = Vec::new();
+        for i in 0..=root {
+            if !keep[i] {
+                continue;
+            }
+            let mut s = self.steps[i].clone();
+            for p in s.premises.iter_mut() {
+                *p = new_idx[*p];
+            }
+            new_idx[i] = out.len();
+            out.push(s);
+        }
+        self.steps = out;
     }
 
     pub fn write_json<W: Write>(&self, w: &mut W) -> std::io::Result<()> {
