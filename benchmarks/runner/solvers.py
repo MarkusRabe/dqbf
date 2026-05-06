@@ -67,8 +67,8 @@ def registry() -> dict[str, Solver]:
             certs={"sat": "{certdir}/{stem}.aag", "unsat": "{certdir}/{stem}.frp"},
             available=_exists(str(ROOT / "provers/frust/target/release/frust")),
         ),
-        "frust-prev": Solver(
-            name="frust-prev",
+        "frust-v0.2": Solver(
+            name="frust-v0.2",
             cmd=[
                 "/tmp/frust-iter2",
                 "{file}",
