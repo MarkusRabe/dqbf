@@ -553,7 +553,7 @@ impl ExpandState {
             // (it's the synthesis problem). Chunk the budget so we yield
             // at the slice deadline rather than burning it on one solve.
             loop {
-                if !picker.solve(&[], &mut pmodel, 50_000) {
+                if !picker.solve(&[], &mut pmodel, 10_000) {
                     if picker.budget_hit {
                         if start.elapsed().as_secs_f64() > deadline {
                             return Step::Pending;
@@ -623,7 +623,7 @@ impl ExpandState {
                     // Shared: outer-∃ → picker[1..no]. Fresh: everything
                     // else (universals pinned by units; inner free).
                     let slot = self.cegis_rows;
-                    if slot < cegis_rows {
+                    if slot < cegis_rows && !self.bad_rows[..self.bad_rows.len() - 1].contains(&ub) {
                         self.cegis_rows += 1;
                         let base = no + slot * n_per_row;
                         let remap = |l: Lit| -> Lit {
@@ -648,6 +648,14 @@ impl ExpandState {
                         for &v in &nonouter {
                             picker.set_decision((base + 1 + nonouter_idx[&v]) as u32, true);
                         }
+                        dbg_ex!(
+                            debug,
+                            "outer-CEGAR r{}: cegis row {} (slot {})",
+                            self.bad_rows.len(),
+                            ub,
+                            slot
+                        );
+                        continue;
                     }
                     // Seed deletion-min from analyze_final's core (the
                     // outer-∃ subset of the failed assumption set)
