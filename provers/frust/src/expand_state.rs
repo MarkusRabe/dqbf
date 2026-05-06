@@ -570,15 +570,36 @@ impl ExpandState {
                 }
                 Some(ub) => {
                     self.bad_rows.push(ub);
-                    // Deletion-core: try removing each outer pin; if still UNSAT,
-                    // it wasn't needed.
+                    // Seed deletion-min from analyze_final's core (the
+                    // outer-∃ subset of the failed assumption set)
+                    // instead of from all |outer| pins — at 357 outer-∃
+                    // the full sweep is 357 solves/round.
                     let base = self.row_assumps(ub, &[]);
+                    let mut a = base.clone();
+                    for &(y, v) in &self.outer_pins {
+                        a.push(if v > 0 { y as Lit } else { -(y as Lit) });
+                    }
+                    cdcl.solve(&a, &mut self.model, self.row_budget);
+                    let last_core: HashSet<Var> = cdcl
+                        .last_core()
+                        .iter()
+                        .map(|&l| crate::formula::var(l))
+                        .collect();
                     let mut core: Vec<(usize, i8)> = self
                         .outer_pins
                         .iter()
                         .enumerate()
+                        .filter(|(_, &(y, _))| last_core.contains(&y))
                         .map(|(j, &(_, v))| (j, v))
                         .collect();
+                    if core.is_empty() {
+                        core = self
+                            .outer_pins
+                            .iter()
+                            .enumerate()
+                            .map(|(j, &(_, v))| (j, v))
+                            .collect();
+                    }
                     let mut k = 0;
                     while k < core.len() {
                         let mut a = base.clone();
