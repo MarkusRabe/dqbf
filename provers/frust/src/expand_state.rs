@@ -517,9 +517,16 @@ impl ExpandState {
         // (universals become picker-level units; inner-∃ + Tseitin aux
         // are free). Finding a model = a topology that simultaneously
         // satisfies the matrix on every accumulated row — CEGIS.
-        const CEGIS_ROWS: usize = 64;
+        // Cap row budget so the picker stays small enough for
+        // pick_branch's linear scan; huge n_per_row falls back to
+        // blocking-only.
         let n_per_row = n - no;
-        let np = no + CEGIS_ROWS * n_per_row;
+        let cegis_rows: usize = if n_per_row > 256 {
+            0
+        } else {
+            (self.rows as usize).min(32)
+        };
+        let np = no + cegis_rows * n_per_row;
         let mut pmodel = vec![0i8; np + 1];
         if self.outer_picker.is_none() {
             let mut p = Cdcl::new(np, &self.outer_learned);
@@ -546,15 +553,27 @@ impl ExpandState {
             for (j, &(_, v)) in self.outer_pins.iter().enumerate() {
                 picker.set_phase((j + 1) as u32, v);
             }
-            if !picker.solve(&[], &mut pmodel, 100_000) {
-                if picker.budget_hit {
-                    return Step::Pending;
+            // Picker SAT can be hard once CEGIS row-matrices accumulate
+            // (it's the synthesis problem). Chunk the budget so we yield
+            // at the slice deadline rather than burning it on one solve.
+            loop {
+                if !picker.solve(&[], &mut pmodel, 50_000) {
+                    if picker.budget_hit {
+                        if start.elapsed().as_secs_f64() > deadline {
+                            return Step::Pending;
+                        }
+                        continue;
+                    }
+                    dbg_ex!(
+                        debug,
+                        "outer-CEGAR picker UNSAT after {} rows, {} blocks",
+                        self.cegis_rows,
+                        self.outer_learned.len()
+                    );
+                    self.mode = Mode::Exhausted;
+                    return Step::Unsat;
                 }
-                dbg_ex!(debug, "outer-CEGAR picker UNSAT after {} rows, {} blocks", self.cegis_rows, self.outer_learned.len());
-                // Outer-CDCL UNSAT → no constant assignment works.
-                // (Phase-3 cert: FEx over outer-∃ + Q-res of blocks.)
-                self.mode = Mode::Exhausted;
-                return Step::Unsat;
+                break;
             }
             for (j, &i) in self.outer.iter().enumerate() {
                 self.outer_pins[j] = (self.exs[i], if pmodel[j + 1] > 0 { 1 } else { -1 });
@@ -608,7 +627,7 @@ impl ExpandState {
                     // Shared: outer-∃ → picker[1..no]. Fresh: everything
                     // else (universals pinned by units; inner free).
                     let slot = self.cegis_rows;
-                    if slot < CEGIS_ROWS {
+                    if slot < cegis_rows {
                         self.cegis_rows += 1;
                         let base = no + slot * n_per_row;
                         let remap = |l: Lit| -> Lit {
