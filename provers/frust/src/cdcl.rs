@@ -80,6 +80,12 @@ pub struct Cdcl {
     pub n_learned: usize,
     pub budget_hit: bool,
     decide: Vec<bool>,
+    // Minisat-style indexed max-heap over `activity`. `order[i]` is the
+    // var at heap position i; `pos[v]` is v's position (-1 if absent).
+    // Ties break on var index (lower first) so the pre-conflict pop order
+    // matches the old first-unset scan, preserving free-pass determinism.
+    order: Vec<u32>,
+    pos: Vec<i32>,
     core: Vec<Lit>,
     pub proof: Option<ProofLog>,
     /// First unit-vs-unit conflict detected during clause loading, before
@@ -110,6 +116,8 @@ impl Cdcl {
             n_learned: 0,
             budget_hit: false,
             decide: vec![true; n_vars + 1],
+            order: Vec::with_capacity(n_vars),
+            pos: vec![-1i32; n_vars + 1],
             core: Vec::new(),
             proof: None,
             init_unit_conflict: 0,
@@ -118,7 +126,82 @@ impl Cdcl {
             let lits: Vec<ILit> = c.iter().map(|&l| ilit(l)).collect();
             s.add_clause(&lits, false);
         }
+        // Seed heap in var order so equal-activity pops match the old
+        // first-unset scan (free-pass / SlotDpll rely on this).
+        for v in 1..=n_vars {
+            s.heap_insert(v);
+        }
         s
+    }
+
+    // ----- order heap (max on activity[v]; tie-break: lower var) -------
+    #[inline]
+    fn heap_lt(&self, a: u32, b: u32) -> bool {
+        let (aa, ab) = (self.activity[a as usize], self.activity[b as usize]);
+        aa > ab || (aa == ab && a < b)
+    }
+    fn heap_up(&mut self, mut i: usize) {
+        let v = self.order[i];
+        while i > 0 {
+            let p = (i - 1) / 2;
+            if self.heap_lt(v, self.order[p]) {
+                self.order[i] = self.order[p];
+                self.pos[self.order[i] as usize] = i as i32;
+                i = p;
+            } else {
+                break;
+            }
+        }
+        self.order[i] = v;
+        self.pos[v as usize] = i as i32;
+    }
+    fn heap_down(&mut self, mut i: usize) {
+        let v = self.order[i];
+        loop {
+            let l = 2 * i + 1;
+            if l >= self.order.len() {
+                break;
+            }
+            let r = l + 1;
+            let c = if r < self.order.len() && self.heap_lt(self.order[r], self.order[l]) {
+                r
+            } else {
+                l
+            };
+            if self.heap_lt(self.order[c], v) {
+                self.order[i] = self.order[c];
+                self.pos[self.order[i] as usize] = i as i32;
+                i = c;
+            } else {
+                break;
+            }
+        }
+        self.order[i] = v;
+        self.pos[v as usize] = i as i32;
+    }
+    #[inline]
+    fn heap_insert(&mut self, v: usize) {
+        if self.pos[v] >= 0 {
+            return;
+        }
+        let i = self.order.len();
+        self.order.push(v as u32);
+        self.pos[v] = i as i32;
+        self.heap_up(i);
+    }
+    fn heap_pop(&mut self) -> Option<usize> {
+        if self.order.is_empty() {
+            return None;
+        }
+        let v = self.order[0] as usize;
+        let last = self.order.pop().unwrap();
+        self.pos[v] = -1;
+        if !self.order.is_empty() {
+            self.order[0] = last;
+            self.pos[last as usize] = 0;
+            self.heap_down(0);
+        }
+        Some(v)
     }
 
     pub fn enable_proof_log(&mut self) {
@@ -320,11 +403,12 @@ impl Cdcl {
             return;
         }
         let lim = self.trail_lim[lvl as usize];
-        for &l in &self.trail[lim..] {
-            let v = ivar(l);
+        for i in (lim..self.trail.len()).rev() {
+            let v = ivar(self.trail[i]);
             self.phase[v] = self.value[v];
             self.value[v] = 0;
             self.reason[v] = UNDEF;
+            self.heap_insert(v);
         }
         self.trail.truncate(lim);
         self.trail_lim.truncate(lvl as usize);
@@ -581,34 +665,27 @@ impl Cdcl {
         (out, chain)
     }
 
-    fn pick_branch(&self, vsids: bool) -> Option<ILit> {
-        // Hybrid: first-unset (deterministic) until a conflict happened
-        // in this solve; then VSIDS.
-        let v = if vsids {
-            let mut best: Option<usize> = None;
-            let mut best_a = -1.0f64;
-            for v in 1..=self.n_vars {
-                if self.value[v] == 0 && self.decide[v] && self.activity[v] > best_a {
-                    best_a = self.activity[v];
-                    best = Some(v);
-                }
+    fn pick_branch(&mut self) -> Option<ILit> {
+        loop {
+            let v = self.heap_pop()?;
+            if self.value[v] == 0 && self.decide[v] {
+                return Some(if self.phase[v] >= 0 {
+                    2 * v as ILit
+                } else {
+                    2 * v as ILit + 1
+                });
             }
-            best
-        } else {
-            (1..=self.n_vars).find(|&v| self.value[v] == 0 && self.decide[v])
-        };
-        v.map(|v| {
-            if self.phase[v] >= 0 {
-                2 * v as ILit
-            } else {
-                2 * v as ILit + 1
-            }
-        })
+        }
     }
 
     pub fn set_decision(&mut self, v: u32, d: bool) {
-        if (v as usize) <= self.n_vars {
-            self.decide[v as usize] = d;
+        let v = v as usize;
+        if v > self.n_vars {
+            return;
+        }
+        self.decide[v] = d;
+        if d {
+            self.heap_insert(v);
         }
     }
 
@@ -651,6 +728,9 @@ impl Cdcl {
     #[inline]
     fn bump(&mut self, v: usize) {
         self.activity[v] += self.var_inc;
+        if self.pos[v] >= 0 {
+            self.heap_up(self.pos[v] as usize);
+        }
         if self.activity[v] > 1e100 {
             for a in self.activity.iter_mut() {
                 *a *= 1e-100;
@@ -750,7 +830,7 @@ impl Cdcl {
                 }
                 continue;
             }
-            match self.pick_branch(self.conflicts > start_conflicts) {
+            match self.pick_branch() {
                 None => {
                     // SAT.
                     for v in 1..=self.n_vars {
