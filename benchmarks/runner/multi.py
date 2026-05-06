@@ -98,9 +98,15 @@ def discover(root: Path) -> list[tuple[Path, str, str, dict]]:
     out: list[tuple[Path, str, str, dict]] = []
     for mf in root.rglob("manifest.json"):
         fam = str(mf.parent.relative_to(root))
-        for e in json.loads(mf.read_text()):
-            p = (mf.parent / e["path"]).resolve()
-            if not p.is_relative_to(root_r):
+        entries = json.loads(mf.read_text())
+        if isinstance(entries, dict):
+            entries = entries.get("instances", [])
+        for e in entries:
+            rel = e.get("path") or e.get("name") or e.get("file")
+            if rel is None:
+                continue
+            p = (mf.parent / rel).resolve()
+            if not p.exists() or not p.is_relative_to(root_r):
                 continue
             out.append((p, fam, e.get("expected", "unknown"), e.get("params", {})))
     if not out:
