@@ -203,7 +203,10 @@ impl CegarState {
         // (dep(y) or linked-z); gates → fresh vars; root ↔ y.
         use crate::interpolant::NodeKind;
         let mut next_g = itp_base;
-        for (&y, d) in defs {
+        let mut def_order: Vec<Var> = defs.keys().copied().collect();
+        def_order.sort_unstable();
+        for &y in &def_order {
+            let d = &defs[&y];
             let gate0 = next_g;
             let mut gv = vec![0 as Lit; d.itp.gates.len()];
             let to_v = |l: u32, gv: &[Lit]| -> Lit {

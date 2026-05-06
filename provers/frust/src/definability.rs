@@ -93,7 +93,7 @@ pub fn padoa_split(
         .collect();
     let mut is_defined: HashSet<Var> = defined.iter().copied().collect();
     let mut todo: Vec<Var> = live.iter().copied().collect();
-    todo.sort_by_key(|y| deps[y].len());
+    todo.sort_by_key(|&y| (deps[&y].len(), y));
 
     let budget_per = ((1_000_000 / live.len().max(1)) as u64).max(500);
     let mut rounds = 0usize;
@@ -179,7 +179,7 @@ pub fn extract_interpolants(
         .flat_map(|c| c.iter().map(|&l| var(l)))
         .collect();
     let mut order: Vec<Var> = defined.iter().copied().filter(|y| live.contains(y)).collect();
-    order.sort_by_key(|y| f.deps[y].len());
+    order.sort_by_key(|&y| (f.deps[&y].len(), y));
 
     // Build a base CDCL once (copy-A | copy-B, no links) with
     // proof-logging enabled; per y, clone it and add only this y's link
