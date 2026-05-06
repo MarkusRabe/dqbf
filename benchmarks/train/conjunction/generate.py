@@ -40,7 +40,7 @@ SOURCES: list[tuple[str, str, str]] = [
         "sat",
         "syn_inv",
     ),
-    ("benchmarks/train/random_bv/v1/under/under_s0000.dqdimacs.gz", "unknown", "random_bv"),
+    ("benchmarks/train/random_bv/under/under_w2_s0000.dqdimacs.gz", "unknown", "random_bv"),
     (
         "benchmarks/train/synthesis_invertibility/instances/and_x_n20.dqdimacs.gz",
         "sat",
@@ -57,10 +57,14 @@ SOURCES: list[tuple[str, str, str]] = [
         "unsat",
         "syn_inv",
     ),
-    ("benchmarks/train/random_bv/v1/over/over_s2000.dqdimacs.gz", "unknown", "random_bv"),
-    ("benchmarks/train/bmc_circuits/mutex/mutex_n4_k008.dqdimacs.gz", "unsat", "bmc"),
-    ("benchmarks/train/collatz/collatz_unrolled_n08_k06.dqdimacs.gz", "unknown", "collatz"),
-    ("benchmarks/train/random_qbf/v1/2qbf/2qbf_s0000.qdimacs", "unknown", "random_qbf"),
+    ("benchmarks/train/random_bv/over/over_w2_s2000.dqdimacs.gz", "unknown", "random_bv"),
+    ("benchmarks/train/bmc_circuits/unrolled/mutex/mutex_n4_k008.dqdimacs.gz", "unsat", "bmc"),
+    (
+        "benchmarks/train/collatz/unrolled/collatz_unrolled_shift_n16_k08.dqdimacs.gz",
+        "unknown",
+        "collatz",
+    ),
+    ("benchmarks/train/random_qbf/2qbf/2qbf_s00000.qdimacs", "unknown", "random_qbf"),
 ]
 
 

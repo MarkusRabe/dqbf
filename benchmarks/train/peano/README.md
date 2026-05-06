@@ -22,7 +22,7 @@ clauses tie the two universally-quantified copies of `b` to the same
 Skolem function — the same trick as `bmc_circuits/succinct/`.
 
 **Alternatives.** `bitwidth_scaling/add` poses the same target with an
-explicit RHS instead of a recursive spec. `circuit_synth_gates/adder`
+explicit RHS instead of a recursive spec. `circuit_synth/gates/adder`
 adds a gate budget.
 
 **Compare against.** SyGuS solvers (cvc5 `--sygus`) on the equivalent

@@ -1,0 +1,9 @@
+-- random_bv seed=19001 mode=under width=8
+param N = 8
+
+fun f0 : bv[N] -> bv[N]
+
+forall x0 : bv[N]
+forall x1 : bv[N]
+
+(~f0(x1) >= ((f0(x0) ^ f0(x1)) | x1))

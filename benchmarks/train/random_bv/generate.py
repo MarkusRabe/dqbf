@@ -139,8 +139,9 @@ def write_instance(spec: Spec, outdir: Path, name: str) -> dict:
     }
 
 
-def build_family(mode: str, base: Path, n_inst: int, width: int, seed0: int) -> int:
-    outdir = base / mode
+def build_family(
+    mode: str, outdir: Path, n_inst: int, width: int, seed0: int
+) -> list[dict]:
     lo, hi = MODE_CONSTRAINTS[mode]
     rnd = random.Random(seed0)
     manifest = []
@@ -154,47 +155,31 @@ def build_family(mode: str, base: Path, n_inst: int, width: int, seed0: int) -> 
             seed=seed,
             mode=mode,
         )
-        manifest.append(write_instance(spec, outdir, f"{mode}_s{seed:04d}"))
-    (outdir / "manifest.json").write_text(json.dumps(manifest, indent=2))
-    print(f"wrote {len(manifest)} instances to {outdir}/")
-    return len(manifest)
+        manifest.append(write_instance(spec, outdir, f"{mode}_w{width}_s{seed:04d}"))
+    return manifest
+
+
+# Width tier × seed-base pairs (formerly v1/v2/v3 wrapper scripts).
+TIERS = ((2, 0), (6, 9000), (8, 19000))
 
 
 @click.command()
-@click.option("--out", type=click.Path(), default="benchmarks/train/random_bv/v1")
-@click.option("--width", "-N", type=int, default=2)
-@click.option("--n-funs", type=int, default=2, help="(single-instance mode only)")
-@click.option("--n-forall", type=int, default=2, help="(single-instance mode only)")
-@click.option("--n-constraints", type=int, default=3, help="(single-instance mode only)")
-@click.option("--seed", type=int, default=0)
+@click.option("--out", type=click.Path(), default="benchmarks/train/random_bv")
 @click.option("--mode", type=click.Choice(["under", "over", "mixed", "all"]), default="all")
 @click.option("--n-instances", type=int, default=15)
-def main(
-    out: str,
-    width: int,
-    n_funs: int,
-    n_forall: int,
-    n_constraints: int,
-    seed: int,
-    mode: str,
-    n_instances: int,
-) -> None:
+def main(out: str, mode: str, n_instances: int) -> None:
     base = Path(out)
-    if mode == "all":
-        total = 0
-        for i, m in enumerate(("under", "mixed", "over")):
-            total += build_family(m, base, n_instances, width, seed0=seed + i * 1000)
-        print(f"total: {total}")
-        return
-    spec = Spec(
-        width=width,
-        n_funs=n_funs,
-        n_forall=n_forall,
-        n_constraints=n_constraints,
-        seed=seed,
-        mode=mode,
-    )
-    print(gen_eqfob(spec))
+    modes = ("under", "mixed", "over") if mode == "all" else (mode,)
+    total = 0
+    for i, m in enumerate(modes):
+        outdir = base / m
+        manifest: list[dict] = []
+        for width, seed0 in TIERS:
+            manifest += build_family(m, outdir, n_instances, width, seed0=seed0 + i * 1000)
+        (outdir / "manifest.json").write_text(json.dumps(manifest, indent=2))
+        print(f"{m}: {len(manifest)} → {outdir}/")
+        total += len(manifest)
+    print(f"total: {total}")
 
 
 if __name__ == "__main__":

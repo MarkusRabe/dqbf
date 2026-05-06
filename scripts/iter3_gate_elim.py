@@ -106,11 +106,11 @@ def eliminate_gates(f: Formula) -> tuple[dict[int, tuple[list[int], list[int]]],
 
 
 PATHS = [
-    "benchmarks/train/pec_circuits/instances/pec_mutex_n8_k2_bb2_complete.dqdimacs.gz",
-    "benchmarks/train/pec_circuits/instances/pec_alu_add_n4_k2_bb3_complete.dqdimacs.gz",
-    "benchmarks/train/pec_circuits/instances/pec_fifo1_n4_k8_bb3_complete.dqdimacs.gz",
-    "benchmarks/train/pec_circuits/instances/pec_mutex_n12_k2_bb3_complete.dqdimacs.gz",
-    "benchmarks/train/pec_circuits/instances/pec_fifo1_n24_k2_bb2_complete.dqdimacs.gz",
+    "benchmarks/train/pec_circuits/miter/pec_mutex_n8_k2_bb2_complete.dqdimacs.gz",
+    "benchmarks/train/pec_circuits/miter/pec_alu_add_n4_k2_bb3_complete.dqdimacs.gz",
+    "benchmarks/train/pec_circuits/miter/pec_fifo1_n4_k8_bb3_complete.dqdimacs.gz",
+    "benchmarks/train/pec_circuits/miter/pec_mutex_n12_k2_bb3_complete.dqdimacs.gz",
+    "benchmarks/train/pec_circuits/miter/pec_fifo1_n24_k2_bb2_complete.dqdimacs.gz",
     "benchmarks/train/peano/instances/peano_v2_mul_n8.dqdimacs.gz",
     "benchmarks/train/conjunction/instances/conj_k2_s07001_007.dqdimacs.gz",
 ]

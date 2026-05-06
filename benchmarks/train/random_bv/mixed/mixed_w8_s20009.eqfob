@@ -1,0 +1,12 @@
+-- random_bv seed=20009 mode=mixed width=8
+param N = 8
+
+fun f0 : bv[N] -> bv[N]
+fun f1 : bv[N] -> bv[N]
+
+forall x0 : bv[N]
+forall x1 : bv[N]
+
+((f1(x0) + 205) > ((x1 + 181) + 175))
+((f1(x1) < ((f1(x0) & 142) | 147)) && (f1(x1) == ~f0(x0)))
+((~f1(x1) & (f1(x1) | 78)) == (~x0 & (x0 & x1)))

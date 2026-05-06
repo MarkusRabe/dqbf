@@ -18,7 +18,7 @@ solve every width cheaply.
 
 **Alternatives.** The same operators appear inside `peano/` (with
 recursive specs instead of explicit RHS) and as gate definitions
-inside `circuit_synth_gates/` (with a gate-count budget instead of
+inside `circuit_synth/gates/` (with a gate-count budget instead of
 unbounded `f`).
 
 **Compare against.** Any QBF solver (caqe, depqbf, cadet) on the same

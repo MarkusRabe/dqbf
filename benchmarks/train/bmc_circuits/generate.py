@@ -10,10 +10,10 @@ Consolidated family — supersedes the old v1/v2/v3 + _succinct split.
 
 Each (circuit, N, k, variant) is emitted in **three** encodings:
 
-- ``{name}/``           — unrolled (`encode`, O(k·|circ|) vars)
+- ``unrolled/{name}/``  — k explicit steps (`encode`, O(k·|circ|) vars)
 - ``succinct/{name}/``  — universal step-counter (`encode_succinct`,
                           O(|circ|+log k) vars; genuine DQBF)
-- ``indinv/{name}/``    — inductive-invariant search (`encode_indinv`,
+- ``inductive/{name}/`` — inductive-invariant search (`encode_indinv`,
                           k-independent; SAT ⇔ property holds)
 
 Default grid N∈{4,8,12,16,20,24,32} × k∈{8,24}: 532 unrolled +
@@ -81,7 +81,7 @@ def main(
     base = Path(out)
     ws = [int(x) for x in widths.split(",")]
     ks = [int(x) for x in bounds.split(",")]
-    encoders: list[tuple[str, Path]] = [("unrolled", base)]
+    encoders: list[tuple[str, Path]] = [("unrolled", base / "unrolled")]
     if succinct:
         encoders.append(("succinct", base / "succinct"))
 
@@ -129,7 +129,7 @@ def main(
                 )
                 total += 1
         if indinv:
-            d = base / "indinv" / name
+            d = base / "inductive" / name
             d.mkdir(parents=True, exist_ok=True)
             try:
                 fi = encode_indinv_aig(seq, source=src)
@@ -142,15 +142,14 @@ def main(
             inst = f"{name}_n{n}_indinv{suffix}"
             with gzip.open(d / f"{inst}.dqdimacs.gz", "wt") as fp:
                 fp.write(
-                    f"c bmc_circuits/{name} enc=indinv N={n} "
-                    f"variant={variant or '-'}: {comment}\n"
+                    f"c bmc_circuits/{name} enc=indinv N={n} variant={variant or '-'}: {comment}\n"
                 )
                 fp.write(dqdimacs.dumps(fi))
-            manifests.setdefault(("indinv", name), []).append(
+            manifests.setdefault(("inductive", name), []).append(
                 {
                     "path": f"{inst}.dqdimacs.gz",
                     "expected": _expected_indinv(variant),
-                    "tags": ["bmc_circuits", name, variant or "single", "indinv"],
+                    "tags": ["bmc_circuits", name, variant or "single", "inductive"],
                     "params": {"N": n, "variant": variant},
                 }
             )
@@ -166,9 +165,8 @@ def main(
             aag, comment = lfn(n)
             emit(name, n, "", aag, comment, None)
 
-    enc_root = {"unrolled": base, "succinct": base / "succinct", "indinv": base / "indinv"}
     for (enc_name, name), m in sorted(manifests.items()):
-        (enc_root[enc_name] / name / "manifest.json").write_text(json.dumps(m, indent=2))
+        (base / enc_name / name / "manifest.json").write_text(json.dumps(m, indent=2))
         print(f"{enc_name}/{name}: {len(m)} instances")
 
     print(f"total: {total} instances; {len(skipped)} skipped (>{max_vars} vars or error)")

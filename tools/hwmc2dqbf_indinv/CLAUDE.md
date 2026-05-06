@@ -16,7 +16,7 @@ Reuses `tools.pec2dqbf.aiger_seq` for AIGER I/O and
 ## Semantics & cross-encoding consistency
 
 `scripts/indinv_consistency.py` checks every `.aag` in
-`benchmarks/train/hwmc_indinv/instances/` against (a) exhaustive
+`benchmarks/train/hwmc_indinv/inductive/` against (a) exhaustive
 forward reachability on the AIGER (BFS, up to |L|≤16) and (b) a
 fresh BMC@24 encoding of the same circuit, both solved with pedant.
 

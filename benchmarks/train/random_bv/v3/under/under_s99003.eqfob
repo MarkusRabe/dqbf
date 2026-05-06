@@ -1,8 +1,0 @@
--- random_bv seed=99003 mode=under width=12
-param N = 12
-
-fun f0 : bv[N] -> bv[N]
-
-forall x0 : bv[N]
-
-(((~f0(x0) | (x0 | x0)) >= f0(x0)) || (~f0(x0) > (f0(x0) | (x0 ^ x0))))

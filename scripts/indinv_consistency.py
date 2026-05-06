@@ -1,7 +1,7 @@
 """Cross-check the inductive-invariant encoding against BMC and against
 ground-truth reachability.
 
-For each `.aag` source under `benchmarks/train/hwmc_indinv/instances/`:
+For each `.aag` source under `benchmarks/train/hwmc_indinv/inductive/`:
 
   1. Compute ground truth by exhaustive forward reachability on the
      AIGER (BFS over 2^|latches| states; cap at |latches| ≤ 16).
@@ -31,7 +31,7 @@ from tools.bmc2dqbf.encode import encode as encode_bmc
 from tools.pec2dqbf.aiger_seq import SeqAig, parse_seq_aag
 
 PEDANT = Path("third_party/pedant/build/src/pedant")
-ROOT = Path("benchmarks/train/hwmc_indinv/instances")
+ROOT = Path("benchmarks/train/hwmc_indinv/inductive")
 BMC_K = 24
 
 

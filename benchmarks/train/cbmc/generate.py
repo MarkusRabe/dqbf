@@ -8,10 +8,10 @@ Consolidated family — supersedes the old `cbmc/` (handwritten sources)
 | ``handwritten/`` | `cbmc --dimacs` on static `.c` sources | all-∃ | cbmc verdict |
 | ``flat/`` | `cbmc --dimacs` on rendered `c_sources` | all-∃ | cbmc verdict |
 | ``succinct/`` | `seq_aig_for` → `encode_succinct` | ∀t,t' ∃ latch(t) | analytic, cross-checked |
-| ``indinv/`` | `seq_aig_for` → `encode_indinv` | ∀s,i,s' ∃ inv(s) | construction (ok→sat) |
+| ``inductive/`` | `seq_aig_for` → `encode_indinv` | ∀s,i,s' ∃ inv(s) | construction (ok→sat) |
 
 For BMC encodings (handwritten/flat/succinct), SAT ⇔ assertion can
-fail at that unwind. For ``indinv/`` the **semantics flip**: SAT ⇔
+fail at that unwind. For ``inductive/`` the **semantics flip**: SAT ⇔
 inductive invariant exists ⇔ property holds.
 
 The handwritten sources are flat-DIMACS only (CBMC 5.12 emits no SSA
@@ -40,7 +40,8 @@ from tools.hwmc2dqbf_indinv.encode import encode_indinv_aig
 
 HERE = Path(__file__).resolve().parent
 SRC = HERE / "sources"
-OUT = HERE / "instances"
+
+VARIANTS = ("handwritten", "flat", "succinct", "inductive")
 
 WIDTHS = (4, 6, 8)
 BOUNDS = (8, 16, 32)
@@ -100,20 +101,16 @@ def _write_flat(out: Path, header: str, n_vars: int, clauses: list[str]) -> None
 @click.option("-N", "widths", default=",".join(str(w) for w in WIDTHS))
 @click.option("-K", "bounds", default=",".join(str(k) for k in BOUNDS))
 @click.option("--max-nvars", default=400_000)
-@click.option(
-    "--mode",
-    type=click.Choice(["handwritten", "flat", "succinct", "indinv", "all"]),
-    default="all",
-)
+@click.option("--mode", type=click.Choice([*VARIANTS, "all"]), default="all")
 def main(widths: str, bounds: str, max_nvars: int, mode: str) -> None:
     need_cbmc = mode in ("handwritten", "flat", "all")
     if need_cbmc and shutil.which("cbmc") is None:
         raise SystemExit("cbmc not on PATH (needed for handwritten/flat modes)")
     ws = [int(x) for x in widths.split(",")]
     ks = [int(x) for x in bounds.split(",")]
-    for sub in ("handwritten", "flat", "succinct", "indinv"):
-        (OUT / sub).mkdir(parents=True, exist_ok=True)
-    m: dict[str, list[dict]] = {"handwritten": [], "flat": [], "succinct": [], "indinv": []}
+    for sub in VARIANTS:
+        (HERE / sub).mkdir(parents=True, exist_ok=True)
+    m: dict[str, list[dict]] = {sub: [] for sub in VARIANTS}
 
     if mode in ("handwritten", "all"):
         seen: set[int] = set()
@@ -128,7 +125,7 @@ def main(widths: str, bounds: str, max_nvars: int, mode: str) -> None:
                 seen.add(h)
                 stem = f"{c.stem}_u{k:03d}"
                 _write_flat(
-                    OUT / "handwritten" / f"{stem}.dqdimacs.gz",
+                    HERE / "handwritten" / f"{stem}.dqdimacs.gz",
                     f"c cbmc/handwritten source={c.name} unwind={k} cbmc_verdict={verdict}\n",
                     nv,
                     cls,
@@ -147,18 +144,18 @@ def main(widths: str, bounds: str, max_nvars: int, mode: str) -> None:
             tag = "bug" if bug else "ok"
             for n in ws:
                 seq, comment = seq_aig_for(name, n, bug)
-                if mode in ("indinv", "all"):
+                if mode in ("inductive", "all"):
                     fi = encode_indinv_aig(seq, source=f"cbmc/{name}_{tag}_n{n}")
                     if fi.n_vars <= max_nvars:
                         stem = f"{name}_{tag}_n{n}_indinv"
-                        with gzip.open(OUT / "indinv" / f"{stem}.dqdimacs.gz", "wt") as fp:
+                        with gzip.open(HERE / "inductive" / f"{stem}.dqdimacs.gz", "wt") as fp:
                             fp.write(f"c cbmc/indinv {comment}\n")
                             fp.write(dqdimacs.dumps(fi))
-                        m["indinv"].append(
+                        m["inductive"].append(
                             {
                                 "path": f"{stem}.dqdimacs.gz",
                                 "expected": "unsat" if bug else "sat",
-                                "tags": ["cbmc", "indinv", name, tag],
+                                "tags": ["cbmc", "inductive", name, tag],
                                 "params": {"family": name, "bug": bug, "n": n},
                             }
                         )
@@ -167,7 +164,7 @@ def main(widths: str, bounds: str, max_nvars: int, mode: str) -> None:
                     if mode in ("succinct", "all"):
                         f = encode_succinct(seq, k=k, source=f"cbmc/{stem}")
                         if f.n_vars <= max_nvars:
-                            with gzip.open(OUT / "succinct" / f"{stem}.dqdimacs.gz", "wt") as fp:
+                            with gzip.open(HERE / "succinct" / f"{stem}.dqdimacs.gz", "wt") as fp:
                                 fp.write(f"c cbmc/succinct {comment} bound={k}\n")
                                 fp.write(dqdimacs.dumps(f))
                             m["succinct"].append(
@@ -186,7 +183,7 @@ def main(widths: str, bounds: str, max_nvars: int, mode: str) -> None:
                                 f"c cbmc/flat {name} bug={bug} bits={n} "
                                 f"unwind={k} cbmc_verdict={verdict}\n"
                             )
-                            _write_flat(OUT / "flat" / f"{stem}.dqdimacs.gz", hdr, nv, cls)
+                            _write_flat(HERE / "flat" / f"{stem}.dqdimacs.gz", hdr, nv, cls)
                             m["flat"].append(
                                 {
                                     "path": f"{stem}.dqdimacs.gz",
@@ -199,10 +196,10 @@ def main(widths: str, bounds: str, max_nvars: int, mode: str) -> None:
     for sub, mf in m.items():
         if not mf:
             continue
-        (OUT / sub / "manifest.json").write_text(json.dumps(mf, indent=2))
+        (HERE / sub / "manifest.json").write_text(json.dumps(mf, indent=2))
         s = sum(1 for x in mf if x["expected"] == "sat")
         u = sum(1 for x in mf if x["expected"] == "unsat")
-        print(f"{sub}: {len(mf)} instances ({s} sat / {u} unsat) → {OUT / sub}/")
+        print(f"{sub}: {len(mf)} instances ({s} sat / {u} unsat) → {HERE / sub}/")
 
 
 if __name__ == "__main__":

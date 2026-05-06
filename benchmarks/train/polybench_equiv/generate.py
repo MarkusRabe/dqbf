@@ -21,32 +21,37 @@ PROG = HERE / "programs"
 
 
 # (kernel, P, Q, expected)  — expected derives from polyhedral legality:
-# loop reversal/interchange with no carried dependence ⇒ "sat".
+# loop reversal/interchange with no carried dependence ⇒ "sat"; with one ⇒ "unsat".
 PAIRS: list[tuple[str, str, str, str]] = [
     ("jacobi1d_n4_rev", "jacobi1d_n4_ref.asm", "jacobi1d_n4_rev.asm", "sat"),
-    # Stubs to fill: atax_n2_{ij,ji}, mvt_n2_{ref,fused}, gesummv_n2_{ref,unroll},
-    # 2mm_n2_{ref,ikj}, jacobi1d_n4_fused (UNSAT — fusing both sweeps is illegal).
+    ("copy_n4_bwd", "copy_n4_fwd.asm", "copy_n4_bwd.asm", "sat"),
+    ("prefix_sum_n4_rev", "prefix_sum_n4_ref.asm", "prefix_sum_n4_rev.asm", "unsat"),
+    # Stubs to fill: atax_n2_{ij,ji}, mvt_n2_{ref,fused}, gesummv_n2_{ref,unroll}
+    # need a MUL/AND op in tools/progequiv2dqbf/isa.py first.
 ]
 
-CONFIGS: list[Config] = [
-    Config(word_bits=w, addr_bits=3, n_regs=4, bound=24, out_reg=0)
-    for w in (3, 4, 6, 8)
-]
+WORD_BITS = (3, 4, 6, 8, 12, 16, 24, 32)
+VAR_CAP = 50_000
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=str(HERE / "instances"))
+    ap.add_argument("--out", default=str(HERE / "mem_trace"))
     args = ap.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     manifest: list[dict] = []
+    skipped = 0
     for name, p_asm, q_asm, expected in PAIRS:
         P = parse((PROG / p_asm).read_text(), p_asm)
         Q = parse((PROG / q_asm).read_text(), q_asm)
-        for cfg in CONFIGS:
+        for w in WORD_BITS:
+            cfg = Config(word_bits=w, addr_bits=3, n_regs=4, bound=24, out_reg=0)
             f = encode_bounded(P, Q, cfg, source=name)
-            stem = f"polybench_{name}_w{cfg.word_bits}_k{cfg.bound}"
+            if f.n_vars > VAR_CAP:
+                skipped += 1
+                continue
+            stem = f"polybench_{name}_w{cfg.word_bits:02d}_k{cfg.bound}"
             (out / f"{stem}.dqdimacs.gz").write_bytes(
                 gzip.compress(dumps(f).encode())
             )
@@ -61,7 +66,7 @@ def main() -> None:
                 }
             )
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2))
-    print(f"wrote {len(manifest)} instances → {out}")
+    print(f"wrote {len(manifest)} instances → {out}/ ({skipped} skipped at >{VAR_CAP} vars)")
 
 
 if __name__ == "__main__":
