@@ -42,6 +42,22 @@ struct Watcher {
 
 const UNDEF: u32 = u32::MAX;
 
+/// Luby sequence: 1,1,2,1,1,2,4,1,1,2,1,1,2,4,8,... — restart interval
+/// multiplier. Minisat's iterative form (0-indexed).
+fn luby(mut x: u32) -> u64 {
+    let (mut size, mut seq) = (1u32, 0u32);
+    while size < x + 1 {
+        seq += 1;
+        size = 2 * size + 1;
+    }
+    while size - 1 != x {
+        size = (size - 1) >> 1;
+        seq -= 1;
+        x %= size;
+    }
+    1u64 << seq
+}
+
 /// Per-clause resolution antecedent: chain[0] is the seed conflict
 /// clause (pivot = 0); each subsequent (cref, pivot) resolves the
 /// running resolvent against `cref` on variable `pivot`. Replaying the
@@ -748,6 +764,8 @@ impl Cdcl {
         self.cancel_until(0);
         let assumps: Vec<ILit> = assumptions.iter().map(|&l| ilit(l)).collect();
         let start_conflicts = self.conflicts;
+        let mut restart_i = 0u32;
+        let mut next_restart = start_conflicts + 100 * luby(restart_i);
         loop {
             let confl = self.propagate();
             if confl != UNDEF {
@@ -785,6 +803,11 @@ impl Cdcl {
                 }
                 if learned.len() > 1 {
                     self.enqueue(learned[0], cr);
+                }
+                if self.conflicts >= next_restart {
+                    self.cancel_until(assumps.len() as u32);
+                    restart_i += 1;
+                    next_restart = self.conflicts + 100 * luby(restart_i);
                 }
                 continue;
             }
@@ -850,6 +873,14 @@ impl Cdcl {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn luby_seq() {
+        let want = [1, 1, 2, 1, 1, 2, 4, 1, 1, 2, 1, 1, 2, 4, 8];
+        for (i, &w) in want.iter().enumerate() {
+            assert_eq!(super::luby(i as u32), w, "luby({i})");
+        }
+    }
+
     use super::*;
 
     fn lits(v: &[i32]) -> Vec<Lit> {
