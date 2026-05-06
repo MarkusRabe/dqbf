@@ -2,6 +2,7 @@
 
 | date | label | view |
 |---|---|---|
+| 2026-05-06_0605 | v1.20-vs-v2.0 | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-06_0605_v1.20-vs-v2.0.html) · [source](2026-05-06_0605_v1.20-vs-v2.0.html) |
 | 2026-05-05_1224 | iter20-final | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-05_1224_iter20-final.html) · [source](2026-05-05_1224_iter20-final.html) |
 | 2026-05-05_1139 | iter16-persist-cegar | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-05_1139_iter16-persist-cegar.html) · [source](2026-05-05_1139_iter16-persist-cegar.html) |
 | 2026-05-05_0804 | iter12-arbsolve-unsat | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-05_0804_iter12-arbsolve-unsat.html) · [source](2026-05-05_0804_iter12-arbsolve-unsat.html) |
