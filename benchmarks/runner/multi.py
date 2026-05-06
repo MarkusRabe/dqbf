@@ -135,6 +135,9 @@ class Instance:
     expected: str
     problem_key: str | None
     source_polarity: str  # "same" | "inverted"
+    # "<auto>" = filename-match; None = no source (suppress HWMC/QBF
+    # solvers — the encoding asks a different question than the source).
+    source_aag: str | None
     params: dict
 
 
@@ -160,13 +163,14 @@ def discover(root: Path) -> list[Instance]:
                     expected=e.get("expected", "unknown"),
                     problem_key=e.get("problem_key"),
                     source_polarity=e.get("source_polarity", "same"),
-                    params=e.get("params", {}),
+                    source_aag=e.get("source_aag", "<auto>"),
+                    params={**e.get("params", {}), "_source_aag": e.get("source_aag", "<auto>")},
                 )
             )
     if not out:
         for p in sorted(root.rglob("*.qdimacs")) + sorted(root.rglob("*.dqdimacs")):
             out.append(
-                Instance(p, str(p.parent.relative_to(root)), "unknown", None, "same", {})
+                Instance(p, str(p.parent.relative_to(root)), "unknown", None, "same", "<auto>", {})
             )
     return out
 
@@ -211,6 +215,8 @@ def _run_one(
             return _row("n/a")
         file_path = str(src)
     elif solver.input_format == "aag":
+        if params.get("_source_aag", "<auto>") is None:
+            return _row("n/a")
         src = _find_source_aag(inst)
         if src is None:
             return _row("n/a")
@@ -316,6 +322,16 @@ def run_multi(
     todo: list[tuple[Solver, Instance, str]] = []
     for it in instances:
         for sv in solvers:
+            # Non-DQBF solvers run on a *source* file (.aag/.tlsf), not the
+            # .dqdimacs. If the manifest says there is no source, skip the
+            # cache entirely — any cached verdict came from a wrongly
+            # matched source and answers a different question.
+            if sv.input_format == "aag" and it.source_aag is None:
+                rows.append(
+                    RunRow(sv.name, str(it.path), it.family, it.expected,
+                           "n/a", 0.0, None, 0, "n/a", True, it.problem_key)
+                )
+                continue
             k = key(shash[sv.name], ihash[it.path], timeout_s)
             hit = load(k) if use_cache else None
             if hit is not None:

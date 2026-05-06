@@ -185,9 +185,10 @@ def _entry(stem, expected, cname, n, k, nbb, kind):
         "path": f"{stem}.dqdimacs.gz",
         "expected": expected,
         "problem_key": f"pec_circuits:{cname}:{n}:{kind}:bb{nbb}",
-        # The .aag is the miter; abc-pdr UNSAT = no distinguishing input
-        # = circuits equivalent = DQBF SAT (`_complete`).
-        "source_polarity": "inverted",
+        # PEC asks "are the circuits equivalent given a black-boxed gate";
+        # the .aag here is the *sequential* circuit (no blackbox, no miter),
+        # so abc-* would answer a different question. Suppress matching.
+        "source_aag": None,
         "tags": ["pec_circuits", cname, kind],
         "params": {"N": n, "K": k, "k": k, "n_bb": nbb, "circuit": cname, "kind": kind},
     }

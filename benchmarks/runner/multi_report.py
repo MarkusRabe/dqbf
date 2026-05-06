@@ -102,7 +102,7 @@ def _js_json(obj: object) -> str:
 
 
 # Only the fields the JS needs — keeps the embedded blob small.
-_JS_FIELDS = ("solver", "path", "family", "expected", "got", "wall_s", "cert_status", "cert_bytes")
+_JS_FIELDS = ("solver", "path", "family", "expected", "got", "wall_s", "cert_status", "cert_bytes", "problem_key")
 
 
 def _opts(solvers: list[str], selected: str = "") -> str:

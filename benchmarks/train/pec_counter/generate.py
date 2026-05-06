@@ -55,9 +55,7 @@ def main(out: str, bounds: str) -> None:
                 "path": f"{name}.dqdimacs.gz",
                 "expected": "unknown",
                 "problem_key": "pec_counter:counter:3",
-                # abc-* on the .aag uses the *concrete* gate (no blackbox);
-                # its UNSAT (bad unreachable) corresponds to DQBF SAT here.
-                "source_polarity": "inverted",
+                "source_aag": None,
                 "tags": ["pec_counter"],
                 "params": {"k": k},
             }
