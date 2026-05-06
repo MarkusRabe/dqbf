@@ -2,10 +2,22 @@ from core.semantics import is_true
 from tools.eqfob.eqfob.bitblast import bitblast
 from tools.eqfob.eqfob.parse import parse
 from tools.eqfob.eqfob.typecheck import check
+from tools.verify.sat import solve_cnf
 
 
 def compile_text(src: str, **overrides):
     return bitblast(check(parse(src), overrides=overrides))
+
+
+def prop_sat(src: str) -> bool:
+    """Compile and solve as propositional CNF. Only valid when the source
+    has no `forall` (|U|=0), so the DQBF degenerates to plain SAT — used
+    for ops like `*` whose Tseitin auxiliaries blow past `is_true`'s
+    Skolem-enumeration budget at any useful width."""
+    f = compile_text(src)
+    assert len(f.universals) == 0, "prop_sat requires no universals"
+    sat, _ = solve_cnf(f.n_vars, [list(c) for c in f.clauses])
+    return sat
 
 
 IDENTITY = """
@@ -69,6 +81,21 @@ def test_param_override() -> None:
     f1 = compile_text(IDENTITY, N=1)
     f3 = compile_text(IDENTITY, N=3)
     assert len(f3.universals) == 3 * len(f1.universals)
+
+
+def test_mul_matches_shift_add() -> None:
+    # No x makes 3*x differ from (x<<1)+x ⇒ the negated witness is UNSAT.
+    assert prop_sat("exists x : bv[4]\n(3 * x) != ((x << 1) + x)\n") is False
+    assert prop_sat("exists x : bv[5]\n(5 * x) != ((x << 2) + x)\n") is False
+
+
+def test_mul_is_commutative() -> None:
+    assert prop_sat("exists x : bv[4]\nexists y : bv[4]\nx * y != y * x\n") is False
+
+
+def test_mul_nontrivial_sanity() -> None:
+    # 3*x == x only at x=0 ⇒ a counter-witness exists.
+    assert prop_sat("exists x : bv[3]\n(3 * x) != x\n") is True
 
 
 def test_ackermann_added_for_multiple_calls() -> None:

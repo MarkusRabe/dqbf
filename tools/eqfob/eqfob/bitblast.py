@@ -152,11 +152,20 @@ class _Blaster:
 
     def bv_mul(self, a: Bits, b: Bits, dep: Deps) -> Bits:
         n = len(a)
-        acc = self.bv_const(0, n)
+        t = self.true_lit()
+        # Iterate over the operand with more constant bits so the
+        # constant-fold below skips zero rows for `c * x` regardless of
+        # which side the literal is on.
+        if sum(1 for x in a if abs(x) == t) > sum(1 for x in b if abs(x) == t):
+            a, b = b, a
+        acc: Bits | None = None
         for i, bi in enumerate(b):
-            partial = [-self.true_lit()] * i + [self.g_and(bi, aj, dep) for aj in a[: n - i]]
-            acc = self.bv_add(acc, partial, dep)
-        return acc
+            if bi == -t:
+                continue
+            row = a[: n - i] if bi == t else [self.g_and(bi, aj, dep) for aj in a[: n - i]]
+            partial = [-t] * i + row
+            acc = partial if acc is None else self.bv_add(acc, partial, dep)
+        return acc if acc is not None else self.bv_const(0, n)
 
     def bv_const(self, v: int, w: int) -> Bits:
         t = self.true_lit()

@@ -30,7 +30,7 @@ PAIRS: list[tuple[int, int]] = [(8, 6), (12, 8), (16, 10), (24, 12)]
 
 
 def step_expr(v: str) -> str:
-    return f"ite({v} <= 1, ({v} & 0) + 1, ite(({v} & 1) == 0, {v} >>> 1, ({v} << 1) + {v} + 1))"
+    return f"ite({v} <= 1, ({v} & 0) + 1, ite(({v} & 1) == 0, {v} >>> 1, 3 * {v} + 1))"
 
 
 def eqfob_unrolled(n: int, k: int) -> str:
