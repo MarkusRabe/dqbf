@@ -60,11 +60,78 @@ pub struct CegarState {
     undef_set: BTreeSet<Var>,
     forcing: HashMap<Var, Vec<(Vec<Lit>, Lit)>>,
     arb_of: HashMap<(Var, Vec<Lit>), usize>,
-    arb_meta: Vec<(Var, Vec<Lit>)>,
+    arb_meta: Vec<Vec<(Var, Vec<Lit>)>>,
     arb_assump: Vec<Lit>,
     any_const_arbiter: bool,
     cell_dep_cap: usize,
+    /// Consistency-shape pairs: y → (y', dep_bijection) where the
+    /// formula encodes `(⋀ d_i↔d'_i) → (y↔y')`. One arbiter cell
+    /// then links both — halves the cell count and lets arbsolve see
+    /// the cross-row constraint directly instead of via |dep| rounds.
+    partner: HashMap<Var, (Var, Vec<(Var, Var)>)>,
     rounds: usize,
+}
+
+/// Detect (y,y') pairs with disjoint same-size deps where the formula
+/// provably encodes `(⋀ dᵢ↔d'ᵢ) → (y↔y')`. Sound check via a fresh
+/// 2-copy CDCL (Padoa-style): link dᵢ↔d'ᵢ unconditionally, then
+/// `matrix ∧ y ∧ ¬y'` UNSAT (and symmetric) ⇒ the matrix forces y↔y'
+/// whenever dep(y) and dep(y') agree positionally. Only then is
+/// sharing one arbiter cell sound.
+fn detect_partners(f: &Formula, undef: &[Var]) -> HashMap<Var, (Var, Vec<(Var, Var)>)> {
+    use std::collections::BTreeMap;
+    let mut by_size: BTreeMap<usize, Vec<Var>> = BTreeMap::new();
+    for &y in undef {
+        let d = &f.deps[&y];
+        if !d.is_empty() {
+            by_size.entry(d.len()).or_default().push(y);
+        }
+    }
+    let mut out: HashMap<Var, (Var, Vec<(Var, Var)>)> = HashMap::new();
+    let n = f.n_vars as usize;
+    for ys in by_size.values() {
+        let mut taken: BTreeSet<Var> = BTreeSet::new();
+        for i in 0..ys.len() {
+            if taken.contains(&ys[i]) {
+                continue;
+            }
+            let di: Vec<Var> = f.deps[&ys[i]].iter().copied().collect();
+            for j in (i + 1)..ys.len() {
+                if taken.contains(&ys[j]) {
+                    continue;
+                }
+                let dj: Vec<Var> = f.deps[&ys[j]].iter().copied().collect();
+                if !di.iter().all(|u| !f.deps[&ys[j]].contains(u)) {
+                    continue;
+                }
+                let bij: Vec<(Var, Var)> =
+                    di.iter().copied().zip(dj.iter().copied()).collect();
+                // Fresh CDCL: matrix + (dᵢ ↔ d'ᵢ) link clauses.
+                let mut cls: Vec<Clause> = f.clauses.clone();
+                for &(d, dp) in &bij {
+                    cls.push(vec![d as Lit, -(dp as Lit)]);
+                    cls.push(vec![-(d as Lit), dp as Lit]);
+                }
+                let mut chk = Cdcl::new(n, &cls);
+                let mut sm = vec![0i8; n + 1];
+                let a = vec![ys[i] as Lit, -(ys[j] as Lit)];
+                let b = vec![-(ys[i] as Lit), ys[j] as Lit];
+                if chk.solve(&a, &mut sm, 5_000)
+                    || chk.budget_hit
+                    || chk.solve(&b, &mut sm, 5_000)
+                    || chk.budget_hit
+                {
+                    continue;
+                }
+                out.insert(ys[i], (ys[j], bij.clone()));
+                out.insert(ys[j], (ys[i], bij.iter().map(|&(a, b)| (b, a)).collect()));
+                taken.insert(ys[i]);
+                taken.insert(ys[j]);
+                break;
+            }
+        }
+    }
+    out
 }
 
 impl CegarState {
@@ -113,13 +180,14 @@ impl CegarState {
             forcing: exs.iter().map(|&y| (y, Vec::new())).collect(),
             exs,
             arb_of: HashMap::new(),
-            arb_meta: vec![(0, vec![])],
+            arb_meta: vec![vec![]],
             arb_assump: Vec::new(),
             any_const_arbiter: false,
             cell_dep_cap: (ARB_BUDGET / undefined.len().max(1))
                 .next_power_of_two()
                 .trailing_zeros()
                 .min(12) as usize,
+            partner: detect_partners(f, undefined),
             rounds: 0,
         }
     }
@@ -152,6 +220,7 @@ pub fn validity_cegar(
         arb_assump,
         any_const_arbiter,
         cell_dep_cap,
+        partner,
         rounds,
     } = st;
     let cell_dep_cap = *cell_dep_cap;
@@ -195,14 +264,16 @@ pub fn validity_cegar(
                 );
             }
             let cells: Vec<(Var, Vec<Lit>, bool)> = (1..arb_meta.len())
-                .map(|i| {
-                    let (y, dep) = arb_meta[i].clone();
+                .flat_map(|i| {
                     let val = arb_assump
                         .iter()
                         .find(|&&l| var(l) as usize == arb_base + i)
                         .map(|&l| l > 0)
                         .unwrap_or(false);
-                    (y, dep, val)
+                    arb_meta[i]
+                        .iter()
+                        .map(move |(y, dep)| (*y, dep.clone(), val))
+                        .collect::<Vec<_>>()
                 })
                 .collect();
             return CegarOut::Sat(ForcingCert {
@@ -328,27 +399,53 @@ pub fn validity_cegar(
             } else {
                 dep_lits.clone()
             };
-            let key = (y, cell_dep.clone());
+            // For partnered y, key on the canonical (lower-var) side so
+            // both share one cell. Link clauses are added for *both*
+            // y and y' under their respective cell_deps; arb_meta keeps
+            // both so cert reconstruction can read either side.
+            let (key_y, key_dep, links): (Var, Vec<Lit>, Vec<(Var, Vec<Lit>)>) =
+                match partner.get(&y) {
+                    Some((yp, bij)) if !cell_dep.is_empty() => {
+                        let bm: HashMap<Var, Var> = bij.iter().copied().collect();
+                        let cell_dep_p: Vec<Lit> = cell_dep
+                            .iter()
+                            .map(|&l| {
+                                let v = var(l);
+                                let vp = *bm.get(&v).unwrap_or(&v) as Lit;
+                                if l > 0 { vp } else { -vp }
+                            })
+                            .collect();
+                        if y < *yp {
+                            (y, cell_dep.clone(), vec![(y, cell_dep.clone()), (*yp, cell_dep_p)])
+                        } else {
+                            (*yp, cell_dep_p.clone(), vec![(*yp, cell_dep_p), (y, cell_dep.clone())])
+                        }
+                    }
+                    _ => (y, cell_dep.clone(), vec![(y, cell_dep.clone())]),
+                };
+            let key = (key_y, key_dep);
             let ai = *arb_of.entry(key.clone()).or_insert_with(|| {
-                arb_meta.push((y, cell_dep.clone()));
+                arb_meta.push(links.clone());
                 let idx = arb_meta.len() - 1;
                 if idx >= ARB_BUDGET {
                     return idx;
                 }
                 let av = (arb_base + idx) as Lit;
                 let ac = (n + idx) as Lit;
-                let mut c1: Vec<Lit> = cell_dep.iter().map(|&l| -l).collect();
-                let mut c2 = c1.clone();
-                c1.push(-av); c1.push(y as Lit);
-                c2.push(av);  c2.push(-(y as Lit));
-                validity.add_external(&c1);
-                validity.add_external(&c2);
-                let mut d1: Vec<Lit> = cell_dep.iter().map(|&l| -l).collect();
-                let mut d2 = d1.clone();
-                d1.push(-ac); d1.push(y as Lit);
-                d2.push(ac);  d2.push(-(y as Lit));
-                consist.add_external(&d1);
-                consist.add_external(&d2);
+                for (yl, cd) in &links {
+                    let mut c1: Vec<Lit> = cd.iter().map(|&l| -l).collect();
+                    let mut c2 = c1.clone();
+                    c1.push(-av); c1.push(*yl as Lit);
+                    c2.push(av);  c2.push(-(*yl as Lit));
+                    validity.add_external(&c1);
+                    validity.add_external(&c2);
+                    let mut d1: Vec<Lit> = cd.iter().map(|&l| -l).collect();
+                    let mut d2 = d1.clone();
+                    d1.push(-ac); d1.push(*yl as Lit);
+                    d2.push(ac);  d2.push(-(*yl as Lit));
+                    consist.add_external(&d1);
+                    consist.add_external(&d2);
+                }
                 arbsolve.set_decision(idx as u32, true);
                 arbsolve.set_phase(idx as u32, want);
                 arb_assump.push(if want > 0 { av } else { -av });
