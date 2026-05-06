@@ -37,7 +37,7 @@ GRID: list[tuple[int, int, int]] = [
 
 
 @click.command()
-@click.option("--out", type=click.Path(), default=str(HERE / "instances"))
+@click.option("--out", type=click.Path(), default=str(HERE / "mem_trace"))
 def main(out: str) -> None:
     d = Path(out)
     d.mkdir(parents=True, exist_ok=True)

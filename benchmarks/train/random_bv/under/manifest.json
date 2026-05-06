@@ -1,0 +1,767 @@
+[
+  {
+    "path": "under_w2_s0000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 0,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 1
+    },
+    "source": "under_w2_s0000.eqfob"
+  },
+  {
+    "path": "under_w2_s0001.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 1,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 2
+    },
+    "source": "under_w2_s0001.eqfob"
+  },
+  {
+    "path": "under_w2_s0002.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 2,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 2
+    },
+    "source": "under_w2_s0002.eqfob"
+  },
+  {
+    "path": "under_w2_s0003.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 3,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 2
+    },
+    "source": "under_w2_s0003.eqfob"
+  },
+  {
+    "path": "under_w2_s0004.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 4,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 2
+    },
+    "source": "under_w2_s0004.eqfob"
+  },
+  {
+    "path": "under_w2_s0005.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 5,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 1
+    },
+    "source": "under_w2_s0005.eqfob"
+  },
+  {
+    "path": "under_w2_s0006.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 6,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 2
+    },
+    "source": "under_w2_s0006.eqfob"
+  },
+  {
+    "path": "under_w2_s0007.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 7,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 2
+    },
+    "source": "under_w2_s0007.eqfob"
+  },
+  {
+    "path": "under_w2_s0008.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 8,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 2
+    },
+    "source": "under_w2_s0008.eqfob"
+  },
+  {
+    "path": "under_w2_s0009.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 9,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 1
+    },
+    "source": "under_w2_s0009.eqfob"
+  },
+  {
+    "path": "under_w2_s0010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 10,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 2
+    },
+    "source": "under_w2_s0010.eqfob"
+  },
+  {
+    "path": "under_w2_s0011.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 11,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 2
+    },
+    "source": "under_w2_s0011.eqfob"
+  },
+  {
+    "path": "under_w2_s0012.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 12,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 1
+    },
+    "source": "under_w2_s0012.eqfob"
+  },
+  {
+    "path": "under_w2_s0013.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 13,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 1
+    },
+    "source": "under_w2_s0013.eqfob"
+  },
+  {
+    "path": "under_w2_s0014.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 14,
+      "mode": "under",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 1
+    },
+    "source": "under_w2_s0014.eqfob"
+  },
+  {
+    "path": "under_w6_s9000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 9000,
+      "mode": "under",
+      "width": 6,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 1
+    },
+    "source": "under_w6_s9000.eqfob"
+  },
+  {
+    "path": "under_w6_s9001.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 9001,
+      "mode": "under",
+      "width": 6,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 2
+    },
+    "source": "under_w6_s9001.eqfob"
+  },
+  {
+    "path": "under_w6_s9002.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 9002,
+      "mode": "under",
+      "width": 6,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 2
+    },
+    "source": "under_w6_s9002.eqfob"
+  },
+  {
+    "path": "under_w6_s9003.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 9003,
+      "mode": "under",
+      "width": 6,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 1
+    },
+    "source": "under_w6_s9003.eqfob"
+  },
+  {
+    "path": "under_w6_s9004.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 9004,
+      "mode": "under",
+      "width": 6,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 1
+    },
+    "source": "under_w6_s9004.eqfob"
+  },
+  {
+    "path": "under_w6_s9005.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 9005,
+      "mode": "under",
+      "width": 6,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 2
+    },
+    "source": "under_w6_s9005.eqfob"
+  },
+  {
+    "path": "under_w6_s9006.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 9006,
+      "mode": "under",
+      "width": 6,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 2
+    },
+    "source": "under_w6_s9006.eqfob"
+  },
+  {
+    "path": "under_w6_s9007.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 9007,
+      "mode": "under",
+      "width": 6,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 2
+    },
+    "source": "under_w6_s9007.eqfob"
+  },
+  {
+    "path": "under_w6_s9008.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 9008,
+      "mode": "under",
+      "width": 6,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 2
+    },
+    "source": "under_w6_s9008.eqfob"
+  },
+  {
+    "path": "under_w6_s9009.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 9009,
+      "mode": "under",
+      "width": 6,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 1
+    },
+    "source": "under_w6_s9009.eqfob"
+  },
+  {
+    "path": "under_w6_s9010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 9010,
+      "mode": "under",
+      "width": 6,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 1
+    },
+    "source": "under_w6_s9010.eqfob"
+  },
+  {
+    "path": "under_w6_s9011.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 9011,
+      "mode": "under",
+      "width": 6,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 2
+    },
+    "source": "under_w6_s9011.eqfob"
+  },
+  {
+    "path": "under_w6_s9012.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 9012,
+      "mode": "under",
+      "width": 6,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 2
+    },
+    "source": "under_w6_s9012.eqfob"
+  },
+  {
+    "path": "under_w6_s9013.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 9013,
+      "mode": "under",
+      "width": 6,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 2
+    },
+    "source": "under_w6_s9013.eqfob"
+  },
+  {
+    "path": "under_w6_s9014.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 9014,
+      "mode": "under",
+      "width": 6,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 1
+    },
+    "source": "under_w6_s9014.eqfob"
+  },
+  {
+    "path": "under_w8_s19000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 19000,
+      "mode": "under",
+      "width": 8,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 1
+    },
+    "source": "under_w8_s19000.eqfob"
+  },
+  {
+    "path": "under_w8_s19001.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 19001,
+      "mode": "under",
+      "width": 8,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 1
+    },
+    "source": "under_w8_s19001.eqfob"
+  },
+  {
+    "path": "under_w8_s19002.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 19002,
+      "mode": "under",
+      "width": 8,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 2
+    },
+    "source": "under_w8_s19002.eqfob"
+  },
+  {
+    "path": "under_w8_s19003.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 19003,
+      "mode": "under",
+      "width": 8,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 2
+    },
+    "source": "under_w8_s19003.eqfob"
+  },
+  {
+    "path": "under_w8_s19004.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 19004,
+      "mode": "under",
+      "width": 8,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 1
+    },
+    "source": "under_w8_s19004.eqfob"
+  },
+  {
+    "path": "under_w8_s19005.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 19005,
+      "mode": "under",
+      "width": 8,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 2
+    },
+    "source": "under_w8_s19005.eqfob"
+  },
+  {
+    "path": "under_w8_s19006.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 19006,
+      "mode": "under",
+      "width": 8,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 1
+    },
+    "source": "under_w8_s19006.eqfob"
+  },
+  {
+    "path": "under_w8_s19007.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 19007,
+      "mode": "under",
+      "width": 8,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 2
+    },
+    "source": "under_w8_s19007.eqfob"
+  },
+  {
+    "path": "under_w8_s19008.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 19008,
+      "mode": "under",
+      "width": 8,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 1
+    },
+    "source": "under_w8_s19008.eqfob"
+  },
+  {
+    "path": "under_w8_s19009.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 19009,
+      "mode": "under",
+      "width": 8,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 2
+    },
+    "source": "under_w8_s19009.eqfob"
+  },
+  {
+    "path": "under_w8_s19010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 19010,
+      "mode": "under",
+      "width": 8,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 1
+    },
+    "source": "under_w8_s19010.eqfob"
+  },
+  {
+    "path": "under_w8_s19011.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 19011,
+      "mode": "under",
+      "width": 8,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 2
+    },
+    "source": "under_w8_s19011.eqfob"
+  },
+  {
+    "path": "under_w8_s19012.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 19012,
+      "mode": "under",
+      "width": 8,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 2
+    },
+    "source": "under_w8_s19012.eqfob"
+  },
+  {
+    "path": "under_w8_s19013.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 19013,
+      "mode": "under",
+      "width": 8,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 1
+    },
+    "source": "under_w8_s19013.eqfob"
+  },
+  {
+    "path": "under_w8_s19014.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "under"
+    ],
+    "params": {
+      "seed": 19014,
+      "mode": "under",
+      "width": 8,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 2
+    },
+    "source": "under_w8_s19014.eqfob"
+  }
+]

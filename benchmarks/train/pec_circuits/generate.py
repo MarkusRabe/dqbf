@@ -108,7 +108,7 @@ def _probe_hqs(f, hqs: Path | None) -> str:
 
 
 @click.command()
-@click.option("--out", type=click.Path(), default="benchmarks/train/pec_circuits/instances")
+@click.option("--out", type=click.Path(), default="benchmarks/train/pec_circuits/miter")
 @click.option("-N", "widths", default="4,8,12,16,20,24")
 @click.option("-K", "bounds", default="2,4,8")
 @click.option("--n-blackboxes", default="1,2,3")

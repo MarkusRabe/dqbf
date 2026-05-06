@@ -42,7 +42,7 @@ EXPECTED = {
 
 
 @click.command()
-@click.option("--out", type=click.Path(), default="benchmarks/train/hwmc_indinv/instances")
+@click.option("--out", type=click.Path(), default="benchmarks/train/hwmc_indinv/inductive")
 @click.option("-N", "widths", default=",".join(str(w) for w in WIDTHS))
 def main(out: str, widths: str) -> None:
     base = Path(out)

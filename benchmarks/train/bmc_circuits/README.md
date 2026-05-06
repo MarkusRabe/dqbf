@@ -1,21 +1,24 @@
 # bmc_circuits — parametric sequential circuits × BMC bound × encoding
 
 27 hand-written sequential circuits, each parametric in bit-width `N`,
-encoded as bounded model checking at bound `k`. Two encodings of the
-same circuits, side by side:
+encoded under three views of the same circuit:
 
-- `{name}/` — **unrolled**: per-step inputs/latches/gates as
+- `{name}/` — **unrolled BMC**: per-step inputs/latches/gates as
   existentials with linearly-nested deps. O(k·|circ|) vars; result is
   QBF ⊂ DQBF.
-- `succinct/{name}/` — **universal step-counter**: step index `t` is a
-  `⌈log₂(k+1)⌉`-bit universal, each input/latch/gate is a single
+- `succinct/{name}/` — **universal step-counter BMC**: step index `t`
+  is a `⌈log₂(k+1)⌉`-bit universal, each input/latch/gate is a single
   existential function of `t`, transition asserted once over `(t,t+1)`.
   O(|circ|+log k) vars; genuine DQBF (the two index copies have
   incomparable dep sets). Equisatisfiable with unrolled — see
   `tools/bmc2dqbf/encode_test.py::test_succinct_equisat_with_unrolled`.
+- `indinv/{name}/` — **inductive-invariant search** via
+  `tools.hwmc2dqbf_indinv.encode_indinv`. k-independent; **SAT here
+  means an invariant exists ⇔ property holds**, so for the paired
+  circuits `_safe` → SAT, `_bug` → UNSAT.
 
 Default grid: `N ∈ {4,8,12,16,20,24,32}` × `k ∈ {8,24}` → 532 unrolled
-+ 532 succinct = **1064 instances**.
++ 532 succinct + 266 indinv = **1330 instances**.
 
 ## Circuits
 
@@ -56,9 +59,8 @@ circuits are verified by simulation in `circuits_v3_test.py`.
 ## Generate
 
 ```bash
-python -m benchmarks.train.bmc_circuits.generate            # 1064 instances
-... --no-succinct                                           # 532 unrolled only
-... --indinv                                                # +indinv/{name}/ via hwmc2dqbf_indinv
+python -m benchmarks.train.bmc_circuits.generate            # 1330 instances
+... --no-succinct --no-indinv                               # 532 unrolled only
 ... -N 4,8,12,16,20,24,32 -K 8,16,24 --max-vars 100000
 ```
 

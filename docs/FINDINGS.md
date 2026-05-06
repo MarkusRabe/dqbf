@@ -8,7 +8,7 @@ should be reproducible from committed sources.
 
 | | |
 |---|---|
-| Instance | `benchmarks/train/random_bv/v1/under/under_s0007.dqdimacs.gz` |
+| Instance | `benchmarks/train/random_bv/under/under_w2_s0007.dqdimacs.gz` |
 | Source   | `under_s0007.eqfob` (seed 7, mode=under, width 2) |
 | dqbdd / hqs | **UNSAT** |
 | pedant | **SAT**, emits Skolem AIG |
@@ -19,7 +19,7 @@ The formula is SAT; dqbdd and hqs are wrong. Both share the HQSpre
 preprocessor, which is the likely culprit. Reproduce:
 
 ```sh
-zcat benchmarks/train/random_bv/v1/under/under_s0007.dqdimacs.gz > /tmp/u7.dq
+zcat benchmarks/train/random_bv/under/under_w2_s0007.dqdimacs.gz > /tmp/u7.dq
 third_party/dqbdd/Release/src/dqbdd /tmp/u7.dq        # → UNSAT (wrong)
 third_party/hqs/HQS/build/src/hqs/hqs2 /tmp/u7.dq     # → UNSAT (wrong)
 third_party/pedant/build/src/pedant /tmp/u7.dq --aag /tmp/u7.aag  # → SAT

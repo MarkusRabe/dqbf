@@ -38,15 +38,12 @@ benchmarks/**/*.tar.gz
 benchmarks/**/*.tar.bz2
 benchmarks/**/*.zip
 benchmarks/_downloads/
+# Generated benchmark instances + manifests (commit generators only).
+# Committed assets in the same dirs (.aag/.eqfob/.asm sources, .gitkeep,
+# random_qbf .qdimacs reference set) are tracked explicitly.
 benchmarks/train/**/build/
-benchmarks/train/hwmcc_legacy/instances/*.dqdimacs.gz
-benchmarks/train/hwmcc_legacy/instances/manifest.json
-benchmarks/train/bmc_circuits/**/*.dqdimacs.gz
-benchmarks/train/bmc_circuits/**/manifest.json
-benchmarks/train/bmc_mutex/instances/*.dqdimacs.gz
-benchmarks/train/bmc_mutex/instances/manifest.json
-benchmarks/train/pec_counter/instances/*.dqdimacs.gz
-benchmarks/train/pec_counter/instances/manifest.json
+benchmarks/train/**/*.dqdimacs.gz
+benchmarks/train/**/manifest.json
 
 # Solver outputs / certificates
 *.aag.out
@@ -57,15 +54,4 @@ results/
 # Jupyter
 .ipynb_checkpoints/
 third_party/
-benchmarks/train/syntcomp_legacy/instances/*.dqdimacs.gz
-benchmarks/train/syntcomp_legacy/instances/manifest.json
-benchmarks/train/cbmc/instances/*.dqdimacs.gz
-benchmarks/train/cbmc/instances/manifest.json
-benchmarks/train/cbmc_v2/instances/*/*.dqdimacs.gz
-benchmarks/train/cbmc_v2/instances/*/manifest.json
-benchmarks/train/hwmc_indinv/instances/*.dqdimacs.gz
-benchmarks/train/hwmc_indinv/instances/manifest.json
-benchmarks/train/conjunction/instances/
 results/.bench_cache/
-benchmarks/train/circuit_synth_gates/instances/*.dqdimacs.gz
-benchmarks/train/circuit_synth_depth/instances/*.dqdimacs.gz

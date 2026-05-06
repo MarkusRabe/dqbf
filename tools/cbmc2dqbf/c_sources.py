@@ -1,4 +1,4 @@
-"""C-source text for each cbmc_v2 algorithm × {ok,bug}.
+"""C-source text for each cbmc algorithm × {ok,bug}.
 
 Each source is a single-loop `main()` with `__CPROVER_assume` for
 preconditions and one `__CPROVER_assert`. The convention matches

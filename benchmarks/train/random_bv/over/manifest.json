@@ -1,0 +1,767 @@
+[
+  {
+    "path": "over_w2_s2000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 2000,
+      "mode": "over",
+      "width": 2,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 6
+    },
+    "source": "over_w2_s2000.eqfob"
+  },
+  {
+    "path": "over_w2_s2001.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 2001,
+      "mode": "over",
+      "width": 2,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 7
+    },
+    "source": "over_w2_s2001.eqfob"
+  },
+  {
+    "path": "over_w2_s2002.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 2002,
+      "mode": "over",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 5
+    },
+    "source": "over_w2_s2002.eqfob"
+  },
+  {
+    "path": "over_w2_s2003.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 2003,
+      "mode": "over",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 6
+    },
+    "source": "over_w2_s2003.eqfob"
+  },
+  {
+    "path": "over_w2_s2004.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 2004,
+      "mode": "over",
+      "width": 2,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 5
+    },
+    "source": "over_w2_s2004.eqfob"
+  },
+  {
+    "path": "over_w2_s2005.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 2005,
+      "mode": "over",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 5
+    },
+    "source": "over_w2_s2005.eqfob"
+  },
+  {
+    "path": "over_w2_s2006.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 2006,
+      "mode": "over",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 5
+    },
+    "source": "over_w2_s2006.eqfob"
+  },
+  {
+    "path": "over_w2_s2007.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 2007,
+      "mode": "over",
+      "width": 2,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 7
+    },
+    "source": "over_w2_s2007.eqfob"
+  },
+  {
+    "path": "over_w2_s2008.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 2008,
+      "mode": "over",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 6
+    },
+    "source": "over_w2_s2008.eqfob"
+  },
+  {
+    "path": "over_w2_s2009.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 2009,
+      "mode": "over",
+      "width": 2,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 5
+    },
+    "source": "over_w2_s2009.eqfob"
+  },
+  {
+    "path": "over_w2_s2010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 2010,
+      "mode": "over",
+      "width": 2,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 5
+    },
+    "source": "over_w2_s2010.eqfob"
+  },
+  {
+    "path": "over_w2_s2011.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 2011,
+      "mode": "over",
+      "width": 2,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 7
+    },
+    "source": "over_w2_s2011.eqfob"
+  },
+  {
+    "path": "over_w2_s2012.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 2012,
+      "mode": "over",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 6
+    },
+    "source": "over_w2_s2012.eqfob"
+  },
+  {
+    "path": "over_w2_s2013.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 2013,
+      "mode": "over",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 7
+    },
+    "source": "over_w2_s2013.eqfob"
+  },
+  {
+    "path": "over_w2_s2014.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 2014,
+      "mode": "over",
+      "width": 2,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 5
+    },
+    "source": "over_w2_s2014.eqfob"
+  },
+  {
+    "path": "over_w6_s11000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 11000,
+      "mode": "over",
+      "width": 6,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 7
+    },
+    "source": "over_w6_s11000.eqfob"
+  },
+  {
+    "path": "over_w6_s11001.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 11001,
+      "mode": "over",
+      "width": 6,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 6
+    },
+    "source": "over_w6_s11001.eqfob"
+  },
+  {
+    "path": "over_w6_s11002.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 11002,
+      "mode": "over",
+      "width": 6,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 5
+    },
+    "source": "over_w6_s11002.eqfob"
+  },
+  {
+    "path": "over_w6_s11003.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 11003,
+      "mode": "over",
+      "width": 6,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 7
+    },
+    "source": "over_w6_s11003.eqfob"
+  },
+  {
+    "path": "over_w6_s11004.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 11004,
+      "mode": "over",
+      "width": 6,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 5
+    },
+    "source": "over_w6_s11004.eqfob"
+  },
+  {
+    "path": "over_w6_s11005.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 11005,
+      "mode": "over",
+      "width": 6,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 7
+    },
+    "source": "over_w6_s11005.eqfob"
+  },
+  {
+    "path": "over_w6_s11006.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 11006,
+      "mode": "over",
+      "width": 6,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 5
+    },
+    "source": "over_w6_s11006.eqfob"
+  },
+  {
+    "path": "over_w6_s11007.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 11007,
+      "mode": "over",
+      "width": 6,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 7
+    },
+    "source": "over_w6_s11007.eqfob"
+  },
+  {
+    "path": "over_w6_s11008.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 11008,
+      "mode": "over",
+      "width": 6,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 7
+    },
+    "source": "over_w6_s11008.eqfob"
+  },
+  {
+    "path": "over_w6_s11009.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 11009,
+      "mode": "over",
+      "width": 6,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 7
+    },
+    "source": "over_w6_s11009.eqfob"
+  },
+  {
+    "path": "over_w6_s11010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 11010,
+      "mode": "over",
+      "width": 6,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 6
+    },
+    "source": "over_w6_s11010.eqfob"
+  },
+  {
+    "path": "over_w6_s11011.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 11011,
+      "mode": "over",
+      "width": 6,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 7
+    },
+    "source": "over_w6_s11011.eqfob"
+  },
+  {
+    "path": "over_w6_s11012.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 11012,
+      "mode": "over",
+      "width": 6,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 5
+    },
+    "source": "over_w6_s11012.eqfob"
+  },
+  {
+    "path": "over_w6_s11013.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 11013,
+      "mode": "over",
+      "width": 6,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 7
+    },
+    "source": "over_w6_s11013.eqfob"
+  },
+  {
+    "path": "over_w6_s11014.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 11014,
+      "mode": "over",
+      "width": 6,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 7
+    },
+    "source": "over_w6_s11014.eqfob"
+  },
+  {
+    "path": "over_w8_s21000.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 21000,
+      "mode": "over",
+      "width": 8,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 5
+    },
+    "source": "over_w8_s21000.eqfob"
+  },
+  {
+    "path": "over_w8_s21001.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 21001,
+      "mode": "over",
+      "width": 8,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 6
+    },
+    "source": "over_w8_s21001.eqfob"
+  },
+  {
+    "path": "over_w8_s21002.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 21002,
+      "mode": "over",
+      "width": 8,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 6
+    },
+    "source": "over_w8_s21002.eqfob"
+  },
+  {
+    "path": "over_w8_s21003.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 21003,
+      "mode": "over",
+      "width": 8,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 5
+    },
+    "source": "over_w8_s21003.eqfob"
+  },
+  {
+    "path": "over_w8_s21004.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 21004,
+      "mode": "over",
+      "width": 8,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 5
+    },
+    "source": "over_w8_s21004.eqfob"
+  },
+  {
+    "path": "over_w8_s21005.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 21005,
+      "mode": "over",
+      "width": 8,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 5
+    },
+    "source": "over_w8_s21005.eqfob"
+  },
+  {
+    "path": "over_w8_s21006.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 21006,
+      "mode": "over",
+      "width": 8,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 7
+    },
+    "source": "over_w8_s21006.eqfob"
+  },
+  {
+    "path": "over_w8_s21007.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 21007,
+      "mode": "over",
+      "width": 8,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 7
+    },
+    "source": "over_w8_s21007.eqfob"
+  },
+  {
+    "path": "over_w8_s21008.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 21008,
+      "mode": "over",
+      "width": 8,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 6
+    },
+    "source": "over_w8_s21008.eqfob"
+  },
+  {
+    "path": "over_w8_s21009.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 21009,
+      "mode": "over",
+      "width": 8,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 7
+    },
+    "source": "over_w8_s21009.eqfob"
+  },
+  {
+    "path": "over_w8_s21010.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 21010,
+      "mode": "over",
+      "width": 8,
+      "n_funs": 1,
+      "n_forall": 2,
+      "n_constraints": 5
+    },
+    "source": "over_w8_s21010.eqfob"
+  },
+  {
+    "path": "over_w8_s21011.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 21011,
+      "mode": "over",
+      "width": 8,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 7
+    },
+    "source": "over_w8_s21011.eqfob"
+  },
+  {
+    "path": "over_w8_s21012.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 21012,
+      "mode": "over",
+      "width": 8,
+      "n_funs": 2,
+      "n_forall": 1,
+      "n_constraints": 6
+    },
+    "source": "over_w8_s21012.eqfob"
+  },
+  {
+    "path": "over_w8_s21013.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 21013,
+      "mode": "over",
+      "width": 8,
+      "n_funs": 2,
+      "n_forall": 2,
+      "n_constraints": 7
+    },
+    "source": "over_w8_s21013.eqfob"
+  },
+  {
+    "path": "over_w8_s21014.dqdimacs.gz",
+    "expected": "unknown",
+    "tags": [
+      "random_bv",
+      "over"
+    ],
+    "params": {
+      "seed": 21014,
+      "mode": "over",
+      "width": 8,
+      "n_funs": 1,
+      "n_forall": 1,
+      "n_constraints": 6
+    },
+    "source": "over_w8_s21014.eqfob"
+  }
+]

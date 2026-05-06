@@ -1,0 +1,13 @@
+-- random_bv seed=21005 mode=over width=8
+param N = 8
+
+fun f0 : bv[N] -> bv[N]
+
+forall x0 : bv[N]
+forall x1 : bv[N]
+
+(x1 < ((x0 + 65) ^ 208))
+(~x1 > x1)
+((((f0(x1) | 51) ^ ~x0) == (~x1 ^ 235)) && (~f0(x0) != (f0(x0) ^ 175)))
+(((x0 + 154) == x1) && (f0(x0) >= f0(x1)))
+((x1 > (x1 + (f0(x0) & x1))) && ((x1 & (f0(x0) ^ 90)) >= (f0(x0) & ~x0)))
