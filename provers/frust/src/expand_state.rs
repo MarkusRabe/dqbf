@@ -60,6 +60,7 @@ pub struct ExpandState {
     // Outer-CEGAR state
     outer: Vec<usize>,
     outer_learned: Vec<Vec<Lit>>,
+    outer_picker: Option<Cdcl>,
     outer_pins: Vec<(Var, i8)>,
     bad_rows: Vec<u32>,
 
@@ -155,6 +156,7 @@ impl ExpandState {
             batch: rows > (1 << 16),
             outer,
             outer_learned: Vec::new(),
+            outer_picker: None,
             outer_pins,
             bad_rows: Vec::new(),
             cegar: None,
@@ -508,12 +510,14 @@ impl ExpandState {
     ) -> Step {
         let no = self.outer.len();
         let mut pmodel = vec![0i8; no + 1];
+        if self.outer_picker.is_none() {
+            self.outer_picker = Some(Cdcl::new(no, &self.outer_learned));
+        }
         loop {
             if start.elapsed().as_secs_f64() > deadline {
                 return Step::Pending;
             }
-            // Pick outer values via a tiny CDCL over learned blocking clauses.
-            let mut picker = Cdcl::new(no, &self.outer_learned);
+            let picker = self.outer_picker.as_mut().unwrap();
             for (j, &(_, v)) in self.outer_pins.iter().enumerate() {
                 picker.set_phase((j + 1) as u32, v);
             }
@@ -626,6 +630,7 @@ impl ExpandState {
                             }
                         })
                         .collect();
+                    self.outer_picker.as_mut().unwrap().add_external(&block);
                     self.outer_learned.push(block);
                     dbg_ex!(
                         debug,
