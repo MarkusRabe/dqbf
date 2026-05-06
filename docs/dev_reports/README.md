@@ -2,6 +2,7 @@
 
 | date | label | view |
 |---|---|---|
+| 2026-05-06_0831 | iter24-shared-arbiters | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-06_0831_iter24-shared-arbiters.html) · [source](2026-05-06_0831_iter24-shared-arbiters.html) |
 | 2026-05-06_0629 | v1.20-vs-v2.0 | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-06_0629_v1.20-vs-v2.0.html) · [source](2026-05-06_0629_v1.20-vs-v2.0.html) |
 | 2026-05-06_0605 | v1.20-vs-v2.0 | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-06_0605_v1.20-vs-v2.0.html) · [source](2026-05-06_0605_v1.20-vs-v2.0.html) |
 | 2026-05-05_1224 | iter20-final | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-05_1224_iter20-final.html) · [source](2026-05-05_1224_iter20-final.html) |
