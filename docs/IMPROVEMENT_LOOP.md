@@ -94,7 +94,6 @@ results into a heuristic decision.
    change), run the multi-solver benchmark and archive the HTML:
 
    ```sh
-   rm -rf results/
    python -m benchmarks.runner.cli multi --root benchmarks/train \
      --solvers frust,dqbdd,pedant,hqs --timeout 10 -j 32 \
      -o results/train.jsonl --report results/train.html \
