@@ -493,10 +493,11 @@ fn saturate(
                 break;
             }
         }
-        // Proof-recovery mode: also try SFEx (journal §6 cycle-breaking
-        // rule) when FEx found nothing. Gated on known_unsat because the
-        // O(|db|·|exs|²) scan eats time from the interleaved CEGAR slice.
-        if !forked && known_unsat {
+        // SFEx (journal §6 cycle-breaking) when FEx found nothing. The
+        // O(|db|·|exs|²) scan would eat the interleaved CEGAR slice on
+        // large matrices, so gate on known_unsat there; small formulas
+        // (dep_cycle has |C|=82) can always afford it.
+        if !forked && (known_unsat || db.clauses.len() < 200) {
             for &i in &order {
                 let c = db.clauses[i].clone();
                 if let Some((part, c3, fr)) = crate::rules::choose_sfork(g, &c) {
