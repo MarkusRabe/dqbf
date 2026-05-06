@@ -1082,6 +1082,32 @@ order). 5/5 runs identical. 0/2 sampled new SAT contradict pedant.
 were partly determinism variance, not load. With this fixed, the
 diff vs previous run is meaningful again.
 
+## Refined-loop iterations 39-40: LBD reduce_db; merged padoa+itp (2026-05-06)
+
+**iter39** (`7ee07f4`, −2): LBD-based learned-clause deletion. Track
+LBD per analyze-learned clause; every ~4 k conflicts detach the
+worst-LBD half (keeping reasons and LBD≤2). Disabled when
+proof-logging (deleting an ante-referenced cref breaks chains).
+**Neutral** — CEGAR's per-round solves are short (rarely reach 4 k);
+the CEGIS picker (lead-3 target `csg_and8_k006`) still UNKNOWN.
+**Gotcha**: first `compute_lbd` panicked on n>32 (stack-array
+overflow); the "76× speedup" was crash exit. Fixed; kept since
++20/−22 are real exploration changes, not noise.
+
+**iter40** (reverted, ±0): merge `padoa_split` + `extract_interpolants`
+into one per-y clone+solve. Functionally identical to iter36's
+clone-base — both clone per y, just one loop vs two. The hoped-for
+saving (eliminate the second per-y solve) doesn't materialise because
+padoa's selector-gated *shared* CDCL is much faster than the per-y
+clone solves it would replace. fifo1: 2.03 s → 2.01 s. Reverted.
+
+**Result: 2909/4350**, 0 INVALID. iters 36-40 net **+5 vs iter35**
+(2904), with the determinism fix (iter38) the substantive change.
+Next architectural step remains: shared-proof interpolation that
+keeps interpolants small (proof-core minimization before McMillan
+walk), or learned-clause deletion tuned for the CEGIS picker
+specifically (lower trigger, picker-only).
+
 ---
 
 ## Appendix: iteration tables
