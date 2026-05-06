@@ -116,7 +116,7 @@ def verify_proof(f: Formula, proof: Proof) -> bool:
                     return False
                 d1, d2 = _clause_dep(g, c1), _clause_dep(g, c2)
                 drop = frozenset(var(lit) for lit in c3) if s.rule == "sfex" else frozenset()
-                g = g.with_existential(s.fresh, (d1 & d2) - drop)
+                g = g.add_existential(s.fresh, (d1 & d2) - drop)
                 forks[s.fresh] = sig
         else:
             return False
