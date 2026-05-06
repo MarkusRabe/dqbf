@@ -158,10 +158,10 @@ pub fn padoa_split(
 }
 
 /// For each `y` in `defined`, extract a McMillan interpolant `I(dep(y))`
-/// such that `y ↔ I` under the matrix. Uses one fresh proof-logging
-/// CDCL per y (no selector gating, so the proof's shared vocabulary is
-/// exactly dep(y)). Skips y when it isn't defined over dep(y) *alone*
-/// (i.e. needs the linked-z fixpoint) — those still go through CEGAR.
+/// such that `y ↔ I` under the matrix. One selector-gated CDCL is built
+/// once; each y solves on a fresh *clone* of it so the proof is minimal
+/// (sharing learned clauses across y's gave correct but bloated
+/// interpolants — alu_add went 452→1001 gates and CEGAR doubled).
 pub fn extract_interpolants(
     f: &Formula,
     defined: &[Var],
@@ -180,59 +180,67 @@ pub fn extract_interpolants(
         .collect();
     let mut order: Vec<Var> = defined.iter().copied().filter(|y| live.contains(y)).collect();
     order.sort_by_key(|y| f.deps[y].len());
-    let mut out: HashMap<Var, Def> = HashMap::new();
+
+    // Build a base CDCL once (copy-A | copy-B, no links) with
+    // proof-logging enabled; per y, clone it and add only this y's link
+    // clauses. Clone copies the already-built watch lists, which is
+    // cheaper than `Cdcl::new` re-parsing 2m clause vecs and avoids the
+    // selector indirection that bloats interpolants.
+    let mut base_clauses: Vec<Clause> = Vec::with_capacity(2 * m);
+    for c in &f.clauses {
+        base_clauses.push(c.clone());
+    }
+    for c in &f.clauses {
+        base_clauses.push(c.iter().map(|&l| shift(l)).collect());
+    }
+    let mut base = Cdcl::new(2 * n as usize, &base_clauses);
+    base.enable_proof_log();
     let mut model = vec![0i8; 2 * n as usize + 1];
-    let mut base: Vec<Clause> = Vec::with_capacity(2 * m);
-    for c in &f.clauses {
-        base.push(c.clone());
-    }
-    for c in &f.clauses {
-        base.push(c.iter().map(|&l| shift(l)).collect());
-    }
+
+    let mut out: HashMap<Var, Def> = HashMap::new();
+    let mut done_order: Vec<Var> = Vec::new();
     // Fixpoint: each pass links z's already in `out`, so the reference
-    // graph stays acyclic and self-contained. A y that needs a same-dep z
-    // fails on pass 1 but succeeds on pass 2 once z is in `out`.
+    // graph stays acyclic. A y that needs a same-dep z fails pass 1 but
+    // succeeds pass 2 once z is in `out`.
     'passes: loop {
         let before = out.len();
-    for &y in &order {
-        if out.contains_key(&y) {
-            continue;
-        }
-        if start.elapsed().as_secs_f64() >= deadline {
-            break 'passes;
-        }
-        let dy: BTreeSet<Var> = f.deps[&y].clone();
-        let linked_z: Vec<Var> = out
-            .keys()
-            .copied()
-            .filter(|&z| f.deps[&z].is_subset(&dy))
-            .collect();
-        let mut clauses = base.clone();
-        for &u in dy.iter().chain(linked_z.iter()) {
-            let a = u as Lit;
-            let b = shift(a);
-            clauses.push(vec![-a, b]);
-            clauses.push(vec![a, -b]);
-        }
-        let mut cdcl = Cdcl::new(2 * n as usize, &clauses);
-        cdcl.enable_proof_log();
-        let unsat = !cdcl.solve(&[y as Lit, -shift(y as Lit)], &mut model, 50_000);
-        if cdcl.budget_hit || !unsat {
-            continue;
-        }
-        let shared: HashSet<Var> = dy.iter().chain(linked_z.iter()).copied().collect();
-        let side = |cr: u32| -> Side {
-            if cdcl.clause_lits(cr).iter().all(|&l| var(l) <= nu) {
-                Side::A
-            } else {
-                Side::B
+        for &y in &order {
+            if out.contains_key(&y) {
+                continue;
             }
-        };
-        let a_local = |v: Var| v <= nu && !shared.contains(&v);
-        if let Some((itp, root)) = mcmillan(&cdcl, side, &shared, a_local) {
-            out.insert(y, Def { itp, root });
+            if start.elapsed().as_secs_f64() >= deadline {
+                break 'passes;
+            }
+            let dy: BTreeSet<Var> = f.deps[&y].clone();
+            let linked_z: Vec<Var> = done_order
+                .iter()
+                .copied()
+                .filter(|&z| f.deps[&z].is_subset(&dy))
+                .collect();
+            let mut cdcl = base.clone();
+            for &u in dy.iter().chain(linked_z.iter()) {
+                let (a, b) = (u as Lit, shift(u as Lit));
+                cdcl.add_external(&[-a, b]);
+                cdcl.add_external(&[a, -b]);
+            }
+            let unsat = !cdcl.solve(&[y as Lit, -shift(y as Lit)], &mut model, 50_000);
+            if cdcl.budget_hit || !unsat {
+                continue;
+            }
+            let shared: HashSet<Var> = dy.iter().chain(linked_z.iter()).copied().collect();
+            let side = |cr: u32| -> Side {
+                if cdcl.clause_lits(cr).iter().all(|&l| var(l) <= nu) {
+                    Side::A
+                } else {
+                    Side::B
+                }
+            };
+            let a_local = |v: Var| v <= nu && !shared.contains(&v);
+            if let Some((itp, root)) = mcmillan(&cdcl, side, &shared, a_local) {
+                out.insert(y, Def { itp, root });
+                done_order.push(y);
+            }
         }
-    }
         if out.len() == before {
             break;
         }
@@ -409,22 +417,23 @@ mod tests {
     }
 }
 
-    #[test]
-    #[ignore]
-    fn interpolant_validate_pec() {
-        let path = "../../benchmarks/train/pec_circuits/miter/pec_alu_add_n4_k2_bb3_complete.dqdimacs.gz";
-        let buf = String::from_utf8(
-            std::process::Command::new("gzip").args(["-dc", path]).output().unwrap().stdout,
-        ).unwrap();
-        let f = crate::parse::parse(&buf).expect("parse");
-        let start = std::time::Instant::now();
-        let split = padoa_split(&f, 5.0, &start, false).expect("padoa");
-        let defs = extract_interpolants(&f, &split.defined, 30.0, &start, false);
-        assert!(validate_interpolants(&f, &defs, 20).is_none());
-    }
+#[test]
+#[ignore]
+fn interpolant_validate_pec() {
+    let path = "../../benchmarks/train/pec_circuits/miter/pec_alu_add_n4_k2_bb3_complete.dqdimacs.gz";
+    let buf = String::from_utf8(
+        std::process::Command::new("gzip").args(["-dc", path]).output().unwrap().stdout,
+    ).unwrap();
+    let f = crate::parse::parse(&buf).expect("parse");
+    let start = std::time::Instant::now();
+    let split = padoa_split(&f, 5.0, &start, false).expect("padoa");
+    let defs = extract_interpolants(&f, &split.defined, 30.0, &start, false);
+    assert!(validate_interpolants(&f, &defs, 20).is_none());
+}
 
-    #[allow(dead_code)]
-    fn _old_e179_debug() {
+#[allow(dead_code)]
+#[cfg(any())]
+fn _old_e179_debug() {
         let path = "../../benchmarks/train/pec_circuits/miter/pec_alu_add_n4_k2_bb3_complete.dqdimacs.gz";
         let buf = String::from_utf8(
             std::process::Command::new("gzip").args(["-dc", path]).output().unwrap().stdout,

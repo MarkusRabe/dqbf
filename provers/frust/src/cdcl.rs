@@ -64,7 +64,7 @@ fn luby(mut x: u32) -> u64 {
 /// chain yields the learned clause exactly (level-0 lits included).
 type Chain = Vec<(u32, u32)>;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct ProofLog {
     pub n_input: usize,
     /// learned cref → chain that derives it.
@@ -108,6 +108,37 @@ pub struct Cdcl {
     /// proof logging is enabled. `enable_proof_log` re-seats it as a cref
     /// so `solve()` can emit a chain instead of a bare `ok=false`.
     init_unit_conflict: ILit,
+}
+
+impl Clone for Cdcl {
+    fn clone(&self) -> Self {
+        Self {
+            arena: self.arena.clone(),
+            crefs: self.crefs.clone(),
+            watches: self.watches.clone(),
+            value: self.value.clone(),
+            level: self.level.clone(),
+            reason: self.reason.clone(),
+            seen: self.seen.clone(),
+            trail: self.trail.clone(),
+            trail_lim: self.trail_lim.clone(),
+            qhead: self.qhead,
+            n_vars: self.n_vars,
+            ok: self.ok,
+            phase: self.phase.clone(),
+            activity: self.activity.clone(),
+            var_inc: self.var_inc,
+            conflicts: self.conflicts,
+            n_learned: self.n_learned,
+            budget_hit: self.budget_hit,
+            decide: self.decide.clone(),
+            order: self.order.clone(),
+            pos: self.pos.clone(),
+            core: self.core.clone(),
+            proof: self.proof.clone(),
+            init_unit_conflict: self.init_unit_conflict,
+        }
+    }
 }
 
 impl Cdcl {
