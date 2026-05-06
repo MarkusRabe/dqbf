@@ -2,6 +2,7 @@
 
 | date | label | view |
 |---|---|---|
+| 2026-05-06_1429 | iter40 | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-06_1429_iter40.html) · [source](2026-05-06_1429_iter40.html) |
 | 2026-05-06_1325 | iter35-interpolation | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-06_1325_iter35-interpolation.html) · [source](2026-05-06_1325_iter35-interpolation.html) |
 | 2026-05-06_1201 | iter31-vsids-heap | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-06_1201_iter31-vsids-heap.html) · [source](2026-05-06_1201_iter31-vsids-heap.html) |
 | 2026-05-06_1023 | iter28-cegis | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-06_1023_iter28-cegis.html) · [source](2026-05-06_1023_iter28-cegis.html) |
