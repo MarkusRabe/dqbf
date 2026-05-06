@@ -872,6 +872,37 @@ without known_unsat.
 UNSAT with `.frp`. n4,n8 still UNKNOWN (saturate doesn't find the
 right partition heuristically; needs the §6 specific construction).
 
+## Refined-loop iteration 26: CEGIS row constraints in OuterCegar (2026-05-06, `b86fdf2`)
+
+**Target**: `circuit_synth/{gates,depth}` — 224 unsolved, all ∃∀∃
+with 65–415 outer-∃ (gate-topology selectors). OuterCegar's blocking
+clauses prune one bad topology per row-failure; converges only by
+luck.
+
+**Hypothesis (algorithmic)**: CEGIS — instead of blocking, add each
+counterexample row's *matrix copy* (fresh inner-∃, shared outer-∃,
+universals pinned) to the picker. Picker SAT then means "a topology
+that simultaneously satisfies all seen rows"; full row-scan validates.
+
+**Change** (`expand_state.rs`): picker pre-allocates
+`no + 64×(n−no)` vars; per bad row, remap and `add_external` the
+matrix + universal units. Also fixes a **pre-existing soundness bug**
+the larger picker exposed: `picker.solve` hitting the 100k conflict
+budget returned `false`, treated as UNSAT; now `Pending`.
+`detect_partners` (`arbiter.rs`): one selector-guarded incremental
+CDCL instead of fresh per-pair build (perf only, behaviour unchanged).
+
+**Dead-ends recorded**: arb_core deletion-min (−5; 7× consist solves
+per conflict round); validity-block on (u_core ∪ arb_core) (no help on
+crc_n16 — arbsolve over O(|E|×2^|dep|) cells is research-approach for
+succinct UNSAT at >150 undef); `learned_any` only on `was_new` (risks
+iter17's −206 with partnered cells).
+
+**Result: +6 net**, 2758/4350. 0 INVALID, 0 mismatches vs expected,
+0/15 sampled SAT contradict pedant. circuit_synth 77→100 solved
+(xor4_k003, prienc4_d02 in <10 rounds). Several previously-UNSAT
+OuterCegar verdicts were spurious (budget_hit) — now correctly UNKNOWN.
+
 ---
 
 ## Appendix: iteration tables
