@@ -1021,6 +1021,43 @@ iters 31-34 are within j=32 contention noise on borderline 8-10 s
 instances. Full-expand kept. **iter30's heap was the real
 architectural step (+120)**; iters 31-34 net +5 on top.
 
+## Refined-loop iteration 35: McMillan interpolation (2026-05-06, `82554ea`)
+
+**Target**: the 398 pedant-only instances. `pec_alu_add_n8` (1186
+defined, 0 undefined) was burning 12k+ CEGAR rounds accumulating ~47k
+forcing clauses for definitions that interpolation gives directly.
+
+**Change** (~450 LOC, the architectural step the iter20 gap-analysis
+named):
+- `interpolant.rs`: McMillan walk over CDCL proof DAG; structurally-
+  hashed AIG with a single node-ID counter so inputs added after a
+  gate never collide with that gate's lit (the first naive numbering
+  collided — every interpolant was wrong).
+- `definability.rs::extract_interpolants`: per-y fresh proof-logging
+  CDCL with a fixpoint over already-interpolated z's so the reference
+  graph stays acyclic and self-contained. `validate_interpolants`
+  cross-checks vs unit-prop at random rows.
+- `arbiter.rs`: `CegarState::new(.., defs)` Tseitinizes each AIG into
+  validity; mc_sel block at round 0 when defs non-empty.
+- `aiger.rs`: `SkolemFn::Aig` variant; outputs DFS-post-ordered over
+  interpolant references (z must emit before y if y mentions z).
+- `expand_state.rs`: drop `bce::reconstruct` on CEGAR-SAT — CEGAR
+  runs on the original matrix so reconstruction is unnecessary, and
+  `reconstruct` only handles `Table`.
+
+**Result: +42/−32 = +10 net**, 2904/4350. 0 INVALID. `pec_alu_add_n4`
+SAT/VALID in 2 CEGAR rounds (was 12k+); `crc_n12_k024_bug` SAT/VALID.
+
+**Gotchas.** The lit-collision bug (`mk_and` used
+`2*(inputs.len()+gates.len())` while `input` used `2*inputs.len()` —
+adding an input after a gate gave both lit 6). e58↔¬e134 cycle: each
+interpolant references the other when both are linked; restricting
+links to `out` (already-interpolated) keeps the graph acyclic at the
+cost of ~20/1186 missed extractions on alu_n8. The −32 are large
+succinct instances where per-y fresh-CDCL extraction (one Cdcl::new
+per existential, each cloning 2m clauses) eats the budget; an
+incremental interpolating solver is iter36.
+
 ---
 
 ## Appendix: iteration tables
