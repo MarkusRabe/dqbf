@@ -69,6 +69,15 @@ pub struct CegarState {
     /// then links both — halves the cell count and lets arbsolve see
     /// the cross-row constraint directly instead of via |dep| rounds.
     pub partner: HashMap<Var, (Var, Vec<(Var, Var)>)>,
+    /// Matrix-copy `matrix(U,E') ∧ ⋀_{y∈defined}(y↔y')` block in
+    /// validity, enabled by selector lit. With it assumed, every
+    /// defined-y is pinned to its unique value at each U without per-row
+    /// forcing clauses. Clauses are added lazily at the first round the
+    /// block is enabled so easy instances pay no overhead. On
+    /// validity-UNSAT the SAT verdict is re-checked with ¬mc_sel so a
+    /// genuine-UNSAT row (matrix(U,·) has no model there) isn't masked.
+    mc_sel: Lit,
+    mc_added: bool,
     rounds: usize,
 }
 
@@ -168,11 +177,15 @@ impl CegarState {
             all_aux.push(aux);
         }
         vclauses.push(all_aux);
-        let arb_base = n + m;
+        // Var slots for the matrix-copy block (clauses added lazily):
+        //   mc_sel = n+m+1;  E' var v' = (n+m+1)+v;  arbiters above that.
+        let mc_sel = (n + m + 1) as Lit;
+        let copy_base = n + m + 1;
+        let arb_base = copy_base + n;
         let nv = arb_base + ARB_BUDGET;
         let mut validity = Cdcl::new(nv, &vclauses);
-        for i in 1..=ARB_BUDGET {
-            validity.set_decision((arb_base + i) as u32, false);
+        for i in (n + m + 1)..=(arb_base + ARB_BUDGET) {
+            validity.set_decision(i as u32, false);
         }
         let nc = n + ARB_BUDGET;
         let mut consist = Cdcl::new(nc, &f.clauses);
@@ -201,15 +214,46 @@ impl CegarState {
             exs,
             arb_of: HashMap::new(),
             arb_meta: vec![vec![]],
-            arb_assump: Vec::new(),
+            arb_assump: vec![-mc_sel],
             any_const_arbiter: false,
             cell_dep_cap: (ARB_BUDGET / undefined.len().max(1))
                 .next_power_of_two()
                 .trailing_zeros()
                 .min(12) as usize,
             partner: detect_partners(f, undefined),
+            mc_sel,
+            mc_added: false,
             rounds: 0,
         }
+    }
+
+    fn add_matrix_copy(&mut self, f: &Formula) {
+        let copy_base = (self.mc_sel) as usize; // = n+m+1
+        let shift = |l: Lit| -> Lit {
+            let v = var(l);
+            if self.univ.contains(&v) {
+                l
+            } else if l > 0 {
+                (copy_base + v as usize) as Lit
+            } else {
+                -((copy_base + v as usize) as Lit)
+            }
+        };
+        for c in &f.clauses {
+            let mut sc: Vec<Lit> = c.iter().map(|&l| shift(l)).collect();
+            sc.push(-self.mc_sel);
+            self.validity.add_external(&sc);
+        }
+        for &y in f.deps.keys() {
+            if self.undef_set.contains(&y) {
+                continue;
+            }
+            let yp = (copy_base + y as usize) as Lit;
+            self.validity.add_external(&[-self.mc_sel, -(y as Lit), yp]);
+            self.validity.add_external(&[-self.mc_sel, y as Lit, -yp]);
+            self.validity.set_decision(yp as u32, true);
+        }
+        self.mc_added = true;
     }
 }
 
@@ -220,6 +264,12 @@ pub fn validity_cegar(
     start: &std::time::Instant,
     debug: bool,
 ) -> CegarOut {
+    // Matrix-copy only when arbiter exhaustion is plausibly reachable
+    // (|undef| small) — it accelerates arbsolve-UNSAT but doubles
+    // validity solves on the SAT path.
+    if st.rounds >= 256 && !st.mc_added && st.undef_set.len() <= 16 {
+        st.add_matrix_copy(f);
+    }
     let CegarState {
         n,
         arb_base,
@@ -241,10 +291,12 @@ pub fn validity_cegar(
         any_const_arbiter,
         cell_dep_cap,
         partner,
+        mc_sel,
+        mc_added,
         rounds,
     } = st;
     let cell_dep_cap = *cell_dep_cap;
-    let (n, arb_base) = (*n, *arb_base);
+    let (n, arb_base, mc_sel) = (*n, *arb_base, *mc_sel);
     let conf_budget: u64 = 100_000;
     if debug && *rounds == 0 {
         eprintln!(
@@ -269,9 +321,22 @@ pub fn validity_cegar(
         *rounds += 1;
 
         // ---- validity counterexample under current arbiters ----------
-        let sat = validity.solve(&arb_assump, vmodel, conf_budget);
+        // arb_assump[0] is reserved for ±mc_sel (avoids per-round clone).
+        // After 256 rounds at small |undef|, switch on the matrix-copy
+        // block: pins each defined-y to its unique value at every U.
+        // ¬mc_sel disables the block. UNSAT under mc_sel might mask a
+        // genuine-UNSAT row, so re-check with ¬mc_sel.
+        arb_assump[0] = if *mc_added { mc_sel } else { -mc_sel };
+        let mut sat = validity.solve(arb_assump, vmodel, conf_budget);
         if validity.budget_hit {
             return CegarOut::Bail;
+        }
+        if !sat && *mc_added {
+            arb_assump[0] = -mc_sel;
+            sat = validity.solve(arb_assump, vmodel, conf_budget);
+            if validity.budget_hit {
+                return CegarOut::Bail;
+            }
         }
         if !sat {
             // ¬matrix unreachable under encoded Skolem → DQBF SAT.
@@ -310,7 +375,7 @@ pub fn validity_cegar(
 
         // ---- row model under U* + current arbiters -------------------
         let mut ca: Vec<Lit> = u_assump.clone();
-        for &l in arb_assump.iter() {
+        for &l in arb_assump[1..].iter() {
             // remap validity-space arbiter lit → consist-space (n+i)
             let ai = var(l) as usize - arb_base;
             ca.push(if l > 0 { (n + ai) as Lit } else { -((n + ai) as Lit) });
@@ -360,7 +425,7 @@ pub fn validity_cegar(
                     CegarOut::Unsat
                 };
             }
-            arb_assump.clear();
+            arb_assump.truncate(1);
             for i in 1..arb_meta.len() {
                 let l = if amodel[i] >= 0 { (arb_base + i) as Lit } else { -((arb_base + i) as Lit) };
                 arb_assump.push(l);
