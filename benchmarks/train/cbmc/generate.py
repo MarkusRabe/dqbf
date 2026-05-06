@@ -134,6 +134,7 @@ def main(widths: str, bounds: str, max_nvars: int, mode: str) -> None:
                     {
                         "path": f"{stem}.dqdimacs.gz",
                         "expected": verdict,
+                        "problem_key": f"cbmc:{c.stem}:hw:prop",
                         "tags": ["cbmc", "handwritten", c.stem],
                         "params": {"unwind": k, "source": c.name},
                     }
@@ -144,6 +145,7 @@ def main(widths: str, bounds: str, max_nvars: int, mode: str) -> None:
             tag = "bug" if bug else "ok"
             for n in ws:
                 seq, comment = seq_aig_for(name, n, bug)
+                pkey = f"cbmc:{name}:{n}:{tag}"
                 if mode in ("inductive", "all"):
                     fi = encode_indinv_aig(seq, source=f"cbmc/{name}_{tag}_n{n}")
                     if fi.n_vars <= max_nvars:
@@ -155,6 +157,8 @@ def main(widths: str, bounds: str, max_nvars: int, mode: str) -> None:
                             {
                                 "path": f"{stem}.dqdimacs.gz",
                                 "expected": "unsat" if bug else "sat",
+                                "problem_key": pkey,
+                                "source_polarity": "inverted",
                                 "tags": ["cbmc", "inductive", name, tag],
                                 "params": {"family": name, "bug": bug, "n": n},
                             }
@@ -171,6 +175,7 @@ def main(widths: str, bounds: str, max_nvars: int, mode: str) -> None:
                                 {
                                     "path": f"{stem}.dqdimacs.gz",
                                     "expected": expected_at(name, n, bug, k),
+                                    "problem_key": pkey,
                                     "tags": ["cbmc", "succinct", name, tag],
                                     "params": {"family": name, "bug": bug, "n": n, "k": k},
                                 }
@@ -188,6 +193,7 @@ def main(widths: str, bounds: str, max_nvars: int, mode: str) -> None:
                                 {
                                     "path": f"{stem}.dqdimacs.gz",
                                     "expected": verdict,
+                                    "problem_key": pkey,
                                     "tags": ["cbmc", "flat", name, tag],
                                     "params": {"family": name, "bug": bug, "n": n, "k": k},
                                 }

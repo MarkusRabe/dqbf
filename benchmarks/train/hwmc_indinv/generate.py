@@ -63,6 +63,10 @@ def main(out: str, widths: str) -> None:
                 {
                     "path": f"{inst}.dqdimacs.gz",
                     "expected": EXPECTED[name],
+                    "problem_key": f"hwmc_indinv:{name}:{n}",
+                    # DQBF SAT here = invariant exists = bad UNREACHABLE,
+                    # which abc-pdr reports as UNSAT (no counterexample).
+                    "source_polarity": "inverted",
                     "tags": ["hwmc_indinv", name],
                     "params": {"N": n, "circuit": name},
                 }

@@ -99,6 +99,7 @@ def main(
         seq = parse_seq_aag(aag)
         suffix = f"_{variant}" if variant else ""
         src = f"{name}_n{n}{suffix}.aag"
+        pkey = f"bmc_circuits:{name}:{n}:{variant or 'single'}"
         for enc_name, root in encoders:
             d = root / name
             d.mkdir(parents=True, exist_ok=True)
@@ -123,6 +124,7 @@ def main(
                     {
                         "path": f"{inst}.dqdimacs.gz",
                         "expected": _expected(variant, k, k_bad),
+                        "problem_key": pkey,
                         "tags": ["bmc_circuits", name, variant or "single", enc_name],
                         "params": {"N": n, "k": k, "variant": variant, "k_bad": k_bad},
                     }
@@ -149,6 +151,10 @@ def main(
                 {
                     "path": f"{inst}.dqdimacs.gz",
                     "expected": _expected_indinv(variant),
+                    "problem_key": pkey,
+                    # DQBF SAT = invariant exists = bad unreachable, which
+                    # abc-* on the .aag reports as UNSAT.
+                    "source_polarity": "inverted",
                     "tags": ["bmc_circuits", name, variant or "single", "inductive"],
                     "params": {"N": n, "variant": variant},
                 }

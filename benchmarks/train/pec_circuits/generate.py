@@ -184,8 +184,12 @@ def _entry(stem, expected, cname, n, k, nbb, kind):
     return {
         "path": f"{stem}.dqdimacs.gz",
         "expected": expected,
+        "problem_key": f"pec_circuits:{cname}:{n}:{kind}:bb{nbb}",
+        # The .aag is the miter; abc-pdr UNSAT = no distinguishing input
+        # = circuits equivalent = DQBF SAT (`_complete`).
+        "source_polarity": "inverted",
         "tags": ["pec_circuits", cname, kind],
-        "params": {"N": n, "K": k, "n_bb": nbb, "circuit": cname, "kind": kind},
+        "params": {"N": n, "K": k, "k": k, "n_bb": nbb, "circuit": cname, "kind": kind},
     }
 
 

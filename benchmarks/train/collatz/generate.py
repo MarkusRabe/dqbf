@@ -342,7 +342,9 @@ def main(out: str, steps: str) -> None:
     step_variants = [s for s in steps.split(",") if s in STEPS]
     skipped: list[str] = []
 
-    def emit(variant: str, name: str, f: Formula, expected: str, params: dict) -> dict | None:
+    def emit(
+        variant: str, name: str, f: Formula, expected: str, problem_key: str, params: dict
+    ) -> dict | None:
         d = base / variant
         d.mkdir(parents=True, exist_ok=True)
         if f.n_vars > VAR_CAP:
@@ -353,6 +355,7 @@ def main(out: str, steps: str) -> None:
         return {
             "path": f"{name}.dqdimacs.gz",
             "expected": expected,
+            "problem_key": problem_key,
             "tags": ["collatz", variant, params["step"]],
             "params": params,
         }
@@ -373,6 +376,7 @@ def main(out: str, steps: str) -> None:
                     name,
                     f,
                     expected=known_expected(enc, sv, n, k),
+                    problem_key=f"collatz:{sv}:{n}",
                     params={"N": n, "K": k, "encoding": enc, "step": sv},
                 )
                 if e:
@@ -388,6 +392,7 @@ def main(out: str, steps: str) -> None:
                 name,
                 f,
                 expected="unknown",
+                problem_key=f"collatz:{sv}:{n}",
                 params={"N": n, "M": m_init, "encoding": "indinv", "step": sv},
             )
             if e:

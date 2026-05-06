@@ -171,6 +171,10 @@ def _local_controls(scope: str, families: list[str], extra: str) -> str:
     <label><input type="radio" name="resf-{scope}" value="sat"> sat</label>
     <label><input type="radio" name="resf-{scope}" value="unsat"> unsat</label>
   </fieldset>
+  <fieldset><legend>count</legend>
+    <label><input type="radio" name="count-{scope}" value="encodings" checked> encodings</label>
+    <label><input type="radio" name="count-{scope}" value="problems"> problems</label>
+  </fieldset>
   {extra}
 </div>
 {_family_tree(scope, families)}
@@ -254,8 +258,10 @@ function dSolvers(){
 function state(scope){
   const fams = new Set($$(".famchk-"+scope).filter(c=>c.checked).map(c=>c.value));
   const resf = ($$("input[name=resf-"+scope+"]").find(r=>r.checked)||{}).value || "all";
-  return {fams, resf};
+  const count = ($$("input[name=count-"+scope+"]").find(r=>r.checked)||{}).value || "encodings";
+  return {fams, resf, count};
 }
+function pkey(r){ return r.problem_key || r.path; }
 function rowsAll(st){
   const ds = new Set(dSolvers()), df = dFams();
   return DATA.filter(r =>
@@ -278,36 +284,40 @@ function pctCell(ok, n){
 
 function updateFamStats(scope){
   const SV = dSolvers(), df = dFams();
-  const resf = ($$("input[name=resf-"+scope+"]").find(r=>r.checked)||{}).value || "all";
+  const st = state(scope);
   // Per-leaf-family stats over the *full* domain (ignoring checkbox
   // selection — the tree shows what's available, not what's filtered).
-  const leaf = {};  // family -> {n, ok:{sv:n}}
+  // In "problems" mode, count distinct problem_keys instead of paths;
+  // a problem counts as solved if the solver solved *any* encoding of
+  // it anywhere (so abc-pdr's solve via the .aag credits under
+  // inductive/ too).
+  const byProb = st.count === "problems";
+  const leaf = {};                       // family -> Set<unit>
+  const solvedKey = {};                  // solver -> Set<pkey> (global)
+  for(const s of SV) solvedKey[s] = new Set();
   for(const r of DATA){
     if(!df.has(r.family) || !SV.includes(r.solver)) continue;
-    if(resf!=="all" && r.expected!==resf) continue;
-    const d = leaf[r.family] ||= {paths:new Set(), ok:{}};
-    d.paths.add(r.path);
-    if(SOLVED.has(r.got)) d.ok[r.solver] = (d.ok[r.solver]||0)+1;
+    if(st.resf!=="all" && r.expected!==st.resf) continue;
+    const u = byProb ? pkey(r) : r.path;
+    (leaf[r.family] ||= new Set()).add(u);
+    if(SOLVED.has(r.got)) solvedKey[r.solver].add(byProb ? pkey(r) : r.path);
   }
-  // Header.
   const hdr = $("#famstats-hdr-"+scope);
   if(hdr){ hdr.textContent=""; for(const s of SV) hdr.appendChild(el("span",{text:s})); }
-  // Each node aggregates over leaf families with matching path-prefix.
   const tree = $$("ul.famtree").find(t=>t.dataset.scope===scope);
   if(!tree) return;
   for(const row of tree.querySelectorAll(".famrow")){
     const p = row.dataset.path;
-    let n=0; const ok={}; for(const s of SV) ok[s]=0;
+    const denom = new Set();
     for(const [f,d] of Object.entries(leaf)){
-      if(p==="" || f===p || f.startsWith(p+"/")){
-        n += d.paths.size;
-        for(const s of SV) ok[s] += d.ok[s]||0;
-      }
+      if(p==="" || f===p || f.startsWith(p+"/"))
+        for(const u of d) denom.add(u);
     }
     const stats = row.querySelector(".famstats");
     stats.textContent = "";
     for(const s of SV){
-      const c = pctCell(ok[s], n);
+      let ok=0; for(const u of denom) if(solvedKey[s].has(u)) ok++;
+      const c = pctCell(ok, denom.size);
       stats.appendChild(typeof c==="string" ? el("span",{text:c}) : c);
     }
   }
@@ -326,12 +336,24 @@ function certRowFor(srows){
   return [n, withc, valid, inv, skip, withc?Math.round(bytes/withc):0];
 }
 
-function cactus(rs){
+function cactus(rs, byProb){
   const W=520,H=320;
   const SV = dSolvers();
   const times = {};
-  for (const s of SV)
-    times[s] = rs.filter(r=>r.solver===s && SOLVED.has(r.got)).map(r=>r.wall_s).sort((a,b)=>a-b);
+  for (const s of SV){
+    const solved = rs.filter(r=>r.solver===s && SOLVED.has(r.got));
+    if (byProb){
+      // One point per problem_key: best wall_s across its encodings.
+      const best = {};
+      for(const r of solved){
+        const k = pkey(r);
+        if(best[k]===undefined || r.wall_s<best[k]) best[k]=r.wall_s;
+      }
+      times[s] = Object.values(best).sort((a,b)=>a-b);
+    } else {
+      times[s] = solved.map(r=>r.wall_s).sort((a,b)=>a-b);
+    }
+  }
   const nMax = Math.max(1, ...Object.values(times).map(v=>v.length));
   const tMax = Math.max(1e-3, ...Object.values(times).map(v=>v.length?v[v.length-1]:1e-3));
   const lo=-3, hi=Math.ceil(Math.log10(tMax)), span=Math.max(1,hi-lo);
@@ -388,7 +410,7 @@ function renderOverview(){
 
   // cactus
   root.appendChild(el("h3",{text:"Scaling (cactus)"}));
-  root.appendChild(cactus(rs));
+  root.appendChild(cactus(rs, st.count==="problems"));
 
   // cert tables
   for (const res of ["sat","unsat"]){

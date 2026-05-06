@@ -62,12 +62,47 @@ def _verdict_from_output(rc: int, stdout: str, k: int | None = None) -> str:
 
 
 def _find_source(inst: Path, ext: str) -> Path | None:
-    """Find the source file (e.g. .aag/.tlsf) by stem prefix.
-    Prefer the LONGEST matching stem so 'detector_unreal_n02' picks
-    'detector_unreal.tlsf' not 'detector.tlsf'."""
+    """Find the source file (e.g. .aag/.tlsf) for a generated instance.
+
+    Generators add tokens (`_k008`, `_indinv`) and sometimes reorder
+    suffixes (`barrel_n4_k008_bug` vs `barrel_n4_bug.aag`), so a plain
+    prefix match misses paired safe/bug circuits. Match by token
+    *subset*: a candidate `c` matches if every `_`-separated token of
+    `c.stem` appears in the instance stem. Prefer the candidate with
+    the most tokens so `detector_unreal_n02` picks `detector_unreal`
+    over `detector`.
+
+    Sources may live only in one variant dir (e.g. `unrolled/barrel/`
+    holds the `.aag`, `succinct/barrel/` and `inductive/barrel/` only
+    hold encodings). After the instance's own dir, also search sibling
+    variant dirs that share the same tail path.
+    """
     stem = inst.name.split(".")[0]
-    cands = [c for c in inst.parent.glob(f"*{ext}") if stem.startswith(c.stem)]
-    return max(cands, key=lambda c: len(c.stem), default=None)
+    want = set(stem.split("_"))
+
+    def search(d: Path) -> Path | None:
+        cands = [
+            c
+            for c in d.glob(f"*{ext}")
+            if set(c.stem.split("_")) <= want
+        ]
+        return max(cands, key=lambda c: len(c.stem.split("_")), default=None)
+
+    if (hit := search(inst.parent)) is not None:
+        return hit
+    # Sibling variant dirs: replace one path component above the leaf
+    # with a wildcard, so <fam>/succinct/barrel/ also tries
+    # <fam>/*/barrel/ and (one more up) <*>/succinct/barrel/.
+    parts = inst.parent.parts
+    for i in range(len(parts) - 1, max(len(parts) - 3, 0), -1):
+        head, tail = Path(*parts[:i]), parts[i + 1 :]
+        patt = head.joinpath("*", *tail)
+        for sib in sorted(Path(parts[0]).glob(str(patt.relative_to(parts[0])))):
+            if sib == inst.parent or not sib.is_dir():
+                continue
+            if (hit := search(sib)) is not None:
+                return hit
+    return None
 
 
 def _find_source_aag(inst: Path) -> Path | None:
@@ -90,12 +125,22 @@ class RunRow:
     cert_bytes: int
     cert_status: str  # "n/a" | "valid" | "invalid" | "dep" | "error" | "skipped"
     cached: bool = False
+    problem_key: str | None = None
 
 
-def discover(root: Path) -> list[tuple[Path, str, str, dict]]:
-    """Return (path, family, expected, params) for every instance."""
+@dataclass
+class Instance:
+    path: Path
+    family: str
+    expected: str
+    problem_key: str | None
+    source_polarity: str  # "same" | "inverted"
+    params: dict
+
+
+def discover(root: Path) -> list[Instance]:
     root_r = root.resolve()
-    out: list[tuple[Path, str, str, dict]] = []
+    out: list[Instance] = []
     for mf in root.rglob("manifest.json"):
         fam = str(mf.parent.relative_to(root))
         entries = json.loads(mf.read_text())
@@ -108,10 +153,21 @@ def discover(root: Path) -> list[tuple[Path, str, str, dict]]:
             p = (mf.parent / rel).resolve()
             if not p.exists() or not p.is_relative_to(root_r):
                 continue
-            out.append((p, fam, e.get("expected", "unknown"), e.get("params", {})))
+            out.append(
+                Instance(
+                    path=p,
+                    family=fam,
+                    expected=e.get("expected", "unknown"),
+                    problem_key=e.get("problem_key"),
+                    source_polarity=e.get("source_polarity", "same"),
+                    params=e.get("params", {}),
+                )
+            )
     if not out:
         for p in sorted(root.rglob("*.qdimacs")) + sorted(root.rglob("*.dqdimacs")):
-            out.append((p, str(p.parent.relative_to(root)), "unknown", {}))
+            out.append(
+                Instance(p, str(p.parent.relative_to(root)), "unknown", None, "same", {})
+            )
     return out
 
 
@@ -121,6 +177,7 @@ def _run_one(
     family: str,
     expected: str,
     verify: bool,
+    problem_key: str | None,
     params: dict,
     timeout_s: float,
     certdir: Path,
@@ -129,49 +186,34 @@ def _run_one(
     stem = Path(inst.stem.replace(".dqdimacs", "").replace(".qdimacs", "")).name
     sub = certdir / solver.name / family.replace("/", "_")
     sub.mkdir(parents=True, exist_ok=True)
-    file_path = str(inst)
-    inst_ext = inst.name.replace(".gz", "").rsplit(".", 1)[-1]
-    if solver.input_format == "qdimacs" and inst_ext != "qdimacs":
+
+    def _row(got: str, wall: float = 0.0, cert: tuple[str | None, int] = (None, 0)) -> RunRow:
         return RunRow(
             solver=solver.name,
             path=str(inst),
             family=family,
             expected=expected,
-            got="n/a",
-            wall_s=0.0,
-            cert_path=None,
-            cert_bytes=0,
+            got=got,
+            wall_s=wall,
+            cert_path=cert[0],
+            cert_bytes=cert[1],
             cert_status="n/a",
+            problem_key=problem_key,
         )
+
+    file_path = str(inst)
+    inst_ext = inst.name.replace(".gz", "").rsplit(".", 1)[-1]
+    if solver.input_format == "qdimacs" and inst_ext != "qdimacs":
+        return _row("n/a")
     if solver.input_format == "tlsf":
         src = _find_source_tlsf(inst)
         if src is None:
-            return RunRow(
-                solver=solver.name,
-                path=str(inst),
-                family=family,
-                expected=expected,
-                got="n/a",
-                wall_s=0.0,
-                cert_path=None,
-                cert_bytes=0,
-                cert_status="n/a",
-            )
+            return _row("n/a")
         file_path = str(src)
     elif solver.input_format == "aag":
         src = _find_source_aag(inst)
         if src is None:
-            return RunRow(
-                solver=solver.name,
-                path=str(inst),
-                family=family,
-                expected=expected,
-                got="n/a",
-                wall_s=0.0,
-                cert_path=None,
-                cert_bytes=0,
-                cert_status="n/a",
-            )
+            return _row("n/a")
         aig = sub / f"{src.stem}.aig"
         if not aig.exists():
             a2a = Path(__file__).resolve().parents[2] / "third_party/aigtoaig"
@@ -186,17 +228,7 @@ def _run_one(
     # Some solver templates (abc -q "...") embed {file} inside an interpreted
     # command string; refuse paths that could break out of that.
     if not re.fullmatch(r"[A-Za-z0-9_./+\-]+", file_path):
-        return RunRow(
-            solver=solver.name,
-            path=str(inst),
-            family=family,
-            expected=expected,
-            got="error",
-            wall_s=0.0,
-            cert_path=None,
-            cert_bytes=0,
-            cert_status="n/a",
-        )
+        return _row("error")
     k = params.get("k")
     fmt = {
         "file": file_path,
@@ -225,28 +257,30 @@ def _run_one(
     except subprocess.TimeoutExpired:
         wall = timeout_s
         got = "timeout"
-    cert_path: str | None = None
-    cert_bytes = 0
+    cert: tuple[str | None, int] = (None, 0)
     tmpl = solver.certs.get(got)
     if tmpl:
         cp_ = Path(tmpl.format(**fmt))
         if cp_.exists():
-            cert_path = str(cp_)
-            cert_bytes = cp_.stat().st_size
-    row = RunRow(
-        solver=solver.name,
-        path=str(inst),
-        family=family,
-        expected=expected,
-        got=got,
-        wall_s=round(wall, 4),
-        cert_path=cert_path,
-        cert_bytes=cert_bytes,
-        cert_status="n/a",
-    )
+            cert = (str(cp_), cp_.stat().st_size)
+    row = _row(got, wall=round(wall, 4), cert=cert)
     if verify:
         row.cert_status = _verify_one(row, timeout_s)
     return row
+
+
+def _normalise(r: RunRow, sv: Solver, it: Instance) -> RunRow:
+    """Apply per-instance polarity to a native-verdict row. The cache
+    stores the solver's *native* output; inversion is metadata so a
+    manifest change doesn't require a re-run.
+
+    `source_polarity: "inverted"` marks encodings whose DQBF SAT/UNSAT
+    is the opposite of the source-format solver's (e.g. PEC miter:
+    abc-pdr UNSAT = circuits equivalent = DQBF SAT; hwmc_indinv:
+    abc-pdr UNSAT = bad unreachable = invariant exists = DQBF SAT)."""
+    if it.source_polarity == "inverted" and sv.input_format in ("aag", "tlsf"):
+        r.got = {"sat": "unsat", "unsat": "sat"}.get(r.got, r.got)
+    return r
 
 
 def _affine(slot: int) -> None:
@@ -276,13 +310,13 @@ def run_multi(
     print(f"{len(instances)} instances × {len(solvers)} solvers, timeout={timeout_s}s, j={jobs}")
 
     shash = {sv.name: solver_hash(sv.cmd) for sv in solvers}
-    ihash = {inst: instance_hash(inst) for inst, _, _, _ in instances}
+    ihash = {it.path: instance_hash(it.path) for it in instances}
 
     rows: list[RunRow] = []
-    todo: list[tuple[Solver, Path, str, str, dict, str]] = []
-    for inst, fam, exp, prm in instances:
+    todo: list[tuple[Solver, Instance, str]] = []
+    for it in instances:
         for sv in solvers:
-            k = key(shash[sv.name], ihash[inst], timeout_s)
+            k = key(shash[sv.name], ihash[it.path], timeout_s)
             hit = load(k) if use_cache else None
             if hit is not None:
                 hit["cached"] = True
@@ -291,12 +325,13 @@ def run_multi(
                 # binary may be registered under several names, and the
                 # instance may have moved or been re-tagged.
                 hit["solver"] = sv.name
-                hit["path"] = str(inst)
-                hit["family"] = fam
-                hit["expected"] = exp
-                rows.append(RunRow(**hit))
+                hit["path"] = str(it.path)
+                hit["family"] = it.family
+                hit["expected"] = it.expected
+                hit["problem_key"] = it.problem_key
+                rows.append(_normalise(RunRow(**hit), sv, it))
             else:
-                todo.append((sv, inst, fam, exp, prm, k))
+                todo.append((sv, it, k))
     print(f"  cache: {len(rows)} hits, {len(todo)} to run")
 
     with sink_path.open("w") as sink, ProcessPoolExecutor(max_workers=jobs) as ex:
@@ -304,8 +339,11 @@ def run_multi(
             sink.write(json.dumps(asdict(r)) + "\n")
         sink.flush()
         futs = {
-            ex.submit(_run_one, sv, inst, fam, exp, verify, prm, timeout_s, certdir, i): k
-            for i, (sv, inst, fam, exp, prm, k) in enumerate(todo)
+            ex.submit(
+                _run_one, sv, it.path, it.family, it.expected, verify,
+                it.problem_key, it.params, timeout_s, certdir, i,
+            ): (sv, it, k)
+            for i, (sv, it, k) in enumerate(todo)
         }
         for fut in as_completed(futs):
             try:
@@ -315,10 +353,16 @@ def run_multi(
                 # concurrent process). Skip rather than crash the pool.
                 print(f"  skip (vanished): {e}")
                 continue
+            sv, it, k = futs[fut]
+            # `got="n/a"` is a runner decision ("solver doesn't apply"),
+            # not a solver result — caching it would freeze in a stale
+            # `_find_source` miss. Cache only when the solver actually ran.
+            if r.got != "n/a":
+                store(k, asdict(r))
+            r = _normalise(r, sv, it)
             rows.append(r)
             sink.write(json.dumps(asdict(r)) + "\n")
             sink.flush()
-            store(futs[fut], asdict(r))
     return rows
 
 
