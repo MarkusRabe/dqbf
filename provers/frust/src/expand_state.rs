@@ -517,20 +517,14 @@ impl ExpandState {
         // pick_branch's linear scan; huge n_per_row falls back to
         // blocking-only.
         let n_per_row = n - no;
-        let cegis_rows: usize = if n_per_row > 256 {
-            0
-        } else {
-            (self.rows as usize).min(32)
-        };
+        // iter30's heap removes the linear-scan reason for the 32-row
+        // cap. Budget the picker by total vars instead: enough rows to
+        // cover 2^|U| when n_per_row is small (circuit_synth: 33×256 ≈
+        // 8 k); fall back to blocking when rows would blow up.
+        let cegis_rows: usize = (self.rows as usize).min(50_000 / n_per_row.max(1));
+        let full = cegis_rows == self.rows as usize;
         let np = no + cegis_rows * n_per_row;
         let mut pmodel = vec![0i8; np + 1];
-        if self.outer_picker.is_none() {
-            let mut p = Cdcl::new(np, &self.outer_learned);
-            for i in (no + 1)..=np {
-                p.set_decision(i as u32, false);
-            }
-            self.outer_picker = Some(p);
-        }
         let outer_set: HashSet<Var> = self.outer.iter().map(|&i| self.exs[i]).collect();
         let outer_idx: HashMap<Var, usize> = self
             .outer
@@ -541,6 +535,47 @@ impl ExpandState {
         let nonouter: Vec<Var> = (1..=f.n_vars).filter(|v| !outer_set.contains(v)).collect();
         let nonouter_idx: HashMap<Var, usize> =
             nonouter.iter().enumerate().map(|(j, &v)| (v, j)).collect();
+        if self.outer_picker.is_none() {
+            let mut p = Cdcl::new(np, &self.outer_learned);
+            for i in (no + 1)..=np {
+                p.set_decision(i as u32, false);
+            }
+            // Full coverage fits the var budget — load every row upfront
+            // instead of CEGIS one-by-one. A single picker solve then
+            // decides: SAT ⇒ the model is a valid topology for all rows;
+            // UNSAT ⇒ DQBF UNSAT.
+            if full {
+                for ub in 0..self.rows {
+                    let slot = ub as usize;
+                    let base = no + slot * n_per_row;
+                    for c in &f.clauses {
+                        let rc: Vec<Lit> = c
+                            .iter()
+                            .map(|&l| {
+                                let v = crate::formula::var(l);
+                                let pv = if let Some(&j) = outer_idx.get(&v) {
+                                    j as Lit
+                                } else {
+                                    (base + 1 + nonouter_idx[&v]) as Lit
+                                };
+                                if l > 0 { pv } else { -pv }
+                            })
+                            .collect();
+                        p.add_external(&rc);
+                    }
+                    for (i, &u) in self.expand_us.iter().enumerate() {
+                        let pv = (base + 1 + nonouter_idx[&u]) as Lit;
+                        p.add_external(&[if (ub >> i) & 1 == 1 { pv } else { -pv }]);
+                    }
+                    for &v in &nonouter {
+                        p.set_decision((base + 1 + nonouter_idx[&v]) as u32, true);
+                    }
+                }
+                self.cegis_rows = cegis_rows;
+                dbg_ex!(debug, "outer-CEGAR full-expand: {} rows × {} vars", self.rows, n_per_row);
+            }
+            self.outer_picker = Some(p);
+        }
         loop {
             if start.elapsed().as_secs_f64() > deadline {
                 return Step::Pending;
