@@ -95,6 +95,11 @@ pub struct Cdcl {
     pub conflicts: u64,
     pub n_learned: usize,
     pub budget_hit: bool,
+    /// LBD per learned clause, parallel to `learned_cr`. Input/external
+    /// clauses are never collected.
+    learned_cr: Vec<u32>,
+    lbd: Vec<u8>,
+    reduce_at: u64,
     decide: Vec<bool>,
     // Minisat-style indexed max-heap over `activity`. `order[i]` is the
     // var at heap position i; `pos[v]` is v's position (-1 if absent).
@@ -131,6 +136,9 @@ impl Clone for Cdcl {
             conflicts: self.conflicts,
             n_learned: self.n_learned,
             budget_hit: self.budget_hit,
+            learned_cr: self.learned_cr.clone(),
+            lbd: self.lbd.clone(),
+            reduce_at: self.reduce_at,
             decide: self.decide.clone(),
             order: self.order.clone(),
             pos: self.pos.clone(),
@@ -162,6 +170,9 @@ impl Cdcl {
             conflicts: 0,
             n_learned: 0,
             budget_hit: false,
+            learned_cr: Vec::new(),
+            lbd: Vec::new(),
+            reduce_at: 4_000,
             decide: vec![true; n_vars + 1],
             order: Vec::with_capacity(n_vars),
             pos: vec![-1i32; n_vars + 1],
@@ -712,6 +723,67 @@ impl Cdcl {
         (out, chain)
     }
 
+    fn compute_lbd(&self, lits: &[ILit]) -> u8 {
+        // Distinct nonzero levels among lits. For typical learned-clause
+        // sizes the quadratic scan beats allocating; clauses with LBD≥32
+        // are deletion-fodder anyway, so saturating there is fine.
+        let mut seen = [0u32; 32];
+        let mut n = 0usize;
+        for &l in lits {
+            let lvl = self.level[ivar(l)];
+            if lvl == 0 || seen[..n.min(32)].contains(&lvl) {
+                continue;
+            }
+            if n < 32 {
+                seen[n] = lvl;
+            }
+            n += 1;
+        }
+        n.min(255) as u8
+    }
+
+    /// Detach the worst half of learned clauses (highest LBD, then
+    /// longest). Keeps any clause currently on the trail as a reason.
+    /// Disabled when proof-logging — deleting a clause whose cref is
+    /// referenced in `pl.ante` would break the chain.
+    fn reduce_db(&mut self) {
+        if self.learned_cr.is_empty() {
+            return;
+        }
+        let mut order: Vec<usize> = (0..self.learned_cr.len()).collect();
+        order.sort_by_key(|&i| {
+            let cr = self.learned_cr[i];
+            (self.lbd[i], self.cl_len(cr))
+        });
+        let cut = order.len() / 2;
+        let locked: std::collections::HashSet<u32> =
+            self.reason.iter().copied().filter(|&r| r != UNDEF).collect();
+        let mut keep_cr: Vec<u32> = Vec::with_capacity(cut);
+        let mut keep_lbd: Vec<u8> = Vec::with_capacity(cut);
+        let mut detach: std::collections::HashSet<u32> = std::collections::HashSet::new();
+        for (rank, &i) in order.iter().enumerate() {
+            let cr = self.learned_cr[i];
+            if rank < cut || self.lbd[i] <= 2 || locked.contains(&cr) {
+                keep_cr.push(cr);
+                keep_lbd.push(self.lbd[i]);
+            } else {
+                detach.insert(cr);
+            }
+        }
+        if detach.is_empty() {
+            return;
+        }
+        // Only the two watched lits' lists need touching, not all 2n.
+        for &cr in &detach {
+            let l0 = self.cl_lit(cr, 0);
+            let l1 = self.cl_lit(cr, 1);
+            self.watches[neg(l0) as usize].retain(|w| w.cref != cr);
+            self.watches[neg(l1) as usize].retain(|w| w.cref != cr);
+        }
+        self.learned_cr = keep_cr;
+        self.lbd = keep_lbd;
+    }
+
     fn pick_branch(&mut self) -> Option<ILit> {
         loop {
             let v = self.heap_pop()?;
@@ -818,10 +890,15 @@ impl Cdcl {
                     return false;
                 }
                 let (learned, bt, chain) = self.analyze(confl);
+                let lbd = self.compute_lbd(&learned);
                 self.cancel_until(bt);
                 let cr = self.add_clause(&learned, true);
                 if let Some(p) = self.proof.as_mut() {
                     p.ante.insert(cr, chain);
+                }
+                if cr != UNDEF && learned.len() > 2 && self.proof.is_none() {
+                    self.learned_cr.push(cr);
+                    self.lbd.push(lbd);
                 }
                 if !self.ok {
                     if self.proof.is_some() && cr != UNDEF {
@@ -834,6 +911,10 @@ impl Cdcl {
                 }
                 if learned.len() > 1 {
                     self.enqueue(learned[0], cr);
+                }
+                if self.conflicts >= self.reduce_at && self.proof.is_none() {
+                    self.reduce_db();
+                    self.reduce_at = (self.reduce_at * 3 / 2).max(self.conflicts + 2_000);
                 }
                 if self.conflicts >= next_restart {
                     self.cancel_until(assumps.len() as u32);
