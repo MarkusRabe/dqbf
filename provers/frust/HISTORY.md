@@ -1058,6 +1058,30 @@ succinct instances where per-y fresh-CDCL extraction (one Cdcl::new
 per existential, each cloning 2m clauses) eats the budget; an
 incremental interpolating solver is iter36.
 
+## Refined-loop iterations 36-38: clone-base; determinism (2026-05-06)
+
+**iter36** (`ff1aeb9`, −5): clone the base 2-copy CDCL once and add
+per-y link clauses via `add_external` instead of `Cdcl::new` per y.
+Also: `linked_z` came from HashMap iteration → non-deterministic
+proof shape; now a Vec in insertion order.
+
+**iter37** (reverted, −10): tried skipping interpolated-y from CEGAR's
+forcing loop. Wrong premise — the forcing clause is a propagation
+shortcut (direct universals→y), not redundant with the interpolant
+Tseitin (which evaluates the gate chain). Reverted.
+
+**iter38** (`9036636`, **+7 vs iter35**, 2911/4350): the real fix.
+`padoa_split.todo` and `extract_interpolants.order` came from
+`HashSet::iter` then *stable*-sorted by dep-len only — equal-dep-len
+y's kept hash order. shift_reg gate-count varied 94-209 across runs;
+hamming_n16 CEGAR rounds 5644-10953. Now sorts by `(dep_len, var)`;
+also sorts `defs` iteration in `CegarState::new` (Tseitin clause
+order). 5/5 runs identical. 0/2 sampled new SAT contradict pedant.
+
+**Gotcha.** The j=32 noise band was masking this — iters 31-35's ±5
+were partly determinism variance, not load. With this fixed, the
+diff vs previous run is meaningful again.
+
 ---
 
 ## Appendix: iteration tables
