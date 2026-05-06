@@ -62,7 +62,7 @@ pub fn deepening_partial_scan(
     deadline: f64,
     start: &std::time::Instant,
     debug: bool,
-) -> Option<u32> {
+) -> Option<Vec<Lit>> {
     let ranked = rank_universals(f);
     let nu_full = f.universals.len();
     for &k in &[8usize, 12, 16, 20] {
@@ -99,7 +99,7 @@ pub fn deepening_partial_scan(
             cdcl.reset_phase();
             if !cdcl.solve(&assumps, model, row_budget) && !cdcl.budget_hit {
                 dbg_ex!(debug, "deepening k={}: row {} UNSAT", k, ub);
-                return Some(ub);
+                return Some(assumps);
             }
         }
     }
@@ -179,7 +179,8 @@ pub fn try_expand(
     if partial {
         // Iterative-deepening UNSAT scan replaces the old fixed-16 partial
         // free pass and the partial outer-CEGAR.
-        *unsat_row = deepening_partial_scan(f, cdcl, &mut model, deadline * 0.4, start, debug);
+        *unsat_row =
+            deepening_partial_scan(f, cdcl, &mut model, deadline * 0.4, start, debug).map(|_| 0);
         let _ = candidate;
         return None;
     }

@@ -7,6 +7,7 @@
 //! comments for the watch-relink invariants.
 
 use crate::formula::{var, Lit};
+use std::collections::HashMap;
 
 /// Internal lit encoding: 2*v for +v, 2*v+1 for -v. Index 0/1 unused.
 type ILit = u32;
@@ -41,6 +42,23 @@ struct Watcher {
 
 const UNDEF: u32 = u32::MAX;
 
+/// Per-clause resolution antecedent: chain[0] is the seed conflict
+/// clause (pivot = 0); each subsequent (cref, pivot) resolves the
+/// running resolvent against `cref` on variable `pivot`. Replaying the
+/// chain yields the learned clause exactly (level-0 lits included).
+type Chain = Vec<(u32, u32)>;
+
+#[derive(Default)]
+pub struct ProofLog {
+    pub n_input: usize,
+    /// learned cref → chain that derives it.
+    pub ante: HashMap<u32, Chain>,
+    /// Chain deriving the final assumption-only clause (or ⊥).
+    pub final_chain: Chain,
+    /// The clause `final_chain` derives — every lit is an assumption.
+    pub final_clause: Vec<Lit>,
+}
+
 pub struct Cdcl {
     /// Flat clause storage: each clause is [len, lit0, lit1, ...].
     arena: Vec<u32>,
@@ -63,6 +81,7 @@ pub struct Cdcl {
     pub budget_hit: bool,
     decide: Vec<bool>,
     core: Vec<Lit>,
+    pub proof: Option<ProofLog>,
 }
 
 impl Cdcl {
@@ -88,12 +107,45 @@ impl Cdcl {
             budget_hit: false,
             decide: vec![true; n_vars + 1],
             core: Vec::new(),
+            proof: None,
         };
         for c in clauses {
             let lits: Vec<ILit> = c.iter().map(|&l| ilit(l)).collect();
             s.add_clause(&lits, false);
         }
         s
+    }
+
+    pub fn enable_proof_log(&mut self) {
+        self.proof = Some(ProofLog {
+            n_input: self.crefs.len(),
+            ..Default::default()
+        });
+    }
+
+    pub fn clause_lits(&self, cr: u32) -> Vec<Lit> {
+        (0..self.cl_len(cr))
+            .map(|k| {
+                let l = self.cl_lit(cr, k);
+                if isign(l) > 0 {
+                    ivar(l) as Lit
+                } else {
+                    -(ivar(l) as Lit)
+                }
+            })
+            .collect()
+    }
+
+    pub fn is_input(&self, cr: u32) -> bool {
+        self.proof
+            .as_ref()
+            .map(|p| {
+                self.crefs
+                    .iter()
+                    .position(|&c| c == cr)
+                    .map_or(false, |i| i < p.n_input)
+            })
+            .unwrap_or(false)
     }
 
     fn cl_len(&self, cr: u32) -> u32 {
@@ -111,14 +163,6 @@ impl Cdcl {
             self.ok = false;
             return UNDEF;
         }
-        if lits.len() == 1 {
-            match self.val_lit(lits[0]) {
-                0 => self.enqueue(lits[0], UNDEF),
-                -1 => self.ok = false,
-                _ => {}
-            }
-            return UNDEF;
-        }
         let cr = self.arena.len() as u32;
         self.arena.push(lits.len() as u32);
         self.arena.extend_from_slice(lits);
@@ -126,16 +170,22 @@ impl Cdcl {
         if learned {
             self.n_learned += 1;
         }
-        if lits.len() >= 2 {
-            self.watches[neg(lits[0]) as usize].push(Watcher {
-                cref: cr,
-                blocker: lits[1],
-            });
-            self.watches[neg(lits[1]) as usize].push(Watcher {
-                cref: cr,
-                blocker: lits[0],
-            });
+        if lits.len() == 1 {
+            match self.val_lit(lits[0]) {
+                0 => self.enqueue(lits[0], cr),
+                -1 => self.ok = false,
+                _ => {}
+            }
+            return cr;
         }
+        self.watches[neg(lits[0]) as usize].push(Watcher {
+            cref: cr,
+            blocker: lits[1],
+        });
+        self.watches[neg(lits[1]) as usize].push(Watcher {
+            cref: cr,
+            blocker: lits[0],
+        });
         cr
     }
 
@@ -309,8 +359,11 @@ impl Cdcl {
         UNDEF
     }
 
-    /// 1-UIP. Returns (learned, backtrack_level).
-    fn analyze(&mut self, mut cr: u32) -> (Vec<ILit>, u32) {
+    /// 1-UIP. Returns (learned, backtrack_level, chain).
+    fn analyze(&mut self, mut cr: u32) -> (Vec<ILit>, u32, Chain) {
+        let logging = self.proof.is_some();
+        let mut chain: Chain = vec![(cr, 0)];
+        let mut lvl0: Vec<usize> = Vec::new();
         let dl = self.dl();
         let mut learned: Vec<ILit> = vec![0]; // hole for asserting lit
         let mut path_c = 0usize;
@@ -324,7 +377,15 @@ impl Cdcl {
             for k in start..len {
                 let q = self.cl_lit(cr, k);
                 let v = ivar(q);
-                if self.seen[v] != 0 || self.level[v] == 0 {
+                if self.seen[v] != 0 {
+                    continue;
+                }
+                if self.level[v] == 0 {
+                    if logging {
+                        self.seen[v] = 1;
+                        to_clear.push(v);
+                        lvl0.push(v);
+                    }
                     continue;
                 }
                 self.seen[v] = 1;
@@ -339,21 +400,56 @@ impl Cdcl {
             // Next seen on trail at dl.
             loop {
                 idx -= 1;
-                if self.seen[ivar(self.trail[idx])] != 0 {
+                if self.seen[ivar(self.trail[idx])] != 0
+                    && self.level[ivar(self.trail[idx])] == dl
+                {
                     break;
                 }
             }
             p = self.trail[idx];
             let v = ivar(p);
             self.seen[v] = 0;
-            // (don't remove from to_clear; clearing 0 again is harmless)
             path_c -= 1;
             if path_c == 0 {
                 break;
             }
             cr = self.reason[v];
+            chain.push((cr, v as u32));
         }
         learned[0] = neg(p);
+        // Proof: resolve away every level-0 lit touched. Process in
+        // *reverse trail order* so a reason clause (whose other lits
+        // are all earlier on the trail) never re-introduces a var we
+        // already removed.
+        if logging && !lvl0.is_empty() {
+            let pos0: HashMap<usize, usize> = self
+                .trail
+                .iter()
+                .enumerate()
+                .filter(|&(_, &l)| self.level[ivar(l)] == 0)
+                .map(|(i, &l)| (ivar(l), i))
+                .collect();
+            let mut heap: std::collections::BinaryHeap<(usize, usize)> =
+                lvl0.iter().map(|&v| (pos0[&v], v)).collect();
+            while let Some((_, v)) = heap.pop() {
+                let r = self.reason[v];
+                if r == UNDEF {
+                    chain.clear();
+                    break;
+                }
+                chain.push((r, v as u32));
+                for k in 0..self.cl_len(r) {
+                    let qv = ivar(self.cl_lit(r, k));
+                    if qv == v || self.seen[qv] != 0 {
+                        continue;
+                    }
+                    debug_assert_eq!(self.level[qv], 0);
+                    self.seen[qv] = 1;
+                    to_clear.push(qv);
+                    heap.push((pos0[&qv], qv));
+                }
+            }
+        }
         // backtrack level + place its lit at learned[1]
         let bt = if learned.len() == 1 {
             0
@@ -370,7 +466,67 @@ impl Cdcl {
         for v in to_clear {
             self.seen[v] = 0;
         }
-        (learned, bt)
+        (learned, bt, chain)
+    }
+
+    /// After UNSAT detection (before cancel_until): resolve `seed` against
+    /// every reason transitively until only assumption/decision lits
+    /// (reason==UNDEF) remain. Returns (final_clause, chain).
+    fn extract_unsat_chain(&mut self, seed: u32) -> (Vec<Lit>, Chain) {
+        let mut chain: Chain = vec![(seed, 0)];
+        let mut to_clear: Vec<usize> = Vec::new();
+        let mut work: Vec<usize> = Vec::new();
+        let mut out: Vec<Lit> = Vec::new();
+        for k in 0..self.cl_len(seed) {
+            let v = ivar(self.cl_lit(seed, k));
+            if self.seen[v] != 0 {
+                continue;
+            }
+            self.seen[v] = 1;
+            to_clear.push(v);
+            if self.reason[v] == UNDEF {
+                out.push(v as Lit);
+            } else {
+                work.push(v);
+            }
+        }
+        // Reverse-trail order so a reason's earlier-propagated lits
+        // never re-introduce a var already removed.
+        let pos: HashMap<usize, usize> = self
+            .trail
+            .iter()
+            .enumerate()
+            .map(|(i, &l)| (ivar(l), i))
+            .collect();
+        let mut heap: std::collections::BinaryHeap<(usize, usize)> =
+            work.drain(..).map(|v| (pos[&v], v)).collect();
+        while let Some((_, v)) = heap.pop() {
+            let r = self.reason[v];
+            chain.push((r, v as u32));
+            for k in 0..self.cl_len(r) {
+                let qv = ivar(self.cl_lit(r, k));
+                if qv == v || self.seen[qv] != 0 {
+                    continue;
+                }
+                self.seen[qv] = 1;
+                to_clear.push(qv);
+                if self.reason[qv] == UNDEF {
+                    out.push(qv as Lit);
+                } else {
+                    heap.push((pos[&qv], qv));
+                }
+            }
+        }
+        // Assign correct polarity: each out-var v is on trail with some
+        // value; in the derived clause it appears negated.
+        for l in out.iter_mut() {
+            let v = *l as usize;
+            *l = if self.value[v] > 0 { -(v as Lit) } else { v as Lit };
+        }
+        for v in to_clear {
+            self.seen[v] = 0;
+        }
+        (out, chain)
     }
 
     fn pick_branch(&self, vsids: bool) -> Option<ILit> {
@@ -466,6 +622,12 @@ impl Cdcl {
                 self.conflicts += 1;
                 self.var_inc /= 0.95;
                 if self.dl() == 0 {
+                    if self.proof.is_some() {
+                        let (fc, ch) = self.extract_unsat_chain(confl);
+                        let p = self.proof.as_mut().unwrap();
+                        p.final_clause = fc;
+                        p.final_chain = ch;
+                    }
                     self.ok = false;
                     return false;
                 }
@@ -474,18 +636,16 @@ impl Cdcl {
                     self.cancel_until(0);
                     return false;
                 }
-                let (learned, bt) = self.analyze(confl);
+                let (learned, bt, chain) = self.analyze(confl);
                 self.cancel_until(bt);
-                if learned.len() == 1 {
-                    if self.val_lit(learned[0]) == -1 {
-                        self.ok = false;
-                        return false;
-                    }
-                    if self.val_lit(learned[0]) == 0 {
-                        self.enqueue(learned[0], UNDEF);
-                    }
-                } else {
-                    let cr = self.add_clause(&learned, true);
+                let cr = self.add_clause(&learned, true);
+                if let Some(p) = self.proof.as_mut() {
+                    p.ante.insert(cr, chain);
+                }
+                if !self.ok {
+                    return false;
+                }
+                if learned.len() > 1 {
                     self.enqueue(learned[0], cr);
                 }
                 continue;
@@ -498,6 +658,30 @@ impl Cdcl {
                     -1 => {
                         // Assumption violated → UNSAT under assumptions.
                         self.core = self.analyze_final(neg(a));
+                        if self.proof.is_some() {
+                            let r = self.reason[ivar(a)];
+                            let (mut fc, ch) = if r == UNDEF {
+                                // ¬a is itself an earlier assumption.
+                                (vec![], vec![])
+                            } else {
+                                self.extract_unsat_chain(r)
+                            };
+                            // The violated assumption appears positively
+                            // in the derived clause iff r contained ¬a;
+                            // either way, the final clause is over
+                            // assumptions only. Ensure ¬a's polarity is
+                            // present (resolved seed has ¬a as a lit).
+                            if r != UNDEF {
+                                let av = ivar(a) as Lit;
+                                let want = if isign(a) > 0 { -av } else { av };
+                                if !fc.contains(&want) {
+                                    fc.push(want);
+                                }
+                            }
+                            let p = self.proof.as_mut().unwrap();
+                            p.final_clause = fc;
+                            p.final_chain = ch;
+                        }
                         self.cancel_until(0);
                         return false;
                     }

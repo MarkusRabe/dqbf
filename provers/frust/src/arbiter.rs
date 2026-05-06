@@ -33,6 +33,9 @@ pub struct ForcingCert {
 
 pub enum CegarOut {
     Sat(ForcingCert),
+    /// matrix[U*,·] propositionally UNSAT — carries the universal row.
+    UnsatRow(Vec<Lit>),
+    /// arbsolve exhausted — every Skolem fails some row.
     Unsat,
     Bail,
     Pending,
@@ -243,7 +246,7 @@ pub fn validity_cegar(
                 if debug {
                     eprintln!("c [def] cegar UNSAT row at round {}", rounds);
                 }
-                return CegarOut::Unsat;
+                return CegarOut::UnsatRow(u_assump);
             }
             // Learn ¬arb_core in arbsolve; re-pick arbiters.
             let conflict: Vec<Lit> = arb_core.iter().map(|&l| -l).collect();

@@ -14,10 +14,13 @@ macro_rules! dbg_ex {
 
 pub enum Step {
     Sat(Option<Skolem>),
-    UnsatRow(u32),
-    Unsat,   // exhausted slot space; no Skolem exists; no cert
-    Pending, // ran out of slice budget mid-search
-    Done,    // exhausted; can't decide
+    /// One CDCL-refuted row of 2^|U|; carries the universal-polarity
+    /// assumptions so the caller can re-prove for a `.frp`.
+    UnsatRow(Vec<Lit>),
+    /// Exhausted slot/arbiter space; no Skolem exists; no row-level cert.
+    Unsat,
+    Pending,
+    Done,
 }
 
 enum Mode {
@@ -267,6 +270,10 @@ impl ExpandState {
                 crate::bce::reconstruct(&mut sk, f, &self.bce_stack);
                 Step::Sat(Some(sk))
             }
+            CegarOut::UnsatRow(row) => {
+                self.mode = Mode::Exhausted;
+                Step::UnsatRow(row)
+            }
             CegarOut::Unsat => {
                 self.mode = Mode::Exhausted;
                 Step::Unsat
@@ -291,9 +298,9 @@ impl ExpandState {
         start: &std::time::Instant,
         debug: bool,
     ) -> Step {
-        if let Some(ub) = deepening_partial_scan(f, cdcl, &mut self.model, deadline, start, debug) {
+        if let Some(row) = deepening_partial_scan(f, cdcl, &mut self.model, deadline, start, debug) {
             self.mode = Mode::Exhausted;
-            return Step::UnsatRow(ub);
+            return Step::UnsatRow(row);
         }
         // Deepening reached its level cap or deadline; not resumable in
         // its current form (each call restarts at k=8, but CDCL learned
@@ -324,7 +331,7 @@ impl ExpandState {
             if !cdcl.solve(&assumps, &mut self.model, self.row_budget) {
                 if !cdcl.budget_hit {
                     self.mode = Mode::Exhausted;
-                    return Step::UnsatRow(ub);
+                    return Step::UnsatRow(assumps);
                 }
                 self.mode = Mode::Exhausted;
                 return Step::Done;
@@ -506,9 +513,9 @@ impl ExpandState {
             }
             if !picker.solve(&[], &mut pmodel, 100_000) {
                 // Outer-CDCL UNSAT → no constant assignment works.
+                // (Phase-3 cert: FEx over outer-∃ + Q-res of blocks.)
                 self.mode = Mode::Exhausted;
-                // We don't have a specific row; signal UNSAT via row 0.
-                return Step::UnsatRow(0);
+                return Step::Unsat;
             }
             for (j, &i) in self.outer.iter().enumerate() {
                 self.outer_pins[j] = (self.exs[i], if pmodel[j + 1] > 0 { 1 } else { -1 });

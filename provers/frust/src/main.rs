@@ -8,6 +8,7 @@ mod expand_state;
 mod formula;
 mod parse;
 mod proof;
+mod proof_emit;
 mod rules;
 mod search;
 

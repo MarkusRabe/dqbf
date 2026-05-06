@@ -302,7 +302,15 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                         stats: format!("expand-slot-exhausted (slice {:.2}s)", slice),
                     };
                 }
-                crate::expand_state::Step::UnsatRow(_) => {
+                crate::expand_state::Step::UnsatRow(row) => {
+                    if let Some(p) = crate::proof_emit::reprove_row_unsat(f, &row, 250_000) {
+                        return Output {
+                            verdict: Verdict::Unsat,
+                            proof: Some(p),
+                            skolem: None,
+                            stats: format!("expand-row-unsat (slice {:.2}s)", slice),
+                        };
+                    }
                     known_unsat = true;
                     expand_done = true;
                 }
