@@ -63,6 +63,7 @@ pub struct ExpandState {
     outer_picker: Option<Cdcl>,
     outer_pins: Vec<(Var, i8)>,
     bad_rows: Vec<u32>,
+    cegis_rows: usize,
 
     // Definability-CEGAR persisted state (built lazily; resumes
     // across slices instead of rebuilding three CDCL instances).
@@ -159,6 +160,7 @@ impl ExpandState {
             outer_picker: None,
             outer_pins,
             bad_rows: Vec::new(),
+            cegis_rows: 0,
             cegar: None,
             model: vec![0i8; n],
         }
@@ -509,10 +511,33 @@ impl ExpandState {
         debug: bool,
     ) -> Step {
         let no = self.outer.len();
-        let mut pmodel = vec![0i8; no + 1];
+        let n = f.n_vars as usize;
+        // Picker var space: 1..no are outer-∃; per accumulated
+        // counterexample row, a fresh copy of all non-outer vars
+        // (universals become picker-level units; inner-∃ + Tseitin aux
+        // are free). Finding a model = a topology that simultaneously
+        // satisfies the matrix on every accumulated row — CEGIS.
+        const CEGIS_ROWS: usize = 64;
+        let n_per_row = n - no;
+        let np = no + CEGIS_ROWS * n_per_row;
+        let mut pmodel = vec![0i8; np + 1];
         if self.outer_picker.is_none() {
-            self.outer_picker = Some(Cdcl::new(no, &self.outer_learned));
+            let mut p = Cdcl::new(np, &self.outer_learned);
+            for i in (no + 1)..=np {
+                p.set_decision(i as u32, false);
+            }
+            self.outer_picker = Some(p);
         }
+        let outer_set: HashSet<Var> = self.outer.iter().map(|&i| self.exs[i]).collect();
+        let outer_idx: HashMap<Var, usize> = self
+            .outer
+            .iter()
+            .enumerate()
+            .map(|(j, &i)| (self.exs[i], j + 1))
+            .collect();
+        let nonouter: Vec<Var> = (1..=f.n_vars).filter(|v| !outer_set.contains(v)).collect();
+        let nonouter_idx: HashMap<Var, usize> =
+            nonouter.iter().enumerate().map(|(j, &v)| (v, j)).collect();
         loop {
             if start.elapsed().as_secs_f64() > deadline {
                 return Step::Pending;
@@ -522,6 +547,10 @@ impl ExpandState {
                 picker.set_phase((j + 1) as u32, v);
             }
             if !picker.solve(&[], &mut pmodel, 100_000) {
+                if picker.budget_hit {
+                    return Step::Pending;
+                }
+                dbg_ex!(debug, "outer-CEGAR picker UNSAT after {} rows, {} blocks", self.cegis_rows, self.outer_learned.len());
                 // Outer-CDCL UNSAT → no constant assignment works.
                 // (Phase-3 cert: FEx over outer-∃ + Q-res of blocks.)
                 self.mode = Mode::Exhausted;
@@ -574,6 +603,37 @@ impl ExpandState {
                 }
                 Some(ub) => {
                     self.bad_rows.push(ub);
+                    // CEGIS: add a matrix copy at row ub to the picker
+                    // so the next candidate must satisfy this row too.
+                    // Shared: outer-∃ → picker[1..no]. Fresh: everything
+                    // else (universals pinned by units; inner free).
+                    let slot = self.cegis_rows;
+                    if slot < CEGIS_ROWS {
+                        self.cegis_rows += 1;
+                        let base = no + slot * n_per_row;
+                        let remap = |l: Lit| -> Lit {
+                            let v = crate::formula::var(l);
+                            let pv = if let Some(&j) = outer_idx.get(&v) {
+                                j as Lit
+                            } else {
+                                (base + 1 + nonouter_idx[&v]) as Lit
+                            };
+                            if l > 0 { pv } else { -pv }
+                        };
+                        let picker = self.outer_picker.as_mut().unwrap();
+                        for c in &f.clauses {
+                            let rc: Vec<Lit> = c.iter().map(|&l| remap(l)).collect();
+                            picker.add_external(&rc);
+                        }
+                        for (i, &u) in self.expand_us.iter().enumerate() {
+                            let pv = (base + 1 + nonouter_idx[&u]) as Lit;
+                            let bit = (ub >> i) & 1 == 1;
+                            picker.add_external(&[if bit { pv } else { -pv }]);
+                        }
+                        for &v in &nonouter {
+                            picker.set_decision((base + 1 + nonouter_idx[&v]) as u32, true);
+                        }
+                    }
                     // Seed deletion-min from analyze_final's core (the
                     // outer-∃ subset of the failed assumption set)
                     // instead of from all |outer| pins — at 357 outer-∃

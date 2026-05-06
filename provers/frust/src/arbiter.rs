@@ -87,8 +87,32 @@ fn detect_partners(f: &Formula, undef: &[Var]) -> HashMap<Var, (Var, Vec<(Var, V
             by_size.entry(d.len()).or_default().push(y);
         }
     }
-    let mut out: HashMap<Var, (Var, Vec<(Var, Var)>)> = HashMap::new();
     let n = f.n_vars as usize;
+    // One incremental CDCL with selector-guarded link clauses for every
+    // ordered universal pair (u,v): sel_{u,v} → (u ↔ v). Consistency of
+    // (y, y') under bijection bij is then `solve(sel_{bij} ∪ {y, ¬y'})`
+    // and `solve(sel_{bij} ∪ {¬y, y'})` both UNSAT.
+    let us: Vec<Var> = f.universals.iter().copied().collect();
+    let n_sel = us.len() * us.len();
+    let sel = |a: Var, b: Var| -> Lit {
+        let ia = us.iter().position(|&u| u == a).unwrap();
+        let ib = us.iter().position(|&u| u == b).unwrap();
+        (n + 1 + ia * us.len() + ib) as Lit
+    };
+    let mut cls: Vec<Clause> = f.clauses.clone();
+    for &a in &us {
+        for &b in &us {
+            let s = sel(a, b);
+            cls.push(vec![-s, a as Lit, -(b as Lit)]);
+            cls.push(vec![-s, -(a as Lit), b as Lit]);
+        }
+    }
+    let mut chk = Cdcl::new(n + n_sel, &cls);
+    for i in 1..=n_sel {
+        chk.set_decision((n + i) as u32, false);
+    }
+    let mut sm = vec![0i8; n + n_sel + 1];
+    let mut out: HashMap<Var, (Var, Vec<(Var, Var)>)> = HashMap::new();
     for ys in by_size.values() {
         let mut taken: BTreeSet<Var> = BTreeSet::new();
         for i in 0..ys.len() {
@@ -96,37 +120,33 @@ fn detect_partners(f: &Formula, undef: &[Var]) -> HashMap<Var, (Var, Vec<(Var, V
                 continue;
             }
             let di: Vec<Var> = f.deps[&ys[i]].iter().copied().collect();
-            for j in (i + 1)..ys.len() {
-                if taken.contains(&ys[j]) {
+            for &yj in &ys[i + 1..] {
+                if taken.contains(&yj) {
                     continue;
                 }
-                let dj: Vec<Var> = f.deps[&ys[j]].iter().copied().collect();
-                if !di.iter().all(|u| !f.deps[&ys[j]].contains(u)) {
+                let dj: Vec<Var> = f.deps[&yj].iter().copied().collect();
+                if di.iter().any(|u| f.deps[&yj].contains(u)) {
                     continue;
                 }
-                let bij: Vec<(Var, Var)> =
-                    di.iter().copied().zip(dj.iter().copied()).collect();
-                // Fresh CDCL: matrix + (dᵢ ↔ d'ᵢ) link clauses.
-                let mut cls: Vec<Clause> = f.clauses.clone();
-                for &(d, dp) in &bij {
-                    cls.push(vec![d as Lit, -(dp as Lit)]);
-                    cls.push(vec![-(d as Lit), dp as Lit]);
-                }
-                let mut chk = Cdcl::new(n, &cls);
-                let mut sm = vec![0i8; n + 1];
-                let a = vec![ys[i] as Lit, -(ys[j] as Lit)];
-                let b = vec![-(ys[i] as Lit), ys[j] as Lit];
-                if chk.solve(&a, &mut sm, 5_000)
+                let bij: Vec<(Var, Var)> = di.iter().copied().zip(dj.iter().copied()).collect();
+                let sels: Vec<Lit> = bij.iter().map(|&(a, b)| sel(a, b)).collect();
+                let mut a1 = sels.clone();
+                a1.push(ys[i] as Lit);
+                a1.push(-(yj as Lit));
+                let mut a2 = sels;
+                a2.push(-(ys[i] as Lit));
+                a2.push(yj as Lit);
+                if chk.solve(&a1, &mut sm, 5_000)
                     || chk.budget_hit
-                    || chk.solve(&b, &mut sm, 5_000)
+                    || chk.solve(&a2, &mut sm, 5_000)
                     || chk.budget_hit
                 {
                     continue;
                 }
-                out.insert(ys[i], (ys[j], bij.clone()));
-                out.insert(ys[j], (ys[i], bij.iter().map(|&(a, b)| (b, a)).collect()));
+                out.insert(ys[i], (yj, bij.clone()));
+                out.insert(yj, (ys[i], bij.iter().map(|&(a, b)| (b, a)).collect()));
                 taken.insert(ys[i]);
-                taken.insert(ys[j]);
+                taken.insert(yj);
                 break;
             }
         }
