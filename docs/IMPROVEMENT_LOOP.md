@@ -25,7 +25,7 @@ results into a heuristic decision.
 
 ## The loop itself
 
-1. **Probe** — `scripts/frust_opt_loop.py`: full `train/` set, 10s, j=48,
+1. **Probe** — `scripts/frust_opt_loop.py`: full `train/` set, 10s, j=32,
    every cert through `tools/verify`. Output: solved/total, INVALID
    count, missing-cert count, slowest-small-instance list, **per-instance
    diff vs the previous run**.
@@ -96,7 +96,7 @@ results into a heuristic decision.
    ```sh
    rm -rf results/
    python -m benchmarks.runner.cli multi --root benchmarks/train \
-     --solvers frust,dqbdd,pedant,hqs --timeout 10 -j 48 \
+     --solvers frust,dqbdd,pedant,hqs --timeout 10 -j 32 \
      -o results/train.jsonl --report results/train.html \
      --certdir results/certs --verify-certs
    cp results/train.html "docs/dev_reports/$(date +%Y-%m-%d_%H%M)_<slug>.html"
@@ -123,7 +123,7 @@ iterations.
 Iters 0-17 used a 344-instance subset. Widening to 804 at iter 18
 immediately surfaced `dep_cycle_n1` (11 variables — the paper's own
 counterexample) and a 74s-on-3s-timeout bug. Both were sitting there
-the whole time. The cost of probing 1500 instances at j=48 is ~5
+the whole time. The cost of probing 1500 instances at j=32 is ~5
 minutes; the cost of missing a bug for 18 iterations is days.
 
 ### Per-instance regression diff, not just counts
@@ -229,7 +229,7 @@ is fine when:
   `random_bv` for a continuous architecture), or
 - the change deletes code (simplification round: −515 LoC, +2 solved),
   or
-- the lost instances are borderline-timing noise (±1 at j=48 is noise).
+- the lost instances are borderline-timing noise (±1 at j=32 is noise).
 
 What you *do* want to understand is *which* instances were lost and
 why — the per-instance diff makes that cheap. A loss you can explain
