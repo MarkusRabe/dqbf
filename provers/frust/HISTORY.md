@@ -932,6 +932,17 @@ selectors; that's an encoder change, not solver).
 **Result: −6 (variance)**, 2766/4350. 0 INVALID. iter28 is the
 report milestone; no kept change.
 
+## Refined-loop iteration 29: CEGIS dedup; skip block when row added (2026-05-06)
+
+Dedup `bad_rows` before allocating a CEGIS slot (same row could
+re-appear from history). When a row-matrix is added, `continue` past
+the deletion-min blocking — the matrix copy already constrains
+correctness at that row, and the deletion-min costs ~core.len()
+solves. Picker chunk 50k→10k so the 12.7s overshoot at xor8 fits
+the 10s budget.
+
+**Result: +8**, 2774/4350. 0 INVALID.
+
 ---
 
 ## Appendix: iteration tables
