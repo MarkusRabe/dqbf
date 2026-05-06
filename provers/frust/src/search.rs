@@ -299,7 +299,7 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                     expand_done = true;
                 }
                 crate::expand_state::Step::UnsatRow(row) => {
-                    if let Some(p) = crate::proof_emit::reprove_row_unsat(f, &row, 250_000) {
+                    if let Some(p) = crate::proof_emit::reprove_row_unsat(f, &row, 50_000) {
                         return Output {
                             verdict: Verdict::Unsat,
                             proof: Some(p),

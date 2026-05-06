@@ -63,23 +63,20 @@ impl Proof {
                 write!(w, ",")?;
             }
             write!(w, r#"{{"clause":{:?},"rule":"{}""#, s.clause, s.rule)?;
-            write!(w, r#","premises":{:?}"#, s.premises)?;
+            if !s.premises.is_empty() {
+                write!(w, r#","premises":{:?}"#, s.premises)?;
+            }
             if let Some(p) = s.pivot {
                 write!(w, r#","pivot":{}"#, p)?;
-            } else {
-                write!(w, r#","pivot":null"#)?;
             }
-            match &s.part {
-                Some(p) => write!(w, r#","part":{:?}"#, p)?,
-                None => write!(w, r#","part":null"#)?,
+            if let Some(p) = &s.part {
+                write!(w, r#","part":{:?}"#, p)?;
             }
-            match &s.c3 {
-                Some(p) => write!(w, r#","c3":{:?}"#, p)?,
-                None => write!(w, r#","c3":null"#)?,
+            if let Some(p) = &s.c3 {
+                write!(w, r#","c3":{:?}"#, p)?;
             }
-            match s.fresh {
-                Some(p) => write!(w, r#","fresh":{}"#, p)?,
-                None => write!(w, r#","fresh":null"#)?,
+            if let Some(p) = s.fresh {
+                write!(w, r#","fresh":{}"#, p)?;
             }
             write!(w, "}}")?;
         }

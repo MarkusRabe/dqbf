@@ -44,11 +44,7 @@ pub fn reprove_row_unsat(f: &Formula, row: &[Lit], max_steps: usize) -> Option<P
     if cdcl.solve(row, &mut model, 50_000) || cdcl.budget_hit {
         return None;
     }
-    let p = cdcl_row_unsat_to_frp(f, &cdcl)?;
-    if p.steps.len() > max_steps {
-        return None;
-    }
-    Some(p)
+    cdcl_row_unsat_to_frp(f, &cdcl, max_steps)
 }
 
 /// Emit a `.frp` for a CDCL refutation under universal-only assumptions.
@@ -56,7 +52,7 @@ pub fn reprove_row_unsat(f: &Formula, row: &[Lit], max_steps: usize) -> Option<P
 /// (e.g., an `add_external` clause without an `ante` entry, or a pivot
 /// that turns out to be universal because not every universal was
 /// assumed in partial-scan mode).
-pub fn cdcl_row_unsat_to_frp(f: &Formula, cdcl: &Cdcl) -> Option<Proof> {
+pub fn cdcl_row_unsat_to_frp(f: &Formula, cdcl: &Cdcl, max_steps: usize) -> Option<Proof> {
     let pl = cdcl.proof.as_ref()?;
     if pl.final_chain.is_empty() {
         return None;
@@ -124,13 +120,14 @@ pub fn cdcl_row_unsat_to_frp(f: &Formula, cdcl: &Cdcl) -> Option<Proof> {
     let emit_chain = |proof: &mut Proof,
                       step_of: &HashMap<u32, usize>,
                       derived_of: &HashMap<u32, BTreeSet<Lit>>,
-                      chain: &[(u32, u32)]|
+                      chain: &[(u32, u32)],
+                      cap: usize|
      -> Option<(usize, BTreeSet<Lit>)> {
         let (seed, _) = chain[0];
         let mut acc: BTreeSet<Lit> = derived_of.get(&seed)?.clone();
         let mut idx = *step_of.get(&seed)?;
         for &(cr, pivot) in &chain[1..] {
-            if univ.contains(&pivot) {
+            if univ.contains(&pivot) || proof.steps.len() > cap {
                 return None;
             }
             let other = *step_of.get(&cr)?;
@@ -149,7 +146,7 @@ pub fn cdcl_row_unsat_to_frp(f: &Formula, cdcl: &Cdcl) -> Option<Proof> {
     let mut derived_of: HashMap<u32, BTreeSet<Lit>> = HashMap::new();
     for &cr in &order {
         if let Some(ch) = pl.ante.get(&cr) {
-            let (idx, acc) = emit_chain(&mut proof, &step_of, &derived_of, ch)?;
+            let (idx, acc) = emit_chain(&mut proof, &step_of, &derived_of, ch, max_steps)?;
             let stored: BTreeSet<Lit> = cdcl.clause_lits(cr).into_iter().collect();
             if acc != stored {
                 // Chain replay should reproduce the learned clause
@@ -171,7 +168,7 @@ pub fn cdcl_row_unsat_to_frp(f: &Formula, cdcl: &Cdcl) -> Option<Proof> {
             derived_of.insert(cr, lits);
         }
     }
-    let (last, acc) = emit_chain(&mut proof, &step_of, &derived_of, &pl.final_chain)?;
+    let (last, acc) = emit_chain(&mut proof, &step_of, &derived_of, &pl.final_chain, max_steps)?;
     // 3. ∀-reduce to ⊥. The verifier allows ∀-reduce inline with `res`,
     // so the last `res` could already be ⊥ — but emit an explicit `ured`
     // for clarity when acc isn't already empty.
