@@ -963,6 +963,47 @@ csg_lt2_k005: 10.5 s→0.02 s. Gains spread across `bmc_circuits/succinct`
 (+50), `pec_circuits/miter` (+30), `circuit_synth` (+42), `cbmc/succinct`
 (+11).
 
+## Refined-loop iteration 31: matrix-copy selector in validity (2026-05-06)
+
+**Target**: `bmc_circuits/inductive` non-convergence — `alu4op_n8` ran
+19 k+ CEGAR rounds learning ~26 k forcing clauses for 316 defined-y
+across 2³⁶ rows. Per-row forcing can't close at large |U|.
+
+**Change**: lazily add `matrix(U,E') ∧ ⋀_{y∈defined}(y↔y')` to
+validity under selector `mc_sel`, retractable. Pins each defined-y to
+its unique value at every U in one shot — validity then focuses on
+arbiter conflicts. Enabled at the *next slice* after rounds≥256 (so
+single-slice instances pay nothing) and only when |undef|≤16 (where
+arbsolve-exhaustion is plausible). validity-UNSAT under mc_sel is
+re-checked with ¬mc_sel so a genuine-UNSAT row isn't masked.
+`arb_assump[0]` reserved for ±mc_sel to avoid a per-round Vec clone.
+
+**Result: −2**, 2892/4350. 0 INVALID. 0/15 sampled match pedant.
+Four sub-attempts: ungated (−25, double-solve cost), 256-round Pending
+exit (−40, triggers a multi-second saturate slice), |undef|≤16 gate +
+no clone + slice-boundary activation (≈0). alu4op_n8: UNKNOWN → 6.5 s
+UNSAT. Kept since the inductive gains are real and the −2 is noise; the
+SAT-path double-solve is the limiting cost.
+
+**Gotcha.** `git checkout -- arbiter.rs` mid-bisect dropped uncommitted
+fixes; the per-round `arb_assump.clone()` cost was the dominant
+slowdown but masked by the saturate-slice symptom.
+
+## Refined-loop iteration 32: CEGIS row budget by vars; full-expand (2026-05-06)
+
+iter27's 32-row CEGIS cap protected the linear pick_branch scan.
+iter30's heap removes that constraint, so budget by total picker vars
+instead (50 k / n_per_row). When that covers all 2^|U| rows, load them
+upfront — one picker solve then decides. csg_and8_k007: UNKNOWN →
+8.9 s SAT. The UNSAT side (csg_and8_k006) needs stronger CDCL
+(restarts/deletion) to refute the full-expanded picker.
+
+**Result: +5**, 2897/4350. 0 INVALID. 0/15 sampled match pedant.
+
+**Multi-solver report (iter31 binary)**: frust-v2.0 = **2887/4165**,
+2087 valid certs — **passes hqs (2877)** for the first time. Only
+dqbdd (3023, known-unsound) ahead.
+
 ---
 
 ## Appendix: iteration tables
