@@ -475,7 +475,7 @@ fn saturate(
         let mut forked = false;
         for &i in &order {
             let c = db.clauses[i].clone();
-            if let Some((part, fr)) = crate::rules::choose_fork(g, &c) {
+            if let Some((part, fr)) = crate::rules::choose_fork(g, &c, known_unsat) {
                 let src = db.idx[&c];
                 for cl in [&fr.left, &fr.right] {
                     db.record(cl, Step::fex(cl, src, part.clone(), fr.fresh));
@@ -490,8 +490,10 @@ fn saturate(
                 break;
             }
         }
-        // FEx made no progress (dependency cycle, journal §6). Try SFEx.
-        if !forked {
+        // Proof-recovery mode: also try SFEx (journal §6 cycle-breaking
+        // rule) when FEx found nothing. Gated on known_unsat because the
+        // O(|db|·|exs|²) scan eats time from the interleaved CEGAR slice.
+        if !forked && known_unsat {
             for &i in &order {
                 let c = db.clauses[i].clone();
                 if let Some((part, c3, fr)) = crate::rules::choose_sfork(g, &c) {

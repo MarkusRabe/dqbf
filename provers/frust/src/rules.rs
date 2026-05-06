@@ -126,7 +126,16 @@ pub struct ForkResult {
 }
 
 /// FEx on clause `c`, partitioning by the first information-fork pair.
-pub fn choose_fork(f: &mut Formula, c: &Clause) -> Option<(Clause, ForkResult)> {
+/// With `require_shrink`, returns `None` when the fresh var's dep would
+/// equal one side (the §6 cycle case) so the caller can fall through to
+/// SFEx; otherwise FEx fires regardless (the historical behaviour, kept
+/// because the O(|db|) scan to find a shrinking clause costs more than
+/// the redundant fork in the normal-mode interleaved scheduler).
+pub fn choose_fork(
+    f: &mut Formula,
+    c: &Clause,
+    require_shrink: bool,
+) -> Option<(Clause, ForkResult)> {
     let (a, _b) = find_information_fork(f, c)?;
     let da = f.deps[&a].clone();
     let part: Clause = c
@@ -142,8 +151,12 @@ pub fn choose_fork(f: &mut Formula, c: &Clause) -> Option<(Clause, ForkResult)> 
         .collect();
     let d1 = f.clause_dep(&part);
     let d2 = f.clause_dep(&c2);
+    let inter: BTreeSet<Var> = d1.intersection(&d2).copied().collect();
+    if require_shrink && (inter == d1 || inter == d2) {
+        return None;
+    }
     let x = f.n_vars + 1;
-    f.add_existential(x, d1.intersection(&d2).copied().collect());
+    f.add_existential(x, inter);
     let mut left = part.clone();
     left.push(x as Lit);
     left.sort_unstable();
@@ -177,4 +190,53 @@ pub fn find_information_fork(f: &Formula, c: &Clause) -> Option<(Var, Var)> {
         }
     }
     None
+}
+
+/// SFEx on `c` to break a dependency cycle (journal §6). Picks the
+/// existential `a` with the smallest dep, partitions by `dep ⊆ dep(a)`,
+/// and drops one universal `u` from the intersection via `c3={u}` so the
+/// fresh var's dep is strictly smaller than `dep(a)`. Two applications
+/// with complementary `c3` per Lemma `lem:elimstrongforks` suffice to
+/// eliminate any strong fork; saturate finds the second on a later pass.
+pub fn choose_sfork(f: &mut Formula, c: &Clause) -> Option<(Clause, Vec<Lit>, ForkResult)> {
+    let exs: Vec<Var> = c
+        .iter()
+        .map(|&l| var(l))
+        .filter(|&v| f.is_existential(v))
+        .collect();
+    if exs.len() < 2 {
+        return None;
+    }
+    let a = *exs.iter().min_by_key(|&&v| f.deps[&v].len())?;
+    let da = f.deps[&a].clone();
+    let part: Clause = c
+        .iter()
+        .copied()
+        .filter(|&l| var(l) == a || f.dep(var(l)).is_subset(&da))
+        .collect();
+    let part_set: BTreeSet<Lit> = part.iter().copied().collect();
+    let c2: Clause = c.iter().copied().filter(|l| !part_set.contains(l)).collect();
+    if c2.is_empty() {
+        return None;
+    }
+    let d1 = f.clause_dep(&part);
+    let d2 = f.clause_dep(&c2);
+    let inter: BTreeSet<Var> = d1.intersection(&d2).copied().collect();
+    let u = *inter.iter().next()?;
+    let new_dep: BTreeSet<Var> = inter.iter().copied().filter(|&v| v != u).collect();
+    if new_dep.len() >= da.len() {
+        return None;
+    }
+    let c3: Vec<Lit> = vec![u as Lit];
+    let x = f.n_vars + 1;
+    f.add_existential(x, new_dep);
+    let mut left: Clause = c3.iter().copied().chain(part.iter().copied()).collect();
+    left.push(x as Lit);
+    left.sort_unstable();
+    left.dedup();
+    let mut right: Clause = c3.iter().copied().chain(c2.iter().copied()).collect();
+    right.push(-(x as Lit));
+    right.sort_unstable();
+    right.dedup();
+    Some((part, c3, ForkResult { fresh: x, left, right }))
 }
