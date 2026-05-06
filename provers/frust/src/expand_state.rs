@@ -243,11 +243,11 @@ impl ExpandState {
                         .iter()
                         .map(|y| 1usize << f.deps[y].len().min(8))
                         .sum();
-                    // Two-tier gate: pec-style (≤~60 undef, mixed dep)
-                    // converges via forcing; bmc/succinct-style (≥150
-                    // undef, uniform small dep) hits the arbsolve wall
-                    // and starves SlotDpll. Allow the former through.
-                    if est_cells > 8192 && s.undefined.len() > 100 {
+                    // Two-tier gate, raised post-iter23: shared
+                    // arbiters halve effective cells, so the iter18b
+                    // 8192/100 cutoff was filtering instances CEGAR
+                    // can now close.
+                    if est_cells > 32768 && s.undefined.len() > 200 {
                         self.mode = if nu_full > self.expand_us.len() {
                             Mode::Partial
                         } else {
