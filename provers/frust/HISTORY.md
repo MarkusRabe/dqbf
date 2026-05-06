@@ -903,6 +903,19 @@ iter17's −206 with partnered cells).
 (xor4_k003, prienc4_d02 in <10 rounds). Several previously-UNSAT
 OuterCegar verdicts were spurious (budget_hit) — now correctly UNKNOWN.
 
+## Refined-loop iteration 27: cap CEGIS rows; chunk picker budget (2026-05-06)
+
+CEGIS picker var space `np = no + 64×(n−no)` made `pick_branch`'s
+linear scan slow on |U|=8 instances; the single 100k-conflict solve
+burned the slice. **Change**: `cegis_rows = min(32, 2^|U|)`, skip
+when `n_per_row > 256`; chunk `picker.solve` at 50k conflicts and
+check the deadline between chunks.
+
+**Result: +14 net**, 2772/4350. 0 INVALID, 0 mismatches.
+circuit_synth 100→114. xor8/and8 still UNKNOWN — synthesis at 8
+inputs is hard SAT for the picker (KKY'09 use binary-encoded
+selectors; that's an encoder change, not solver).
+
 ---
 
 ## Appendix: iteration tables
