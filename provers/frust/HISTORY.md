@@ -1014,6 +1014,13 @@ SAT instances harder (more constraints upfront vs CEGIS's lazy row
 addition); restarts don't fully recover. The remaining UNSAT side
 (csg_and8_k006) needs learned-clause deletion.
 
+## Refined-loop iteration 34: drop full-expand (reverted) (2026-05-06)
+
+Tested without iter32's full-expand: −5 (2894). The ±5 swings across
+iters 31-34 are within j=32 contention noise on borderline 8-10 s
+instances. Full-expand kept. **iter30's heap was the real
+architectural step (+120)**; iters 31-34 net +5 on top.
+
 ---
 
 ## Appendix: iteration tables
