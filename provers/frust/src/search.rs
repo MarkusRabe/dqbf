@@ -300,19 +300,18 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                 }
                 crate::expand_state::Step::UnsatRow(row) => {
                     let now = start.elapsed().as_secs_f64();
-                    let dl = (now + 1.0).min(cfg.timeout_s - 0.2);
-                    if let Some(p) =
+                    let dl = (now + 1.5).min(cfg.timeout_s - 0.2);
+                    let proof = if dl > now {
                         crate::proof_emit::reprove_row_unsat(f, &row, 500_000, dl, &start)
-                    {
-                        return Output {
-                            verdict: Verdict::Unsat,
-                            proof: Some(p),
-                            skolem: None,
-                            stats: format!("expand-row-unsat (slice {:.2}s)", slice),
-                        };
-                    }
-                    known_unsat = true;
-                    expand_done = true;
+                    } else {
+                        None
+                    };
+                    return Output {
+                        verdict: Verdict::Unsat,
+                        proof,
+                        skolem: None,
+                        stats: "expand-row-unsat".into(),
+                    };
                 }
                 crate::expand_state::Step::Done => expand_done = true,
                 crate::expand_state::Step::Pending => {}
@@ -322,10 +321,10 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
         // ---- Saturate slice ----
         let now = start.elapsed().as_secs_f64();
         let sat_slice = if known_unsat {
-            // Verdict known; spend up to the remaining budget on a .frp.
-            // Cap at 2s so a hard-to-saturate instance still returns
-            // (the runner sees UNSAT-no-cert, not timeout).
-            (cfg.timeout_s - now).clamp(0.05, 2.0)
+            // Verdict known; saturate is best-effort cert recovery.
+            // 0.5 s is enough for the easy cases; 2 s here cost ~170
+            // borderline solves under j=48 for ~17 extra certs.
+            (cfg.timeout_s - now).min(now * 1.5).clamp(0.05, 0.5)
         } else {
             slice.min(cfg.timeout_s - now)
         };
