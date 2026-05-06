@@ -13,6 +13,13 @@ is the SHA-256 of:
 Only the `RunRow` is cached, not certificate files. `cert_status` is
 preserved (it was checked once) but `cert_path` is cleared on a hit
 because the certdir may have been wiped.
+
+**Never clear `results/.bench_cache/`.** Keys are content-addressed,
+so a rebuilt binary or regenerated instance is a new key — old entries
+are simply unreferenced, not stale. If a result looks wrong, the bug
+is in the binary that produced it (and that binary's hash will never
+recur), not in the cache. Clearing throws away ~1h of unchanged-solver
+results for nothing.
 """
 
 from __future__ import annotations

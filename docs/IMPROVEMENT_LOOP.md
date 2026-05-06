@@ -141,16 +141,18 @@ Three runs were contaminated this way (the multi-solver bench takes
 use a copied binary path for the bench, or — simpler — don't start
 editing until the bench task notifies done.
 
-### Result cache makes re-baselining cheap
+### Result cache makes re-baselining cheap — never clear it
 
 `dqbf-bench multi` caches results under `results/.bench_cache/` keyed
-on `sha256(binary, instance, timeout)`. After a frust rebuild, only
-the frust column re-runs; pedant/dqbdd/hqs hit the cache. To compare
-two frust versions side-by-side, register the old binary as
-`frust-prev` (already in `solvers.py` pointing at `/tmp/frust-iter2`);
-copy the binary there before rebuilding. `--no-cache` forces a fresh
-run; `python -c 'from benchmarks.runner.cache import backfill; ...'`
-seeds the cache from an existing JSONL.
+on `sha256(binary-bytes, instance-content, timeout)`. **Do not `rm -rf`
+the cache** — keys are content-addressed, so a rebuilt binary or
+regenerated instance is a *new* key; old entries are unreferenced, not
+stale. If a cached result looks wrong, the bug was in that binary (and
+that hash never recurs). After a frust rebuild only the frust column
+re-runs; the rest hits the cache. To compare frust versions, register
+each tagged binary in `solvers.py` (e.g. `frust-v1.20`, `frust-v2.0`).
+`--no-cache` forces a fresh run; `backfill()` seeds from an existing
+JSONL.
 
 ### Read the relevant paper before reimplementing
 
