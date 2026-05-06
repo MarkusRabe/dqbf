@@ -827,6 +827,28 @@ shrinks 357→~40.
 csg_inc4 still UNKNOWN (3500+ rounds; pedant also UNKNOWN at 30s —
 genuinely hard synthesis).
 
+## Refined-loop iteration 23: shared arbiters for consistency-shape (2026-05-06)
+
+**Target**: `bmc_circuits/{succinct,inductive}`, `cbmc/succinct` —
+~750 unsolved with the `(⋀ dᵢ↔d'ᵢ) → (y↔y')` consistency clause.
+shift_reg_n12 has 2 undef (inv, inv') at |dep|=12 → 8192 cells →
+ARB_BUDGET; arbsolve never sees that they're the *same function*.
+
+**Change** (`detect_partners` in arbiter.rs): for each undef pair
+(y,y') with disjoint same-size deps, build a fresh CDCL on
+`matrix ∪ {dᵢ↔d'ᵢ}` and check `y∧¬y'` and `¬y∧y'` both UNSAT — then
+the matrix provably ties them. Allocate one arbiter cell linking
+*both* via positional bijection.
+
+**First attempt was UNSOUND** (5/30 mismatch vs pedant): pairing on
+disjoint-deps alone forces y(r)=y'(r) even when the matrix doesn't.
+The `_bug` succinct variants got spurious UNSAT. The CDCL check
+fixed it.
+
+**Result: +94 net**, 2745/4350. 0 INVALID; 0/30 mismatch vs pedant.
+shift_reg_n12 10s→2.0s. bmc_circuits/succinct 163→205,
+inductive 71→80, cbmc/succinct 24→33.
+
 ---
 
 ## Appendix: iteration tables
