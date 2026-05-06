@@ -849,6 +849,18 @@ fixed it.
 shift_reg_n12 10s→2.0s. bmc_circuits/succinct 163→205,
 inductive 71→80, cbmc/succinct 24→33.
 
+## Refined-loop iteration 24: picker persistence; gate-raise reverted (2026-05-06)
+
+Gate raise 8192/100→32768/200 tried first: −4 net (CEGAR steals from
+SlotDpll on the now-exposed 100-200 undef cases that *don't* pair).
+Reverted. **Kept**: persist `outer_picker` CDCL across rounds instead
+of `Cdcl::new(no, &outer_learned)` per iteration.
+
+**Result: +7 net**, 2752/4350. 0 INVALID. Report at this milestone:
+frust-v2.0 = **2731/4165** (ties pedant), 1982 valid certs (+652 vs
+v1.20). One spurious INVALID traced to /tmp full during verify
+(probe certs accumulated; fixed in `frust_opt_loop.py`).
+
 ---
 
 ## Appendix: iteration tables
