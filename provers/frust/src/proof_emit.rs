@@ -48,24 +48,22 @@ pub fn reprove_row_unsat(
     }
     let mut model = vec![0i8; f.n_vars as usize + 1];
     // The verdict is already known; reprove is best-effort cert recovery.
-    // A 50 k-conflict refutation can still emit >>50 k res steps and
-    // (with proof-log bookkeeping) take seconds — under j=48 contention
-    // that turns 60 ms verdicts into 10 s timeouts. Cap at the deadline.
-    let mut spent = 0u64;
+    // Chunk the conflict budget so we can bail at the wall-clock deadline
+    // — under j=48 contention, an unbounded reprove turned 60 ms verdicts
+    // into 10 s timeouts.
     loop {
-        if !cdcl.solve(row, &mut model, 5_000) {
+        cdcl.solve(row, &mut model, 5_000);
+        if !cdcl.budget_hit {
             break;
         }
-        spent += 5_000;
-        if cdcl.budget_hit && start.elapsed().as_secs_f64() < deadline && spent < 50_000 {
-            continue;
+        if start.elapsed().as_secs_f64() >= deadline {
+            return None;
         }
-        return None;
     }
+    let mut p = cdcl_row_unsat_to_frp(f, &cdcl, max_steps)?;
     if start.elapsed().as_secs_f64() >= deadline {
         return None;
     }
-    let mut p = cdcl_row_unsat_to_frp(f, &cdcl, max_steps)?;
     p.compact();
     Some(p)
 }
