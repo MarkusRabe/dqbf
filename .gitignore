@@ -67,3 +67,5 @@ benchmarks/train/hwmc_indinv/instances/*.dqdimacs.gz
 benchmarks/train/hwmc_indinv/instances/manifest.json
 benchmarks/train/conjunction/instances/
 results/.bench_cache/
+benchmarks/train/circuit_synth_gates/instances/*.dqdimacs.gz
+benchmarks/train/circuit_synth_depth/instances/*.dqdimacs.gz
