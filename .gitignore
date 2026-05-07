@@ -55,3 +55,6 @@ results/
 .ipynb_checkpoints/
 third_party/
 results/.bench_cache/
+benchmarks/train/pec_circuits/miter/*.dqdimacs.gz
+benchmarks/train/pec_circuits/miter/manifest.json
+provers/frust/target/
