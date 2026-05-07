@@ -1401,3 +1401,17 @@ definedness-ratio gate doesn't predict whether the const cell happens
 to work. **Reverted before commit.** This closes the lazy-cells line
 of attack: const-arbiter is *correct by accident* on SAT instances
 where the bb output is don't-care, and that accident is load-bearing.
+
+## Iter 56 (2026-05-07): no phase-reset between deepening rows (reverted, −53)
+
+**Hypothesis (architectural).** `deepening_partial_scan` calls
+`reset_phase()` before every row solve, throwing away the previous
+row's saved phase. Consecutive rows differ by ~1 universal bit; the
+previous model is a near restart point.
+
+**Result.** **−53**, 0 INVALID. The deepening CDCL is shared with the
+slot-DPLL free pass that runs *after* deepening fails — a phase
+biased by the deepening rows skews the slot-table fills, and the slot
+DPLL's row-disagreement detection then under-counts conflicting slots
+(it measures disagreement against the biased phase). Phase reset is a
+soundness-of-search invariant, not a perf knob. **Reverted.**
