@@ -259,9 +259,7 @@ impl ExpandState {
                     let defs = crate::definability::extract_interpolants(
                         f, &s.defined, itp_dl, start, debug,
                     );
-                    self.cegar = Some(crate::arbiter::CegarState::new(
-                        f, &s.undefined, &defs,
-                    ));
+                    self.cegar = Some(crate::arbiter::CegarState::new(f, &s.undefined, &defs));
                     self.cegar.as_mut().unwrap().defs = defs;
                 }
                 None => {
@@ -313,7 +311,8 @@ impl ExpandState {
         start: &std::time::Instant,
         debug: bool,
     ) -> Step {
-        if let Some(row) = deepening_partial_scan(f, cdcl, &mut self.model, deadline, start, debug) {
+        if let Some(row) = deepening_partial_scan(f, cdcl, &mut self.model, deadline, start, debug)
+        {
             self.mode = Mode::Exhausted;
             return Step::UnsatRow(row);
         }
@@ -567,7 +566,11 @@ impl ExpandState {
                                 } else {
                                     (base + 1 + nonouter_idx[&v]) as Lit
                                 };
-                                if l > 0 { pv } else { -pv }
+                                if l > 0 {
+                                    pv
+                                } else {
+                                    -pv
+                                }
                             })
                             .collect();
                         p.add_external(&rc);
@@ -581,7 +584,12 @@ impl ExpandState {
                     }
                 }
                 self.cegis_rows = cegis_rows;
-                dbg_ex!(debug, "outer-CEGAR full-expand: {} rows × {} vars", self.rows, n_per_row);
+                dbg_ex!(
+                    debug,
+                    "outer-CEGAR full-expand: {} rows × {} vars",
+                    self.rows,
+                    n_per_row
+                );
             }
             self.outer_picker = Some(p);
         }
@@ -632,6 +640,24 @@ impl ExpandState {
                     break;
                 }
             }
+            // Random fuzz before the linear scan: when |U| is large the
+            // bad rows are sparse and the linear-from-0 scan wastes time
+            // re-solving already-good rows. xorshift hits the row space
+            // uniformly; the linear scan still guarantees coverage.
+            if bad_ub.is_none() && self.rows > 1024 {
+                let mut s = 0x9e3779b9u32 ^ (self.bad_rows.len() as u32).wrapping_mul(2654435761);
+                for _ in 0..256 {
+                    s ^= s << 13;
+                    s ^= s >> 17;
+                    s ^= s << 5;
+                    let ub = s % self.rows;
+                    let assumps = self.row_assumps(ub, &self.outer_pins);
+                    if !cdcl.solve(&assumps, &mut self.model, self.row_budget) && !cdcl.budget_hit {
+                        bad_ub = Some(ub);
+                        break;
+                    }
+                }
+            }
             if bad_ub.is_none() {
                 for ub in 0..self.rows {
                     if ub & 0x3fff == 0 && start.elapsed().as_secs_f64() > deadline {
@@ -667,7 +693,8 @@ impl ExpandState {
                     // Shared: outer-∃ → picker[1..no]. Fresh: everything
                     // else (universals pinned by units; inner free).
                     let slot = self.cegis_rows;
-                    if slot < cegis_rows && !self.bad_rows[..self.bad_rows.len() - 1].contains(&ub) {
+                    if slot < cegis_rows && !self.bad_rows[..self.bad_rows.len() - 1].contains(&ub)
+                    {
                         self.cegis_rows += 1;
                         let base = no + slot * n_per_row;
                         let remap = |l: Lit| -> Lit {
@@ -677,7 +704,11 @@ impl ExpandState {
                             } else {
                                 (base + 1 + nonouter_idx[&v]) as Lit
                             };
-                            if l > 0 { pv } else { -pv }
+                            if l > 0 {
+                                pv
+                            } else {
+                                -pv
+                            }
                         };
                         let picker = self.outer_picker.as_mut().unwrap();
                         for c in &f.clauses {

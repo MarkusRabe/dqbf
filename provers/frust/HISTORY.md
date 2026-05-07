@@ -1196,3 +1196,22 @@ Baseline: 1046/1522.
 | B11 | ATE off; **feed BCE-reduced clauses into saturation** | **1061** | 0 | +15 / −0 |
 | B12 | nc-cap removed (step_budget≤200k only) — large BMC still ≥10s; reverted | — | — | — |
 | B13 | HTE pass over BCE survivors (ALA via surviving binaries) | 1061 | 0 | +15 / −0 |
+
+## Iter 41 (2026-05-06): est_cells gate accounting (reverted, −4)
+
+The `est_cells > 8192 && undef.len() > 100` gate that skips CEGAR
+overestimates: undef-y with `|dep| > cell_dep_cap` get *one* constant
+arbiter, not 2^|dep| cells. Mirroring `CegarState`'s actual cap formula
+opened CEGAR to peano_v2_mul_n8 (212 def, 126 undef at |dep|=16). But
+CEGAR then bails (`const=true`) and the 0.7s detour cost net −4.
+Reverted; the right fix is to *use* the 211 interpolants in the SlotDpll
+fallback rather than discard them — deferred.
+
+## Iter 42 (2026-05-06): random row-fuzz before linear scan (+7)
+
+`step_outer_cegar`'s bad-row finder did history-then-linear-from-0.
+For `random_qbf/3qbf` at |U|=20 (1M rows), the bad rows are sparse and
+the linear scan re-solves thousands of good rows per round (~370ms/
+round, 27 rounds in 10s, then bail). Adding 256 xorshift-random checks
+before the linear scan finds bad rows in 12 rounds → 3qbf_s31021 SAT.
++7 net (mostly random_qbf/3qbf and bmc_circuits/inductive). 0 INVALID.
