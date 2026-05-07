@@ -242,12 +242,31 @@ impl ExpandState {
                         s.defined.len(),
                         s.undefined.len()
                     );
+                    // Compute the cell-budget gate *after* partner
+                    // detection: a (y, y') consistency pair shares one
+                    // cell, so the effective key count is undef − n_pairs.
+                    // Without this, succinct/inductive formulas (296 undef
+                    // in 148 pairs at |dep|=5) were gated to SlotDpll
+                    // even though the partnered cell count fits easily.
+                    let partner = crate::arbiter::detect_partners(f, &s.undefined);
+                    let n_pairs = partner.len() / 2;
                     let est_cells: usize = s
                         .undefined
                         .iter()
+                        .filter(|&&y| {
+                            partner.get(&y).map_or(true, |(p, _)| *p > y)
+                        })
                         .map(|y| 1usize << f.deps[y].len().min(8))
                         .sum();
-                    if est_cells > 8192 && s.undefined.len() > 100 {
+                    let eff_undef = s.undefined.len().saturating_sub(n_pairs);
+                    dbg_ex!(
+                        debug,
+                        "partner: {} pairs of {} undef → est_cells {}",
+                        n_pairs,
+                        s.undefined.len(),
+                        est_cells
+                    );
+                    if est_cells > 8192 && eff_undef > 100 {
                         self.mode = if nu_full > self.expand_us.len() {
                             Mode::Partial
                         } else {
@@ -259,7 +278,9 @@ impl ExpandState {
                     let defs = crate::definability::extract_interpolants(
                         f, &s.defined, itp_dl, start, debug,
                     );
-                    self.cegar = Some(crate::arbiter::CegarState::new(f, &s.undefined, &defs));
+                    self.cegar = Some(crate::arbiter::CegarState::new(
+                        f, &s.undefined, &defs, partner,
+                    ));
                     self.cegar.as_mut().unwrap().defs = defs;
                 }
                 None => {

@@ -96,7 +96,7 @@ pub struct CegarState {
 /// `matrix ∧ y ∧ ¬y'` UNSAT (and symmetric) ⇒ the matrix forces y↔y'
 /// whenever dep(y) and dep(y') agree positionally. Only then is
 /// sharing one arbiter cell sound.
-fn detect_partners(f: &Formula, undef: &[Var]) -> HashMap<Var, (Var, Vec<(Var, Var)>)> {
+pub fn detect_partners(f: &Formula, undef: &[Var]) -> HashMap<Var, (Var, Vec<(Var, Var)>)> {
     use std::collections::BTreeMap;
     let mut by_size: BTreeMap<usize, Vec<Var>> = BTreeMap::new();
     for &y in undef {
@@ -177,6 +177,7 @@ impl CegarState {
         f: &Formula,
         undefined: &[Var],
         defs: &HashMap<Var, crate::definability::Def>,
+        partner: HashMap<Var, (Var, Vec<(Var, Var)>)>,
     ) -> Self {
         let n = f.n_vars as usize;
         let m = f.clauses.len();
@@ -274,11 +275,18 @@ impl CegarState {
             arb_meta: vec![vec![]],
             arb_assump: vec![-mc_sel],
             any_const_arbiter: false,
-            cell_dep_cap: (ARB_BUDGET / undefined.len().max(1))
-                .next_power_of_two()
-                .trailing_zeros()
-                .min(12) as usize,
-            partner: detect_partners(f, undefined),
+            // Effective cell-key count after partnering: each (y, y')
+            // pair shares one cell, so the per-y cell quota is roughly
+            // ARB_BUDGET / (undef − n_pairs). For consistency-shape
+            // formulas (succinct/inductive) ~half the undef are paired.
+            cell_dep_cap: {
+                let n_pairs = partner.len() / 2;
+                (ARB_BUDGET / undefined.len().saturating_sub(n_pairs).max(1))
+                    .next_power_of_two()
+                    .trailing_zeros()
+                    .min(12) as usize
+            },
+            partner,
             mc_sel,
             mc_added: false,
             defs: HashMap::new(),

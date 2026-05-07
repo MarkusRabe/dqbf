@@ -1302,3 +1302,21 @@ found UNSAT for many succinct/inductive instances. Lazy cells starve
 that fallback. The instances they target (indinv with large state) need
 a generalising over-approximation (PDR-style frames), not row-by-row
 cell allocation — research-approach wall. **Reverted.**
+
+## Iter 50 (2026-05-07): partner-aware cell-budget gate (kept, ±0)
+
+**Hypothesis (architectural).** The `est_cells > 8192 ∧ undef > 100`
+gate fires before `detect_partners`, so consistency-shape formulas
+(succinct/inductive: 296 undef in 148 pairs at |dep|=5) get gated to
+SlotDpll even though the partnered cell count fits. Move
+`detect_partners` before the gate; compute `est_cells` over
+*partnered* keys (one cell per pair); pass `partner` into
+`CegarState::new`. Also feeds `cell_dep_cap` so paired y get a
+larger per-key quota.
+
+**Result.** ±0 net (within j=32 noise). The gate now correctly admits
+crc_n32_k024_safe etc. (291 undef → 64 pairs → est_cells 9312→7109)
+into CEGAR, but the per-row arbiter loop still doesn't converge in
+budget (~7400 rounds, 6477 cells). The gate accuracy is right; the
+bottleneck is downstream. **Kept** — it's a soundness/precision fix
+that costs nothing and is a prerequisite for future CEGAR speedups.
