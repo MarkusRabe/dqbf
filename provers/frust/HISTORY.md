@@ -1215,3 +1215,16 @@ the linear scan re-solves thousands of good rows per round (~370ms/
 round, 27 rounds in 10s, then bail). Adding 256 xorshift-random checks
 before the linear scan finds bad rows in 12 rounds → 3qbf_s31021 SAT.
 +7 net (mostly random_qbf/3qbf and bmc_circuits/inductive). 0 INVALID.
+
+## Iter 43 (2026-05-06): forcing clauses for undef-y (UNSOUND, reverted)
+
+Tried letting undef-y learn forcing clauses too (indinv's `inv` is
+row-forced at init/bad rows even though Padoa fails it). Mixing forcing
+clauses and arbiter cells for the same y is unsound: validity-UNSAT
+proves they *jointly* block ¬matrix, but jointly they may be unsat (a
+dep_row covered by both with conflicting values). The priority-decoder
+cert silently picks the first match. **Shipped 1 INVALID** on
+`under_w8_s19001` and a verified-INVALID on `shift_reg_n16_indinv`.
+Caught by tiny-5 + per-instance verify before commit; reverted. The
++14/−25 diff also showed the change cost more than it gained
+(per-y flip-check is a 10k-conflict CDCL solve every CEGAR round).

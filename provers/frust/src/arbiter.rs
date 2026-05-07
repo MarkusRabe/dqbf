@@ -215,7 +215,11 @@ impl CegarState {
                     NodeKind::Input(i) => d.itp.inputs[i] as Lit,
                     NodeKind::Gate(k) => gv[k],
                 };
-                if l & 1 == 0 { base } else { -base }
+                if l & 1 == 0 {
+                    base
+                } else {
+                    -base
+                }
             };
             for (k, &(a, b)) in d.itp.gates.iter().enumerate() {
                 let g = (gate0 + 1 + k) as Lit;
@@ -432,7 +436,13 @@ pub fn validity_cegar(
         let u_assump: Vec<Lit> = f
             .universals
             .iter()
-            .map(|&u| if vmodel[u as usize] >= 0 { u as Lit } else { -(u as Lit) })
+            .map(|&u| {
+                if vmodel[u as usize] >= 0 {
+                    u as Lit
+                } else {
+                    -(u as Lit)
+                }
+            })
             .collect();
 
         // ---- row model under U* + current arbiters -------------------
@@ -440,7 +450,11 @@ pub fn validity_cegar(
         for &l in arb_assump[1..].iter() {
             // remap validity-space arbiter lit → consist-space (n+i)
             let ai = var(l) as usize - arb_base;
-            ca.push(if l > 0 { (n + ai) as Lit } else { -((n + ai) as Lit) });
+            ca.push(if l > 0 {
+                (n + ai) as Lit
+            } else {
+                -((n + ai) as Lit)
+            });
         }
         let row_sat = consist.solve(&ca, cmodel, conf_budget);
         if consist.budget_hit {
@@ -454,7 +468,11 @@ pub fn validity_cegar(
                 .filter(|&&l| var(l) as usize > n)
                 .map(|&l| {
                     let ai = var(l) as usize - n;
-                    if l > 0 { ai as Lit } else { -(ai as Lit) }
+                    if l > 0 {
+                        ai as Lit
+                    } else {
+                        -(ai as Lit)
+                    }
                 })
                 .collect();
             if arb_core.is_empty() {
@@ -489,7 +507,11 @@ pub fn validity_cegar(
             }
             arb_assump.truncate(1);
             for i in 1..arb_meta.len() {
-                let l = if amodel[i] >= 0 { (arb_base + i) as Lit } else { -((arb_base + i) as Lit) };
+                let l = if amodel[i] >= 0 {
+                    (arb_base + i) as Lit
+                } else {
+                    -((arb_base + i) as Lit)
+                };
                 arb_assump.push(l);
             }
             continue;
@@ -509,10 +531,24 @@ pub fn validity_cegar(
             }
             let dep_lits: Vec<Lit> = dep_set[&y]
                 .iter()
-                .map(|&u| if cmodel[u as usize] > 0 { u as Lit } else { -(u as Lit) })
+                .map(|&u| {
+                    if cmodel[u as usize] > 0 {
+                        u as Lit
+                    } else {
+                        -(u as Lit)
+                    }
+                })
                 .collect();
             // Try a forcing clause first unless Padoa already ruled y
-            // undefined (then the flip-check is wasted work).
+            // undefined (then the flip-check is wasted work). Mixing
+            // forcing clauses and arbiter cells for the same undef-y is
+            // unsound: validity-UNSAT proves they *jointly* block ¬matrix,
+            // but jointly they may be unsatisfiable (the row dep(y)=v has
+            // both a forcing clause and a conflicting cell), and the
+            // priority-decoder cert silently picks the forcing clause —
+            // shipped INVALID certs on under_w8_s19001 and shift_reg.
+            // Defined-y are forcing-only and undef-y are arbiter-only;
+            // the regions never overlap.
             if !undef_set.contains(&y) {
                 let mut a = dep_lits.clone();
                 a.push(if want > 0 { -(y as Lit) } else { y as Lit });
@@ -528,8 +564,11 @@ pub fn validity_cegar(
                         .copied()
                         .filter(|&l| univ.contains(&var(l)))
                         .collect();
-                    let fc: Vec<Lit> =
-                        ante.iter().map(|&l| -l).chain(std::iter::once(then)).collect();
+                    let fc: Vec<Lit> = ante
+                        .iter()
+                        .map(|&l| -l)
+                        .chain(std::iter::once(then))
+                        .collect();
                     validity.add_external(&fc);
                     forcing.get_mut(&y).unwrap().push((ante, then));
                     learned_any = true;
@@ -559,13 +598,25 @@ pub fn validity_cegar(
                             .map(|&l| {
                                 let v = var(l);
                                 let vp = *bm.get(&v).unwrap_or(&v) as Lit;
-                                if l > 0 { vp } else { -vp }
+                                if l > 0 {
+                                    vp
+                                } else {
+                                    -vp
+                                }
                             })
                             .collect();
                         if y < *yp {
-                            (y, cell_dep.clone(), vec![(y, cell_dep.clone()), (*yp, cell_dep_p)])
+                            (
+                                y,
+                                cell_dep.clone(),
+                                vec![(y, cell_dep.clone()), (*yp, cell_dep_p)],
+                            )
                         } else {
-                            (*yp, cell_dep_p.clone(), vec![(*yp, cell_dep_p), (y, cell_dep.clone())])
+                            (
+                                *yp,
+                                cell_dep_p.clone(),
+                                vec![(*yp, cell_dep_p), (y, cell_dep.clone())],
+                            )
                         }
                     }
                     _ => (y, cell_dep.clone(), vec![(y, cell_dep.clone())]),
@@ -582,14 +633,18 @@ pub fn validity_cegar(
                 for (yl, cd) in &links {
                     let mut c1: Vec<Lit> = cd.iter().map(|&l| -l).collect();
                     let mut c2 = c1.clone();
-                    c1.push(-av); c1.push(*yl as Lit);
-                    c2.push(av);  c2.push(-(*yl as Lit));
+                    c1.push(-av);
+                    c1.push(*yl as Lit);
+                    c2.push(av);
+                    c2.push(-(*yl as Lit));
                     validity.add_external(&c1);
                     validity.add_external(&c2);
                     let mut d1: Vec<Lit> = cd.iter().map(|&l| -l).collect();
                     let mut d2 = d1.clone();
-                    d1.push(-ac); d1.push(*yl as Lit);
-                    d2.push(ac);  d2.push(-(*yl as Lit));
+                    d1.push(-ac);
+                    d1.push(*yl as Lit);
+                    d2.push(ac);
+                    d2.push(-(*yl as Lit));
                     consist.add_external(&d1);
                     consist.add_external(&d2);
                 }
@@ -622,7 +677,12 @@ pub fn validity_cegar(
 pub fn forcing_to_skolem(f: &Formula, cert: ForcingCert, max_dep: usize) -> Option<Skolem> {
     use crate::aiger::SkolemFn;
     let mut sk = Skolem::new();
-    let ForcingCert { clauses, cells, mut defs, .. } = cert;
+    let ForcingCert {
+        clauses,
+        cells,
+        mut defs,
+        ..
+    } = cert;
     for (&y, d) in &f.deps {
         if let Some(def) = defs.remove(&y) {
             sk.insert(y, SkolemFn::Aig(def.itp, def.root));
@@ -650,8 +710,7 @@ pub fn forcing_to_skolem(f: &Formula, cert: ForcingCert, max_dep: usize) -> Opti
         // Small dep: materialise the table so BCE-reconstruct (which
         // only handles tables) and the Shannon-memo cert path apply.
         let dvec: Vec<Var> = d.iter().copied().collect();
-        let didx: HashMap<Var, usize> =
-            dvec.iter().enumerate().map(|(i, &v)| (v, i)).collect();
+        let didx: HashMap<Var, usize> = dvec.iter().enumerate().map(|(i, &v)| (v, i)).collect();
         let n_rows = 1usize << nd;
         let mut tbl = vec![0u64; n_rows.div_ceil(64)];
         'row: for r in 0..n_rows {
