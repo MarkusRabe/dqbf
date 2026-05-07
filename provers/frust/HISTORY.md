@@ -1383,3 +1383,21 @@ not the defined-y case. Kept as a soundness/hygiene fix — without it,
 an interpolated y with linked-z's at a flip-SAT row would allocate a
 redundant cell (and at large |dep|, a const cell that downgrades
 arbsolve-UNSAT to Bail).
+
+## Iter 55 (2026-05-07): lazy cells gated by definedness ratio (reverted)
+
+**Hypothesis (architectural).** Lazy cells (iter49/52) starve
+deepening on UNSAT-leaning instances. Gate them by the matrix's
+definedness ratio: when ≥90 % of E is Padoa-defined, the formula is
+SAT-leaning (a Skolem exists) and lazy cells should beat const.
+
+**Result.** Caught at the unit-test stage before probing:
+`pec_alu_add_n4_k2_bb1_complete` regressed SAT→UNKNOWN. Trace shows
+y=300 dep=24 — the bb at k=2 unrolling sees 24 universals. The const
+cell (`bb=0` or `bb=1`) is *sufficient* to close the SAT proof
+together with 686 per-row cells for the other 3 bb outputs (dep=8).
+With lazy cells, y=300 needs 2^24 rows — never converges. The
+definedness-ratio gate doesn't predict whether the const cell happens
+to work. **Reverted before commit.** This closes the lazy-cells line
+of attack: const-arbiter is *correct by accident* on SAT instances
+where the bb output is don't-care, and that accident is load-bearing.
