@@ -112,7 +112,20 @@ pub fn padoa_split(
                         still.len()
                     );
                 }
-                return None;
+                // Return the partial split: Padoa is monotone (once a y
+                // is provably defined under its links it stays defined),
+                // and CEGAR handles an over-approximate `undefined` set
+                // (those y's just get arbiter cells they didn't strictly
+                // need). This preserves the work spent so far instead of
+                // discarding it and falling through to SlotDpll. `still`
+                // is a prefix of `todo` (the checked-not-defined ones);
+                // append the unchecked suffix [y..] — disjoint by
+                // construction since the loop iterates `todo` in order.
+                still.extend(todo.iter().skip_while(|&&z| z != y).copied());
+                return Some(DefSplit {
+                    defined,
+                    undefined: still,
+                });
             }
             let dy = &deps[&y];
             let mut assump: Vec<Lit> = Vec::with_capacity(2 + dy.len());

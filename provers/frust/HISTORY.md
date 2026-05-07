@@ -1473,3 +1473,31 @@ slower for no gain.
 also returns UNKNOWN. The journal proof is exponential in the cycle
 length without dependency schemes (which are off-limits). 4 instances
 total; not a productive target.
+
+## Refined-loop iteration 59: padoa_split returns partial split on deadline (2026-05-07)
+
+**Hypothesis**: when `padoa_split` hits deadline mid-fixpoint it returns
+`None`, discarding all the defined-y work and falling through to
+SlotDpll. Returning the partial `DefSplit` instead is sound (Padoa is
+monotone; CEGAR handles an over-approximate `undefined` set by giving
+those y's arbiter cells they may not strictly need) and preserves the
+budget already spent.
+
+**Result: +2/-1 = +1 net** (2409/3571), 0 INVALID. Small because padoa
+rarely actually hits deadline — most succinct/circuit instances
+*converge* in 2 rounds with most existentials genuinely undefined.
+
+**Constraint named (research-approach for `bmc_circuits/succinct`)**:
+`bcd_ctr_n4` has 183 existentials with `dep={t}` (the unrolled step
+function). Of those, 141 form a closed gate-DAG with **0 Padoa roots**
+(every gate references other existentials, never universals alone) and
+state-feedback cycles. They're genuinely undefined over `dep={t}`.
+`detect_partners` pairs only the 16 step-function *outputs* with the
+`s'`-side; the remaining 167 internal gates have no `s'`-counterpart
+and aren't consistency-paired. With 167+ free arbiter cells × 2^4 = 2672
+cells and CEGAR ~9000 rounds, it doesn't converge in 8 s. The succinct
+encoding's *internal* gate values are a search space the current
+CEGAR can't prune efficiently. A "BCE-eliminate the internal Tseitin
+gates" pre-pass would remove most of the 141 (they're pure literals or
+blocked once the step-function output is fixed) — but that's a
+substantial encoding-level change.
