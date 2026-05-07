@@ -1415,3 +1415,42 @@ biased by the deepening rows skews the slot-table fills, and the slot
 DPLL's row-disagreement detection then under-counts conflicting slots
 (it measures disagreement against the biased phase). Phase reset is a
 soundness-of-search invariant, not a perf knob. **Reverted.**
+
+## Refined-loop iteration 57: profile-first; heap_insert filters non-decision vars (2026-05-07)
+
+**Hypothesis (from prior agent's plan)**: per-y `Cdcl::clone()` in
+`extract_interpolants` is the cost; replace with one shared CDCL +
+proof-core minimization.
+
+**Profile finding (perf record on `pec_alu_add_n16`, 8 s budget)**:
+`Cdcl::clone()` is **2.5 %** of wall time (watcher-list clone + drop).
+`Cdcl::solve` is **62 %**; within it, `heap_pop`/`heap_down` are 26 %
+and `heap_lt` 17 %. **The hypothesis is wrong** — clone isn't the
+bottleneck. Also: `mcmillan` *already* only walks the proof DAG
+reachable from `final_chain` (the post-order at line 163-178), so
+"core minimization" is already happening within a single solve. The
+remaining bloat-with-sharing issue is real but it's an **A/B partition
+mismatch**, not a "non-core steps" issue: a learned clause from y₁'s
+solve can be used in y₂'s proof but its derivation chain references
+y₁'s link-clauses, which classify wrongly under y₂'s partition. That's
+not fixable by core minimization; the per-y clone (or per-y assumption
+gating with retraction) is *required* for sound interpolation.
+
+**Change kept (architectural, ±+3)**: `heap_insert` skips non-decision
+vars. `cancel_until` re-inserts every retracted var; with selectors and
+universals marked non-decision, ~½ the inserts feed `pick_branch` pops
+that immediately discard. `set_decision(true)` already calls
+`heap_insert`, so the only behavioural change is fewer no-op heap
+churns. +4/-1 = +3 net (2409/3571), 0 INVALID.
+
+**Constraint named (research-approach for the broader plan)**: shared
+CDCL across A/B partitions can't reuse learned clauses for
+interpolation. Pedant's interpolating solver re-solves per definition
+too; the difference is proof *generation* speed (assumption-gated,
+not cloned).
+
+**Next**: the real bottleneck on succinct/circuit instances is **Padoa
+fixpoint budget exhaustion** (`bcd_ctr_n12`: only 19/614 defined
+before timeout) and **arbsolve over thousands of cells**
+(`barrel_n16`: 360 undef → 5124 cells → 9800 CEGAR rounds). Both are
+gated on padoa speed.

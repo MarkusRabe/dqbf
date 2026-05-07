@@ -239,7 +239,11 @@ impl Cdcl {
     }
     #[inline]
     fn heap_insert(&mut self, v: usize) {
-        if self.pos[v] >= 0 {
+        // Non-decision vars (universals in row solves; selectors in
+        // Padoa) are never picked by `pick_branch`, so keeping them in
+        // the heap just makes every pop O(log n) for nothing. With a
+        // 2-copy Padoa CDCL ~half the vars are non-decision.
+        if self.pos[v] >= 0 || !self.decide[v] {
             return;
         }
         let i = self.order.len();
