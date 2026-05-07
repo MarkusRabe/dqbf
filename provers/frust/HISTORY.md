@@ -1285,3 +1285,20 @@ the eager forcing seed seemed redundant. Skipping it lost a few
 borderline instances (validity needs the *forcing clause* constraints
 too — they're more local than the AIG and prune the picker faster).
 ±0/−12 within j=32 noise; reverted to keep the simpler heuristic.
+
+## Iter 49 (2026-05-07): lazy per-cell arbiter for large dep (reverted, −78)
+
+**Hypothesis (architectural).** Constant arbiter for `|dep| > cell_dep_cap`
+restricts the SAT search to constant Skolems. Use lazy per-row cells
+instead: each validity counterexample row gets a cell. Sound (no
+overlap — never falls back to const, so iter45's pitfall is avoided);
+arbsolve-exhaust with any lazy cell is still Bail.
+
+**Result.** Tiny-5 VALID, 0 INVALID, but **−78 net.** The CEGAR loop
+burns the whole budget enumerating boundary rows (rr_arbiter_n16_indinv:
+7776 rounds, 7776 cells, never converges). Before the change, the
+const-arbiter bailed after ~10 rounds and *deepening_partial_scan*
+found UNSAT for many succinct/inductive instances. Lazy cells starve
+that fallback. The instances they target (indinv with large state) need
+a generalising over-approximation (PDR-style frames), not row-by-row
+cell allocation — research-approach wall. **Reverted.**
