@@ -591,7 +591,16 @@ pub fn validity_cegar(
             // both so cert reconstruction can read either side.
             let (key_y, key_dep, links): (Var, Vec<Lit>, Vec<(Var, Vec<Lit>)>) =
                 match partner.get(&y) {
-                    Some((yp, bij)) if !cell_dep.is_empty() => {
+                    // Share the cell with the partner *also* in the
+                    // constant case (cell_dep empty): the pair *must*
+                    // be the same function, so two independent constants
+                    // is a strictly worse search than one shared. Halves
+                    // arbsolve's search space; in the |dep|>cap regime
+                    // (where the const fallback fires) it's the only
+                    // share that ever applies. arbsolve-UNSAT then
+                    // proves "no constant *pair-symmetric* Skolem", same
+                    // soundness gate as before.
+                    Some((yp, bij)) => {
                         let bm: HashMap<Var, Var> = bij.iter().copied().collect();
                         let cell_dep_p: Vec<Lit> = cell_dep
                             .iter()
@@ -619,7 +628,7 @@ pub fn validity_cegar(
                             )
                         }
                     }
-                    _ => (y, cell_dep.clone(), vec![(y, cell_dep.clone())]),
+                    None => (y, cell_dep.clone(), vec![(y, cell_dep.clone())]),
                 };
             let key = (key_y, key_dep);
             let ai = *arb_of.entry(key.clone()).or_insert_with(|| {

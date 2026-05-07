@@ -1228,3 +1228,14 @@ cert silently picks the first match. **Shipped 1 INVALID** on
 Caught by tiny-5 + per-instance verify before commit; reverted. The
 +14/−25 diff also showed the change cost more than it gained
 (per-y flip-check is a 10k-conflict CDCL solve every CEGAR round).
+
+## Iter 44 (2026-05-06): share constant arbiter cell with partner (±0)
+
+`detect_partners` identifies (y,y') pairs that are provably the same
+function (consistency-shape: `inv` and `inv'`). The cell-share gate
+required `cell_dep != []`, so partnered y at `|dep| > cell_dep_cap`
+got two independent constant arbiters — wasted search. Now the share
+applies in the constant case too, halving arbsolve's space and making
+the const-UNSAT bail cover a larger family. ±0 net (the `_safe` indinv
+instances still need non-constant Skolems to converge), 0 INVALID.
+Kept: smaller search, no soundness loss.
