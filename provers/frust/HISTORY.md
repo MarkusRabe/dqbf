@@ -1454,3 +1454,22 @@ fixpoint budget exhaustion** (`bcd_ctr_n12`: only 19/614 defined
 before timeout) and **arbsolve over thousands of cells**
 (`barrel_n16`: 360 undef → 5124 cells → 9800 CEGAR rounds). Both are
 gated on padoa speed.
+
+## Refined-loop iteration 58: all-anchor FEx partition (reverted, −3) (2026-05-07)
+
+**Hypothesis (secondary lead from prior agents)**: `choose_fork` picks
+the first fork-pair anchor `a` and partitions by `dep ⊆ dep(a)`; trying
+*all* anchors and choosing the smallest intersection-dep should give
+sharper fresh vars for `dep_cycle` (journal §6).
+
+**Result: −3, reverted.** `dep_cycle` n4/n8 are still UNKNOWN — the §6
+construction needs SFEx (drop a universal from the intersection), not a
+better FEx anchor. The losses were 3 unrelated borderline instances
+where the extra clause-clones in the all-anchor scan ate the saturate
+budget. The change makes saturate's already-O(|db|·|exs|²) fork scan
+slower for no gain.
+
+**Constraint named (research-approach for `dep_cycle` n≥4)**: pedant
+also returns UNKNOWN. The journal proof is exponential in the cycle
+length without dependency schemes (which are off-limits). 4 instances
+total; not a productive target.
