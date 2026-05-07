@@ -1264,3 +1264,14 @@ conflicts. Tested on `pec_alu_add_n8` — Padoa already converges at
 round 2 with the small budget; the 4 black-box gates are *genuinely*
 undefined (that's the point of PEC). The change had no measurable
 effect (±0 within j=32 noise). Reverted to keep the simpler code.
+
+## Iter 47 (2026-05-06): matrix-copy at undef≤512 (reverted, −14)
+
+Raised the matrix-copy enable threshold from `undef≤16` to `undef≤512`
+so the succinct families (50-300 undef) get the validity constraint.
+On `crc_n8` validity becomes more constrained (forcing dropped 86→23)
+but the arbiter cells still saturate at 2501 — the 65 k-cell space
+doesn't shrink. Net −14 (the extra |C| clauses in validity slow the
+*easy* instances that used to converge before round 256). Reverted.
+The `undef≤16` threshold is the right cutoff; the succinct family
+needs an architectural change, not a tuning constant.
