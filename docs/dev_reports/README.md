@@ -2,6 +2,7 @@
 
 | date | label | view |
 |---|---|---|
+| 2026-05-07_1041 | iter52-cegis-substitution | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-07_1041_iter52-cegis-substitution.html) · [source](2026-05-07_1041_iter52-cegis-substitution.html) |
 | 2026-05-07_0923 | iter48-baseline | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-07_0923_iter48-baseline.html) · [source](2026-05-07_0923_iter48-baseline.html) |
 | 2026-05-07_0836 | iter43-row-fuzz | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-07_0836_iter43-row-fuzz.html) · [source](2026-05-07_0836_iter43-row-fuzz.html) |
 | 2026-05-06_1709 | iter40-problems-toggle | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-06_1709_iter40-problems-toggle.html) · [source](2026-05-06_1709_iter40-problems-toggle.html) |
