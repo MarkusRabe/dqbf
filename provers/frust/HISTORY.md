@@ -1350,3 +1350,19 @@ const-arbiter fast-bail (≤16 rounds) is load-bearing — the win from
 its fast hand-off to deepening outweighs the lazy SAT search at any
 round bound. **Reverted.** Deepening-vs-CEGAR budget allocation is
 where the trade-off lives; tuning the round cap is in the noise band.
+
+## Iter 53 (2026-05-07): skip interpolated-y in CEGAR loop (reverted, −14)
+
+**Hypothesis.** Defined-y with interpolants are already pinned in
+validity by their AIG; the per-round flip-SAT then arbiter-allocation
+for them sets `any_const_arbiter` and degrades arbsolve-UNSAT to Bail.
+Found via debug trace on dep_cycle_n4: y=21 (dep=12, defined) gets a
+const cell. Skip interpolated-y from the forcing/arbiter loop.
+
+**Result.** **−14** (lost bmc/succinct gray/minmax/mutex). The
+interpolant *is not always exact at every row* — sometimes the
+forcing-clause path is needed to re-derive the value from a different
+core. Reverted. The diagnosis (defined-y with linked-z's get
+const-arbitered) is correct but the fix needs to be: don't *fall to
+arbiter* on flip-SAT for an interpolated y, just skip the cell —
+without skipping the forcing-clause attempt.
