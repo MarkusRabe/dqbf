@@ -1255,3 +1255,12 @@ Caught by the probe's INVALID hard-check; reverted before commit.
 {interpolant, forcing-clauses-only, per-cell-arbiters-only, single
 constant-arbiter} — never mixed. The per-y representation choice must
 be made once and never change inside a CEGAR run.
+
+## Iter 46 (2026-05-06): escalating padoa budget per pass (reverted, ±0)
+
+Multiplied `budget_per` by `min(round, 8)` so later Padoa fixpoint
+passes (with fewer pending y's and a tighter selector cone) get more
+conflicts. Tested on `pec_alu_add_n8` — Padoa already converges at
+round 2 with the small budget; the 4 black-box gates are *genuinely*
+undefined (that's the point of PEC). The change had no measurable
+effect (±0 within j=32 noise). Reverted to keep the simpler code.
