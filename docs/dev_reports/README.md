@@ -2,6 +2,7 @@
 
 | date | label | view |
 |---|---|---|
+| 2026-05-07_1159 | iter60 | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-07_1159_iter60.html) · [source](2026-05-07_1159_iter60.html) |
 | 2026-05-07_1112 | iter56-baseline | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-07_1112_iter56-baseline.html) · [source](2026-05-07_1112_iter56-baseline.html) |
 | 2026-05-07_1041 | iter52-cegis-substitution | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-07_1041_iter52-cegis-substitution.html) · [source](2026-05-07_1041_iter52-cegis-substitution.html) |
 | 2026-05-07_0923 | iter48-baseline | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-07_0923_iter48-baseline.html) · [source](2026-05-07_0923_iter48-baseline.html) |
