@@ -38,7 +38,13 @@ pub fn padoa_split(
     debug: bool,
 ) -> Option<DefSplit> {
     let n = f.n_vars as Lit;
-    let shift = |l: Lit| -> Lit { if l > 0 { l + n } else { l - n } };
+    let shift = |l: Lit| -> Lit {
+        if l > 0 {
+            l + n
+        } else {
+            l - n
+        }
+    };
 
     // Var layout:
     //   1..n         copy A
@@ -57,8 +63,7 @@ pub fn padoa_split(
         .collect();
     let total_vars = 2 * n as usize + link_vars.len();
 
-    let mut clauses: Vec<Clause> =
-        Vec::with_capacity(2 * f.clauses.len() + 2 * link_vars.len());
+    let mut clauses: Vec<Clause> = Vec::with_capacity(2 * f.clauses.len() + 2 * link_vars.len());
     for c in &f.clauses {
         clauses.push(c.clone());
         clauses.push(c.iter().map(|&l| shift(l)).collect());
@@ -79,11 +84,7 @@ pub fn padoa_split(
         .flat_map(|c| c.iter().map(|&l| var(l)))
         .filter(|v| f.deps.contains_key(v))
         .collect();
-    let deps: HashMap<Var, BTreeSet<Var>> = f
-        .deps
-        .iter()
-        .map(|(&y, d)| (y, d.clone()))
-        .collect();
+    let deps: HashMap<Var, BTreeSet<Var>> = f.deps.iter().map(|(&y, d)| (y, d.clone())).collect();
 
     let mut defined: Vec<Var> = f
         .deps
@@ -172,13 +173,23 @@ pub fn extract_interpolants(
     let n = f.n_vars as Lit;
     let m = f.clauses.len();
     let nu = n as Var;
-    let shift = |l: Lit| -> Lit { if l > 0 { l + n } else { l - n } };
+    let shift = |l: Lit| -> Lit {
+        if l > 0 {
+            l + n
+        } else {
+            l - n
+        }
+    };
     let live: HashSet<Var> = f
         .clauses
         .iter()
         .flat_map(|c| c.iter().map(|&l| var(l)))
         .collect();
-    let mut order: Vec<Var> = defined.iter().copied().filter(|y| live.contains(y)).collect();
+    let mut order: Vec<Var> = defined
+        .iter()
+        .copied()
+        .filter(|y| live.contains(y))
+        .collect();
     order.sort_by_key(|&y| (f.deps[&y].len(), y));
 
     // Build a base CDCL once (copy-A | copy-B, no links) with
@@ -332,8 +343,14 @@ pub fn validate_interpolants(
                 if iv != mv {
                     eprintln!(
                         "  validate: y={} itp={} model={} inputs_mv={:?}",
-                        y, iv, mv,
-                        d.itp.inputs.iter().map(|&v| (v, model[v as usize])).collect::<Vec<_>>()
+                        y,
+                        iv,
+                        mv,
+                        d.itp
+                            .inputs
+                            .iter()
+                            .map(|&v| (v, model[v as usize]))
+                            .collect::<Vec<_>>()
                     );
                     return Some((y, assump));
                 }
@@ -349,9 +366,15 @@ mod tests {
 
     fn build(us: &[Var], deps: &[(Var, &[Var])], cls: &[&[Lit]]) -> Formula {
         Formula::new(
-            us.iter().chain(deps.iter().map(|(v, _)| v)).copied().max().unwrap_or(0),
+            us.iter()
+                .chain(deps.iter().map(|(v, _)| v))
+                .copied()
+                .max()
+                .unwrap_or(0),
             us.to_vec(),
-            deps.iter().map(|&(e, d)| (e, d.iter().copied().collect())).collect(),
+            deps.iter()
+                .map(|&(e, d)| (e, d.iter().copied().collect()))
+                .collect(),
             cls.iter().map(|c| c.to_vec()).collect(),
         )
     }
@@ -389,7 +412,9 @@ mod tests {
                 assert_eq!(
                     d.itp.eval(d.root, a),
                     u1 == 1 && u2 == 1,
-                    "u1={} u2={}", u1, u2
+                    "u1={} u2={}",
+                    u1,
+                    u2
                 );
             }
         }
@@ -420,10 +445,16 @@ mod tests {
 #[test]
 #[ignore]
 fn interpolant_validate_pec() {
-    let path = "../../benchmarks/train/pec_circuits/miter/pec_alu_add_n4_k2_bb3_complete.dqdimacs.gz";
+    let path =
+        "../../benchmarks/train/pec_circuits/miter/pec_alu_add_n4_k2_bb3_complete.dqdimacs.gz";
     let buf = String::from_utf8(
-        std::process::Command::new("gzip").args(["-dc", path]).output().unwrap().stdout,
-    ).unwrap();
+        std::process::Command::new("gzip")
+            .args(["-dc", path])
+            .output()
+            .unwrap()
+            .stdout,
+    )
+    .unwrap();
     let f = crate::parse::parse(&buf).expect("parse");
     let start = std::time::Instant::now();
     let split = padoa_split(&f, 5.0, &start, false).expect("padoa");
@@ -434,116 +465,171 @@ fn interpolant_validate_pec() {
 #[allow(dead_code)]
 #[cfg(any())]
 fn _old_e179_debug() {
-        let path = "../../benchmarks/train/pec_circuits/miter/pec_alu_add_n4_k2_bb3_complete.dqdimacs.gz";
-        let buf = String::from_utf8(
-            std::process::Command::new("gzip").args(["-dc", path]).output().unwrap().stdout,
-        ).unwrap();
-        let f = crate::parse::parse(&buf).expect("parse");
-        let start = std::time::Instant::now();
-        let split = padoa_split(&f, 5.0, &start, false).expect("padoa");
-        let defs = extract_interpolants(&f, &split.defined, 30.0, &start, false);
-        eprintln!("e179 in defined: {}", split.defined.contains(&179));
-        eprintln!("e179 has interpolant: {}", defs.contains_key(&179));
-        // Which z's would Padoa link for e179?
-        let dy: BTreeSet<Var> = f.deps[&179].clone();
-        let pad_linked: Vec<Var> = split.defined.iter().copied()
-            .filter(|z| *z != 179 && f.deps[z].is_subset(&dy)).collect();
-        eprintln!("Padoa would link {} z's for e179", pad_linked.len());
-        // How many of those are in defs (interpolated before e179)?
-        let itp_linked: Vec<Var> = pad_linked.iter().copied()
-            .filter(|z| defs.contains_key(z)).collect();
-        eprintln!("  of which {} are interpolated", itp_linked.len());
-        // The non-interpolated linked z's:
-        let missing: Vec<Var> = pad_linked.iter().copied()
-            .filter(|z| !defs.contains_key(z)).collect();
-        eprintln!("  missing: {:?}", &missing[..missing.len().min(10)]);
-        // Manual: build the per-y CDCL with ALL pad_linked z's, see if UNSAT.
+    let path =
+        "../../benchmarks/train/pec_circuits/miter/pec_alu_add_n4_k2_bb3_complete.dqdimacs.gz";
+    let buf = String::from_utf8(
+        std::process::Command::new("gzip")
+            .args(["-dc", path])
+            .output()
+            .unwrap()
+            .stdout,
+    )
+    .unwrap();
+    let f = crate::parse::parse(&buf).expect("parse");
+    let start = std::time::Instant::now();
+    let split = padoa_split(&f, 5.0, &start, false).expect("padoa");
+    let defs = extract_interpolants(&f, &split.defined, 30.0, &start, false);
+    eprintln!("e179 in defined: {}", split.defined.contains(&179));
+    eprintln!("e179 has interpolant: {}", defs.contains_key(&179));
+    // Which z's would Padoa link for e179?
+    let dy: BTreeSet<Var> = f.deps[&179].clone();
+    let pad_linked: Vec<Var> = split
+        .defined
+        .iter()
+        .copied()
+        .filter(|z| *z != 179 && f.deps[z].is_subset(&dy))
+        .collect();
+    eprintln!("Padoa would link {} z's for e179", pad_linked.len());
+    // How many of those are in defs (interpolated before e179)?
+    let itp_linked: Vec<Var> = pad_linked
+        .iter()
+        .copied()
+        .filter(|z| defs.contains_key(z))
+        .collect();
+    eprintln!("  of which {} are interpolated", itp_linked.len());
+    // The non-interpolated linked z's:
+    let missing: Vec<Var> = pad_linked
+        .iter()
+        .copied()
+        .filter(|z| !defs.contains_key(z))
+        .collect();
+    eprintln!("  missing: {:?}", &missing[..missing.len().min(10)]);
+    // Manual: build the per-y CDCL with ALL pad_linked z's, see if UNSAT.
+    let n = f.n_vars as Lit;
+    let shift = |l: Lit| if l > 0 { l + n } else { l - n };
+    let mut clauses: Vec<Clause> = Vec::new();
+    for c in &f.clauses {
+        clauses.push(c.clone());
+    }
+    for c in &f.clauses {
+        clauses.push(c.iter().map(|&l| shift(l)).collect());
+    }
+    for &u in dy.iter().chain(pad_linked.iter()) {
+        clauses.push(vec![-(u as Lit), shift(u as Lit)]);
+        clauses.push(vec![u as Lit, -shift(u as Lit)]);
+    }
+    let mut cdcl = Cdcl::new(2 * n as usize, &clauses);
+    let mut model = vec![0i8; 2 * n as usize + 1];
+    let unsat = !cdcl.solve(&[179, -shift(179)], &mut model, 100_000);
+    eprintln!(
+        "with all pad_linked z's: unsat={} budget_hit={}",
+        unsat, cdcl.budget_hit
+    );
+    // Dump e46's full proof + interpolant.
+    std::env::set_var("FRUST_ITP_TRACE", "1");
+    {
         let n = f.n_vars as Lit;
         let shift = |l: Lit| if l > 0 { l + n } else { l - n };
+        let dy: BTreeSet<Var> = f.deps[&46].clone();
+        let linked_z: Vec<Var> = vec![40, 43, 44]; // from observed inputs
         let mut clauses: Vec<Clause> = Vec::new();
-        for c in &f.clauses { clauses.push(c.clone()); }
-        for c in &f.clauses { clauses.push(c.iter().map(|&l| shift(l)).collect()); }
-        for &u in dy.iter().chain(pad_linked.iter()) {
+        for c in &f.clauses {
+            clauses.push(c.clone());
+        }
+        for c in &f.clauses {
+            clauses.push(c.iter().map(|&l| shift(l)).collect());
+        }
+        for &u in dy.iter().chain(linked_z.iter()) {
             clauses.push(vec![-(u as Lit), shift(u as Lit)]);
             clauses.push(vec![u as Lit, -shift(u as Lit)]);
         }
-        let mut cdcl = Cdcl::new(2*n as usize, &clauses);
-        let mut model = vec![0i8; 2*n as usize +1];
-        let unsat = !cdcl.solve(&[179, -shift(179)], &mut model, 100_000);
-        eprintln!("with all pad_linked z's: unsat={} budget_hit={}", unsat, cdcl.budget_hit);
-        // Dump e46's full proof + interpolant.
-        std::env::set_var("FRUST_ITP_TRACE", "1");
-        {
-            let n = f.n_vars as Lit;
-            let shift = |l: Lit| if l > 0 { l + n } else { l - n };
-            let dy: BTreeSet<Var> = f.deps[&46].clone();
-            let linked_z: Vec<Var> = vec![40, 43, 44]; // from observed inputs
-            let mut clauses: Vec<Clause> = Vec::new();
-            for c in &f.clauses { clauses.push(c.clone()); }
-            for c in &f.clauses { clauses.push(c.iter().map(|&l| shift(l)).collect()); }
-            for &u in dy.iter().chain(linked_z.iter()) {
-                clauses.push(vec![-(u as Lit), shift(u as Lit)]);
-                clauses.push(vec![u as Lit, -shift(u as Lit)]);
-            }
-            let mut cdcl = Cdcl::new(2*n as usize, &clauses);
-            cdcl.enable_proof_log();
-            let mut model = vec![0i8; 2*n as usize +1];
-            let unsat = !cdcl.solve(&[46, -shift(46)], &mut model, 100_000);
-            eprintln!("e46 proof: unsat={}", unsat);
-            let pl = cdcl.proof.as_ref().unwrap();
-            eprintln!("  final_clause={:?}", pl.final_clause);
-            eprintln!("  final_chain.len={}", pl.final_chain.len());
-            for &(cr, piv) in &pl.final_chain {
-                let lits = cdcl.clause_lits(cr);
-                let learned = pl.ante.contains_key(&cr);
-                eprintln!("    cr={} piv={} lits={:?} learned={}", cr, piv, lits, learned);
-            }
-            // Now run mcmillan with trace.
-            let nu = n as Var;
-            let shared: HashSet<Var> = dy.iter().chain(linked_z.iter()).copied().collect();
-            let side = |cr: u32| if cdcl.clause_lits(cr).iter().all(|&l| var(l) <= nu) {
+        let mut cdcl = Cdcl::new(2 * n as usize, &clauses);
+        cdcl.enable_proof_log();
+        let mut model = vec![0i8; 2 * n as usize + 1];
+        let unsat = !cdcl.solve(&[46, -shift(46)], &mut model, 100_000);
+        eprintln!("e46 proof: unsat={}", unsat);
+        let pl = cdcl.proof.as_ref().unwrap();
+        eprintln!("  final_clause={:?}", pl.final_clause);
+        eprintln!("  final_chain.len={}", pl.final_chain.len());
+        for &(cr, piv) in &pl.final_chain {
+            let lits = cdcl.clause_lits(cr);
+            let learned = pl.ante.contains_key(&cr);
+            eprintln!(
+                "    cr={} piv={} lits={:?} learned={}",
+                cr, piv, lits, learned
+            );
+        }
+        // Now run mcmillan with trace.
+        let nu = n as Var;
+        let shared: HashSet<Var> = dy.iter().chain(linked_z.iter()).copied().collect();
+        let side = |cr: u32| {
+            if cdcl.clause_lits(cr).iter().all(|&l| var(l) <= nu) {
                 crate::interpolant::Side::A
             } else {
                 crate::interpolant::Side::B
-            };
-            let a_local = |v: Var| v <= nu && !shared.contains(&v);
-            let (itp, root) = mcmillan(&cdcl, side, &shared, a_local).unwrap();
-            eprintln!("e46 interpolant: inputs={:?} gates={:?} root={}", itp.inputs, itp.gates, root);
-        }
-        std::env::remove_var("FRUST_ITP_TRACE");
-        // Validate all interpolants
-        let bad = validate_interpolants(&f, &defs, 20);
-        match bad {
-            None => eprintln!("all interpolants validate at 20 random rows"),
-            Some((y, row)) => {
-                eprintln!("MISMATCH: y={} at row {:?}", y, &row[..row.len().min(8)]);
-                let d = &defs[&y];
-                eprintln!("  inputs={:?} gates={} root={}", d.itp.inputs, d.itp.gates.len(), d.root);
-                for (i, g) in d.itp.gates.iter().enumerate() {
-                    eprintln!("  g{}: {:?}", i, g);
-                }
+            }
+        };
+        let a_local = |v: Var| v <= nu && !shared.contains(&v);
+        let (itp, root) = mcmillan(&cdcl, side, &shared, a_local).unwrap();
+        eprintln!(
+            "e46 interpolant: inputs={:?} gates={:?} root={}",
+            itp.inputs, itp.gates, root
+        );
+    }
+    std::env::remove_var("FRUST_ITP_TRACE");
+    // Validate all interpolants
+    let bad = validate_interpolants(&f, &defs, 20);
+    match bad {
+        None => eprintln!("all interpolants validate at 20 random rows"),
+        Some((y, row)) => {
+            eprintln!("MISMATCH: y={} at row {:?}", y, &row[..row.len().min(8)]);
+            let d = &defs[&y];
+            eprintln!(
+                "  inputs={:?} gates={} root={}",
+                d.itp.inputs,
+                d.itp.gates.len(),
+                d.root
+            );
+            for (i, g) in d.itp.gates.iter().enumerate() {
+                eprintln!("  g{}: {:?}", i, g);
             }
         }
     }
+}
 
-    #[test]
-    #[ignore]  // bench-scale; run with --ignored
-    fn interpolant_pec_sample() {
-        let path = "../../benchmarks/train/pec_circuits/miter/pec_alu_add_n4_k2_bb3_complete.dqdimacs.gz";
-        let buf = String::from_utf8(
-            std::process::Command::new("gzip").args(["-dc", path]).output().unwrap().stdout,
-        ).unwrap();
-        let f = crate::parse::parse(&buf).expect("parse");
-        let start = std::time::Instant::now();
-        let split = padoa_split(&f, 5.0, &start, false).expect("padoa");
-        eprintln!("padoa: {} defined, {} undef ({:.2}s)", split.defined.len(), split.undefined.len(), start.elapsed().as_secs_f64());
-        let t1 = std::time::Instant::now();
-        let defs = extract_interpolants(&f, &split.defined, 30.0, &start, true);
-        let mut sizes: Vec<usize> = defs.values().map(|d| d.itp.gates.len()).collect();
-        sizes.sort_unstable();
-        eprintln!("interpolants: {}/{} in {:.2}s; gate sizes min/med/max = {}/{}/{}",
-            defs.len(), split.defined.len(), t1.elapsed().as_secs_f64(),
-            sizes.first().copied().unwrap_or(0),
-            sizes.get(sizes.len()/2).copied().unwrap_or(0),
-            sizes.last().copied().unwrap_or(0));
-    }
+#[test]
+#[ignore] // bench-scale; run with --ignored
+fn interpolant_pec_sample() {
+    let path =
+        "../../benchmarks/train/pec_circuits/miter/pec_alu_add_n4_k2_bb3_complete.dqdimacs.gz";
+    let buf = String::from_utf8(
+        std::process::Command::new("gzip")
+            .args(["-dc", path])
+            .output()
+            .unwrap()
+            .stdout,
+    )
+    .unwrap();
+    let f = crate::parse::parse(&buf).expect("parse");
+    let start = std::time::Instant::now();
+    let split = padoa_split(&f, 5.0, &start, false).expect("padoa");
+    eprintln!(
+        "padoa: {} defined, {} undef ({:.2}s)",
+        split.defined.len(),
+        split.undefined.len(),
+        start.elapsed().as_secs_f64()
+    );
+    let t1 = std::time::Instant::now();
+    let defs = extract_interpolants(&f, &split.defined, 30.0, &start, true);
+    let mut sizes: Vec<usize> = defs.values().map(|d| d.itp.gates.len()).collect();
+    sizes.sort_unstable();
+    eprintln!(
+        "interpolants: {}/{} in {:.2}s; gate sizes min/med/max = {}/{}/{}",
+        defs.len(),
+        split.defined.len(),
+        t1.elapsed().as_secs_f64(),
+        sizes.first().copied().unwrap_or(0),
+        sizes.get(sizes.len() / 2).copied().unwrap_or(0),
+        sizes.last().copied().unwrap_or(0)
+    );
+}

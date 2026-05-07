@@ -136,7 +136,11 @@ pub fn write_skolem_aag<W: Write>(w: &mut W, f: &Formula, sk: &Skolem) -> std::i
             .iter()
             .map(|(&y, fn_)| {
                 let r = if let SkolemFn::Aig(itp, _) = fn_ {
-                    itp.inputs.iter().copied().filter(|v| sk.contains_key(v)).collect()
+                    itp.inputs
+                        .iter()
+                        .copied()
+                        .filter(|v| sk.contains_key(v))
+                        .collect()
                 } else {
                     Vec::new()
                 };
@@ -188,7 +192,9 @@ pub fn write_skolem_aag<W: Write>(w: &mut W, f: &Formula, sk: &Skolem) -> std::i
                         .get(&v)
                         .or_else(|| out_lit.get(&v))
                         .copied()
-                        .unwrap_or_else(|| panic!("interpolant for {y} references {v} not yet emitted"))
+                        .unwrap_or_else(|| {
+                            panic!("interpolant for {y} references {v} not yet emitted")
+                        })
                 };
                 let mut gate_lit = vec![0u32; itp.gates.len()];
                 let to_aig = |l: u32, gate_lit: &[u32]| -> u32 {

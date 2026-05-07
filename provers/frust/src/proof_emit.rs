@@ -154,12 +154,7 @@ pub fn cdcl_row_unsat_to_frp(f: &Formula, cdcl: &Cdcl, max_steps: usize) -> Opti
             let other = *step_of.get(&cr)?;
             let other_lits: Vec<Lit> = derived_of.get(&cr)?.iter().copied().collect();
             acc = resolve(&acc, &other_lits, pivot)?;
-            idx = proof.add(Step::res(
-                &acc.iter().copied().collect(),
-                idx,
-                other,
-                pivot,
-            ));
+            idx = proof.add(Step::res(&acc.iter().copied().collect(), idx, other, pivot));
         }
         Some((idx, acc))
     };
@@ -189,7 +184,13 @@ pub fn cdcl_row_unsat_to_frp(f: &Formula, cdcl: &Cdcl, max_steps: usize) -> Opti
             derived_of.insert(cr, lits);
         }
     }
-    let (last, acc) = emit_chain(&mut proof, &step_of, &derived_of, &pl.final_chain, max_steps)?;
+    let (last, acc) = emit_chain(
+        &mut proof,
+        &step_of,
+        &derived_of,
+        &pl.final_chain,
+        max_steps,
+    )?;
     // 3. ∀-reduce to ⊥. The verifier allows ∀-reduce inline with `res`,
     // so the last `res` could already be ⊥ — but emit an explicit `ured`
     // for clarity when acc isn't already empty.

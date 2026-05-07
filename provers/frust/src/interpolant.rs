@@ -55,14 +55,28 @@ impl Itp {
     }
     pub fn lit(&mut self, l: Lit) -> u32 {
         let p = self.input(var(l));
-        if l > 0 { p } else { p ^ 1 }
+        if l > 0 {
+            p
+        } else {
+            p ^ 1
+        }
     }
     pub fn mk_and(&mut self, a: u32, b: u32) -> u32 {
-        if a == 0 || b == 0 { return 0; }
-        if a == 1 { return b; }
-        if b == 1 { return a; }
-        if a == b { return a; }
-        if a == (b ^ 1) { return 0; }
+        if a == 0 || b == 0 {
+            return 0;
+        }
+        if a == 1 {
+            return b;
+        }
+        if b == 1 {
+            return a;
+        }
+        if a == b {
+            return a;
+        }
+        if a == (b ^ 1) {
+            return 0;
+        }
         let k = if a < b { (a, b) } else { (b, a) };
         if let Some(&g) = self.strash.get(&k) {
             return g;
@@ -83,7 +97,11 @@ impl Itp {
         let i = (l >> 1) as usize - 1;
         match self.node[i] {
             None => {
-                let pos = self.inputs.iter().position(|&v| self.in_lit[&v] == (l & !1)).unwrap();
+                let pos = self
+                    .inputs
+                    .iter()
+                    .position(|&v| self.in_lit[&v] == (l & !1))
+                    .unwrap();
                 NodeKind::Input(pos)
             }
             Some(k) => NodeKind::Gate(k),
@@ -97,7 +115,9 @@ impl Itp {
             val[(self.in_lit[&v] >> 1) as usize] = (assign >> i) & 1 == 1;
         }
         let lv = |l: u32, val: &[bool]| -> bool {
-            if l < 2 { return l == 1; }
+            if l < 2 {
+                return l == 1;
+            }
             val[(l >> 1) as usize] ^ (l & 1 == 1)
         };
         for (i, k) in self.node.iter().enumerate() {
@@ -117,7 +137,10 @@ pub enum NodeKind {
 }
 
 #[derive(Clone, Copy, PartialEq)]
-pub enum Side { A, B }
+pub enum Side {
+    A,
+    B,
+}
 
 /// Extract the interpolant from `cdcl`'s proof log. `side(cr)` labels
 /// each *input* cref; `shared` is the A∩B vocabulary; `a_local(v)` is

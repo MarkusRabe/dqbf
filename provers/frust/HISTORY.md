@@ -1275,3 +1275,13 @@ doesn't shrink. Net −14 (the extra |C| clauses in validity slow the
 *easy* instances that used to converge before round 256). Reverted.
 The `undef≤16` threshold is the right cutoff; the succinct family
 needs an architectural change, not a tuning constant.
+
+## Iter 48 (2026-05-06): skip eager flip-check for interpolated y (reverted, ±0)
+
+The eager round-1 seed runs a flip-check (10k-conflict CDCL) for every
+existential — ~700 solves on `pec_alu_add_n8`. With interpolants, the
+defined-y are already pinned in validity by the AIG Tseitin clauses, so
+the eager forcing seed seemed redundant. Skipping it lost a few
+borderline instances (validity needs the *forcing clause* constraints
+too — they're more local than the AIG and prune the picker faster).
+±0/−12 within j=32 noise; reverted to keep the simpler heuristic.

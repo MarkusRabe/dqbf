@@ -592,8 +592,7 @@ impl Cdcl {
             // Next seen on trail at dl.
             loop {
                 idx -= 1;
-                if self.seen[ivar(self.trail[idx])] != 0
-                    && self.level[ivar(self.trail[idx])] == dl
+                if self.seen[ivar(self.trail[idx])] != 0 && self.level[ivar(self.trail[idx])] == dl
                 {
                     break;
                 }
@@ -715,7 +714,11 @@ impl Cdcl {
         // value; in the derived clause it appears negated.
         for l in out.iter_mut() {
             let v = *l as usize;
-            *l = if self.value[v] > 0 { -(v as Lit) } else { v as Lit };
+            *l = if self.value[v] > 0 {
+                -(v as Lit)
+            } else {
+                v as Lit
+            };
         }
         for v in to_clear {
             self.seen[v] = 0;
@@ -756,8 +759,12 @@ impl Cdcl {
             (self.lbd[i], self.cl_len(cr))
         });
         let cut = order.len() / 2;
-        let locked: std::collections::HashSet<u32> =
-            self.reason.iter().copied().filter(|&r| r != UNDEF).collect();
+        let locked: std::collections::HashSet<u32> = self
+            .reason
+            .iter()
+            .copied()
+            .filter(|&r| r != UNDEF)
+            .collect();
         let mut keep_cr: Vec<u32> = Vec::with_capacity(cut);
         let mut keep_lbd: Vec<u8> = Vec::with_capacity(cut);
         let mut detach: std::collections::HashSet<u32> = std::collections::HashSet::new();

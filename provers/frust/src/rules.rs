@@ -215,7 +215,11 @@ pub fn choose_sfork(f: &mut Formula, c: &Clause) -> Option<(Clause, Vec<Lit>, Fo
         .filter(|&l| var(l) == a || f.dep(var(l)).is_subset(&da))
         .collect();
     let part_set: BTreeSet<Lit> = part.iter().copied().collect();
-    let c2: Clause = c.iter().copied().filter(|l| !part_set.contains(l)).collect();
+    let c2: Clause = c
+        .iter()
+        .copied()
+        .filter(|l| !part_set.contains(l))
+        .collect();
     if c2.is_empty() {
         return None;
     }
@@ -238,5 +242,13 @@ pub fn choose_sfork(f: &mut Formula, c: &Clause) -> Option<(Clause, Vec<Lit>, Fo
     right.push(-(x as Lit));
     right.sort_unstable();
     right.dedup();
-    Some((part, c3, ForkResult { fresh: x, left, right }))
+    Some((
+        part,
+        c3,
+        ForkResult {
+            fresh: x,
+            left,
+            right,
+        },
+    ))
 }
