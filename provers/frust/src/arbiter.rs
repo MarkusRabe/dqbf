@@ -582,8 +582,18 @@ pub fn validity_cegar(
                     learned_any = true;
                     continue;
                 }
-                // flip-SAT: y not determined by dep(y) alone (Padoa's
-                // fixpoint linked extra z's). Fall through to arbiter.
+                // flip-SAT: y not determined by dep(y) alone — Padoa
+                // defined it under linked z's. If the interpolant is
+                // already in validity it pins y (over dep ∪ z), so the
+                // arbiter cell is redundant. Allocating one anyway sets
+                // `any_const_arbiter` (these y have large |dep|) and
+                // turns a clean arbsolve-UNSAT into a Bail. Skip.
+                if defs.contains_key(&y) {
+                    continue;
+                }
+                // No interpolant for this defined-y: fall through to
+                // arbiter. Rare (interpolation usually covers all of
+                // `defined`), but the cell keeps the cert sound.
             }
             // Arbiter: per-cell when |dep| fits the per-undef share of
             // ARB_BUDGET; else a single constant.

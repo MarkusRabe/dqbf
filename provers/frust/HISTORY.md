@@ -1366,3 +1366,20 @@ core. Reverted. The diagnosis (defined-y with linked-z's get
 const-arbitered) is correct but the fix needs to be: don't *fall to
 arbiter* on flip-SAT for an interpolated y, just skip the cell —
 without skipping the forcing-clause attempt.
+
+## Iter 54 (2026-05-07): skip arbiter for interpolated defined-y on flip-SAT (kept, ±0)
+
+**Hypothesis (refines iter53).** A Padoa-defined y with linked-z's
+fails the flip-SAT check at any row where its value depends on those
+z's — the forcing clause over `dep(y)` alone doesn't exist. iter53's
+fix skipped them entirely; that lost the forcing-clause path for the
+rows where it *does* succeed. The targeted fix: try forcing as before;
+on flip-SAT, skip the arbiter cell *only if* y has an interpolant
+(the AIG already pins it in validity).
+
+**Result.** ±0 (within j=32 noise). The dep_cycle const-arbiter turns
+out to come from a *genuinely undefined* y (dep=12, no interpolant),
+not the defined-y case. Kept as a soundness/hygiene fix — without it,
+an interpolated y with linked-z's at a flip-SAT row would allocate a
+redundant cell (and at large |dep|, a const cell that downgrades
+arbsolve-UNSAT to Bail).
