@@ -1239,3 +1239,19 @@ applies in the constant case too, halving arbsolve's space and making
 the const-UNSAT bail cover a larger family. ±0 net (the `_safe` indinv
 instances still need non-constant Skolems to converge), 0 INVALID.
 Kept: smaller search, no soundness loss.
+
+## Iter 45 (2026-05-06): lazy per-y cell budget (UNSOUND, reverted)
+
+Tried letting undef-y above `cell_dep_cap` allocate per-cell arbiters
+lazily until their share of `ARB_BUDGET` is exhausted, then fall back
+to constant. **Shipped 58 INVALID certs**: when a y has both per-cell
+arbiters *and* a constant fallback (cell_dep=[]), the constant cell
+covers ALL rows including those already covered by per-cell arbiters,
+and `forcing_to_skolem`'s priority decoder picks first-match silently.
+This is the same overlap pitfall as iter43's forcing-vs-arbiter mix.
+Caught by the probe's INVALID hard-check; reverted before commit.
+
+**Lesson** (written into the code): for any y, *exactly one* of
+{interpolant, forcing-clauses-only, per-cell-arbiters-only, single
+constant-arbiter} — never mixed. The per-y representation choice must
+be made once and never change inside a CEGAR run.
