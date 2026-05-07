@@ -1334,3 +1334,19 @@ that survive (the row's residual cone).
 
 **Result.** csd_inc8_d08_w09 went 7→16 CEGIS rounds in 10 s. **+4
 net** (3qbf, cbmc/succinct), 0 INVALID, 3/3 cross-check pedant. Kept.
+
+## Iter 52 (2026-05-07): lazy cells + 512-round cap (reverted, −74)
+
+**Hypothesis (architectural).** iter49's lazy cells starved the
+deepening fallback. Bound the lazy CEGAR at 512 rounds so budget is
+left for deepening.
+
+**Result.** 0 INVALID, but **−74 net**. The 512-round CEGAR (~0.7s)
+still steals enough budget that const-arbiter-bail-then-deepening
+beats it on the UNSAT-leaning succinct/inductive instances. And 512
+rounds isn't enough for lazy convergence on the SAT-leaning ones
+(conjunction needs ~1200 cells; sees ~600 in 512 rounds). The
+const-arbiter fast-bail (≤16 rounds) is load-bearing — the win from
+its fast hand-off to deepening outweighs the lazy SAT search at any
+round bound. **Reverted.** Deepening-vs-CEGAR budget allocation is
+where the trade-off lives; tuning the round cap is in the noise band.
