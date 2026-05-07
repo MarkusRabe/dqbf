@@ -731,19 +731,54 @@ impl ExpandState {
                                 -pv
                             }
                         };
+                        // The universal assignment for this row is fixed
+                        // (`ub`). Substitute it into the matrix copy
+                        // before adding: clauses satisfied by a universal
+                        // lit are skipped entirely; falsified universal
+                        // lits are dropped. For a typical circuit-synth
+                        // matrix this halves the clause count per row and
+                        // removes the universal vars from the picker's
+                        // propagation working set — the CDCL never has to
+                        // propagate them off the unit clauses each round.
+                        let ubit: HashMap<Var, bool> = self
+                            .expand_us
+                            .iter()
+                            .enumerate()
+                            .map(|(i, &u)| (u, (ub >> i) & 1 == 1))
+                            .collect();
                         let picker = self.outer_picker.as_mut().unwrap();
+                        let mut n_added = 0usize;
+                        let mut touched: HashSet<Var> = HashSet::new();
                         for c in &f.clauses {
-                            let rc: Vec<Lit> = c.iter().map(|&l| remap(l)).collect();
+                            let mut sat = false;
+                            let mut rc: Vec<Lit> = Vec::with_capacity(c.len());
+                            for &l in c {
+                                let v = crate::formula::var(l);
+                                if let Some(&b) = ubit.get(&v) {
+                                    if (l > 0) == b {
+                                        sat = true;
+                                        break;
+                                    }
+                                    continue; // falsified universal lit
+                                }
+                                rc.push(remap(l));
+                                touched.insert(v);
+                            }
+                            if sat || rc.is_empty() {
+                                continue;
+                            }
                             picker.add_external(&rc);
+                            n_added += 1;
                         }
-                        for (i, &u) in self.expand_us.iter().enumerate() {
-                            let pv = (base + 1 + nonouter_idx[&u]) as Lit;
-                            let bit = (ub >> i) & 1 == 1;
-                            picker.add_external(&[if bit { pv } else { -pv }]);
-                        }
+                        // Only enable decision on the inner-∃ vars that
+                        // actually survive the substitution (the cone of
+                        // this row's residual matrix).
                         for &v in &nonouter {
-                            picker.set_decision((base + 1 + nonouter_idx[&v]) as u32, true);
+                            if !ubit.contains_key(&v) && touched.contains(&v) {
+                                picker.set_decision((base + 1 + nonouter_idx[&v]) as u32, true);
+                            }
                         }
+                        let _ = n_added;
                         dbg_ex!(
                             debug,
                             "outer-CEGAR r{}: cegis row {} (slot {})",

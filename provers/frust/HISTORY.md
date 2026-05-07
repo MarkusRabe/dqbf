@@ -1320,3 +1320,17 @@ into CEGAR, but the per-row arbiter loop still doesn't converge in
 budget (~7400 rounds, 6477 cells). The gate accuracy is right; the
 bottleneck is downstream. **Kept** — it's a soundness/precision fix
 that costs nothing and is a prerequisite for future CEGAR speedups.
+
+## Iter 51 (2026-05-07): substitute universals in CEGIS row copies (kept, +4)
+
+**Hypothesis (architectural).** The CEGIS picker adds a full matrix
+copy per counterexample row plus unit clauses pinning the universal
+assignment. The CDCL has to propagate those units off every copy at
+every restart, and clauses satisfied by a universal lit stay in the
+working set as dead clauses. Substitute the universal assignment
+*before* adding: drop satisfied clauses entirely; remove falsified
+universal lits from the rest; only enable decision on the inner-∃ vars
+that survive (the row's residual cone).
+
+**Result.** csd_inc8_d08_w09 went 7→16 CEGIS rounds in 10 s. **+4
+net** (3qbf, cbmc/succinct), 0 INVALID, 3/3 cross-check pedant. Kept.
