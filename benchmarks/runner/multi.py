@@ -22,6 +22,13 @@ from benchmarks.runner.solvers import Solver, registry
 
 EXIT = {10: "sat", 20: "unsat", 0: "unknown", 30: "unknown"}
 
+# Per-input-format version of `_run_one`'s file-mapping logic. Bump a
+# format's entry when its conversion path changes; that format's cache
+# entries become unreferenced (never clear the cache — old entries are
+# harmless). v1: added on-the-fly .dqdimacs → .qdimacs conversion for
+# linear-prefix DQBF (2026-05-09).
+_INPUT_MAPPER_V = {"qdimacs": 1}
+
 # Note on HW model checkers: abc-bmc/-pdr answer the *unbounded* question
 # on the source .aag, while a .dqdimacs instance encodes a *bounded* k. So
 # abc may report SAT (bug at frame > k) where the DQBF instance is UNSAT —
@@ -111,6 +118,85 @@ def _find_source_aag(inst: Path) -> Path | None:
 
 def _find_source_tlsf(inst: Path) -> Path | None:
     return _find_source(inst, ".tlsf")
+
+
+def _to_qdimacs(inst: Path, dst: Path) -> bool:
+    """Convert a linear-prefix DQDIMACS file to QDIMACS. Returns False
+    if the prefix is non-linear (dep sets not nested) — in that case
+    the QBF solver would silently solve a *different* formula, so we
+    refuse rather than emit garbage."""
+    import gzip
+
+    raw = inst.read_bytes()
+    if inst.suffix == ".gz":
+        raw = gzip.decompress(raw)
+    text = raw.decode()
+
+    n_vars = 0
+    universals: list[int] = []
+    deps: dict[int, frozenset[int]] = {}
+    clauses: list[str] = []
+    cur_a: list[int] = []
+    for ln in text.splitlines():
+        ln = ln.strip()
+        if not ln or ln.startswith("c"):
+            continue
+        if ln.startswith("p "):
+            parts = ln.split()
+            n_vars = int(parts[2])
+            continue
+        head = ln.split(None, 1)[0]
+        if head == "a":
+            for t in ln.split()[1:]:
+                v = int(t)
+                if v == 0:
+                    break
+                universals.append(v)
+                cur_a.append(v)
+        elif head == "e":
+            cur = frozenset(cur_a)
+            for t in ln.split()[1:]:
+                v = int(t)
+                if v == 0:
+                    break
+                deps[v] = cur
+        elif head == "d":
+            toks = [int(t) for t in ln.split()[1:]]
+            if not toks or toks[-1] != 0:
+                return False
+            y, ds = toks[0], frozenset(toks[1:-1])
+            deps[y] = ds
+        else:
+            clauses.append(ln)
+
+    # Linearity: dep sets must be nested (form a chain by ⊆).
+    distinct = sorted(set(deps.values()), key=len)
+    for i in range(len(distinct) - 1):
+        if not distinct[i] <= distinct[i + 1]:
+            return False
+
+    # Build the linear prefix: sort distinct dep-sets by size; emit
+    # `a` for the universals between successive dep-set sizes, then `e`
+    # for the existentials at that level.
+    out: list[str] = [f"p cnf {n_vars} {len(clauses)}"]
+    by_dep: dict[frozenset[int], list[int]] = {}
+    for y, d in deps.items():
+        by_dep.setdefault(d, []).append(y)
+    emitted_u: set[int] = set()
+    for d in distinct:
+        new_u = sorted(set(d) - emitted_u)
+        if new_u:
+            out.append("a " + " ".join(map(str, new_u)) + " 0")
+            emitted_u.update(new_u)
+        es = sorted(by_dep[d])
+        out.append("e " + " ".join(map(str, es)) + " 0")
+    # Trailing universals not in any dep set (rare; ∀-free or unused).
+    rest_u = sorted(set(universals) - emitted_u)
+    if rest_u:
+        out.append("a " + " ".join(map(str, rest_u)) + " 0")
+    out.extend(clauses)
+    dst.write_text("\n".join(out) + "\n")
+    return True
 
 
 @dataclass
@@ -207,9 +293,19 @@ def _run_one(
 
     file_path = str(inst)
     inst_ext = inst.name.replace(".gz", "").rsplit(".", 1)[-1]
-    if solver.input_format == "qdimacs" and inst_ext != "qdimacs":
-        return _row("n/a")
-    if solver.input_format == "tlsf":
+    if solver.input_format == "qdimacs" and (inst_ext != "qdimacs" or inst.suffix == ".gz"):
+        # Linear-prefix DQDIMACS is a valid QBF — convert on the fly.
+        # Refuses non-linear prefixes (the QBF solver would silently
+        # answer a different question). A .qdimacs.gz is handled by
+        # the same path (decompress + linearity-check is a no-op).
+        qd = sub / f"{stem}.qdimacs"
+        try:
+            if not _to_qdimacs(inst, qd):
+                return _row("n/a")
+        except Exception:
+            return _row("n/a")
+        file_path = str(qd)
+    elif solver.input_format == "tlsf":
         src = _find_source_tlsf(inst)
         if src is None:
             return _row("n/a")
@@ -315,7 +411,13 @@ def run_multi(
     instances = discover(root)
     print(f"{len(instances)} instances × {len(solvers)} solvers, timeout={timeout_s}s, j={jobs}")
 
-    shash = {sv.name: solver_hash(sv.cmd) for sv in solvers}
+    # Bump `_INPUT_MAPPER_V[fmt]` when `_run_one`'s file-mapping for
+    # that input_format changes (e.g. on-the-fly conversion added).
+    # Scoped: only that format's entries become unreferenced.
+    shash = {
+        sv.name: solver_hash(sv.cmd, _INPUT_MAPPER_V.get(sv.input_format, 0))
+        for sv in solvers
+    }
     ihash = {it.path: instance_hash(it.path) for it in instances}
 
     rows: list[RunRow] = []

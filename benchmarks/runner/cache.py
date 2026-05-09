@@ -36,11 +36,17 @@ def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()[:24]
 
 
-def solver_hash(cmd: list[str]) -> str:
+def solver_hash(cmd: list[str], input_mapper_version: int = 0) -> str:
     """Hash the executable + non-templated args of a solver invocation.
     Two solvers sharing one binary (e.g. `abc -q 'bmc3 ...'` vs
-    `abc -q 'pdr ...'`) must not collide."""
+    `abc -q 'pdr ...'`) must not collide. `input_mapper_version` lets
+    `_run_one` invalidate scoped subsets when its file-mapping logic
+    changes for a particular input_format (e.g. when on-the-fly
+    `.dqdimacs`→`.qdimacs` conversion was added; bumping for `qdimacs`
+    only)."""
     h = hashlib.sha256()
+    if input_mapper_version:
+        h.update(f"m{input_mapper_version}|".encode())
     # Args after the executable: distinguishes `abc -q bmc3` from
     # `abc -q pdr`. Placeholders ({file}, {timeout}) are identical
     # across solvers, so including them is harmless.
