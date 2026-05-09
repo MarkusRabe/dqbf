@@ -276,6 +276,14 @@ impl ExpandState {
                     let defs = crate::definability::extract_interpolants(
                         f, &s.defined, itp_dl, start, debug,
                     );
+                    if debug {
+                        eprintln!(
+                            "c [expand] interpolated {}/{} defined ({} forcing-loop)",
+                            defs.len(),
+                            s.defined.len(),
+                            s.defined.len() - defs.len()
+                        );
+                    }
                     self.cegar = Some(crate::arbiter::CegarState::new(
                         f,
                         &s.undefined,

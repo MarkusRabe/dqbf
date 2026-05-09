@@ -1745,3 +1745,22 @@ call (`Tseitin(¬matrix) ∧ default-defs`), not CEGAR rounds. frust's
 CEGAR rounds × per-cell clauses is the cost center; making the cells
 fancier doesn't change the round count. The next angle is reducing
 *rounds*, not improving *cell representation*.
+
+## Refined-loop iteration 69: skip interpolated-y forcing (reverted, −11) (2026-05-09)
+
+**Hypothesis**: pec_alu_add does 781 CEGAR rounds with 620 forcing
+clauses. 332/336 defined-y are interpolated; their forcing clauses
+should be redundant. Skip the consist flip-check for interpolated y.
+
+**Result: −11 (2405→2394).** iter48's "skip eager interpolated-y" was
+±0 because the eager seed isn't the bottleneck — but neither are the
+per-round flip-checks. The actual bottleneck on the gap-set is the
+*round count* (781), driven by the validity solver re-discovering
+counterexamples on the few non-interpolated y's. Cutting the forcing
+work for interpolated y just removes useful constraint-propagation
+that makes validity converge faster.
+
+**Constraint named: research-approach.** The CEGAR round count can't
+be cut by skipping work; it needs a structural change to *what each
+round learns* (e.g., conflict generalization across rows, or forcing
+clause subsumption). Recorded as a wall.
