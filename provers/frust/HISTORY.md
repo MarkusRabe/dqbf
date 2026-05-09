@@ -1876,3 +1876,37 @@ default function* so most rows are right by default and CEGAR only
 allocates exception cells. (b) is the architectural win — the cert's
 priority decoder already supports a default expression (currently
 implicit `false`); the change is to parameterize it. ~80 LOC.
+
+## Refined-loop iteration 73: cells as validity decision vars (reverted) (2026-05-09)
+
+**Hypothesis** (the goal-3 unification): drop the per-round arbsolve
+solve and the arbiter assumptions to validity. Make cell vars
+*decision* vars in `validity` with phase preference set to `cmodel`'s
+value at allocation; route `¬arb_core` conflicts into validity as
+clauses. The CDCL searches the (U, E, cell) space jointly with all its
+propagation/learning machinery. arbsolve survives only to extract the
+final cell assignment on validity-UNSAT.
+
+**Result: 8588 rounds (was 4359), 2.03s (was 1.16s) on
+`alu_add_n4_indinv` — 2× WORSE. Reverted.**
+
+**Why it backfired**: with cells as decision vars, `vmodel[y]` is
+constrained by the cell-link clause to follow the cell's phase
+preference. So `vmodel[y]` matches `cmodel[y]` more often → fewer
+cells allocated per round → more rounds before the cell space is
+exhausted. The validity solve also gets more expensive (the CDCL
+must now decide all cell vars before terminating).
+
+**Constraint named (refined)**: the unification reduces *coupling*
+between solvers but doesn't reduce the *amount of information* the
+loop must learn. Each cell still has to be discovered one row at a
+time; the CDCL doesn't help because the cell space has no clause
+structure to propagate through (the link clauses only fire when the
+dep-row is fixed, and each row pins one cell). The round count is
+fundamentally `|cells|` for a truly-free function. The right fix is
+upstream: don't allocate `2^|dep|` cells. Either (a) FEx-augmented
+DQBF-BCE (`docs/notes/bce_ext.md` — fork variables with smaller dep
+sets can witness blockedness where the original vars can't, possibly
+eliminating the undef-y entirely) or (b) a learned default function
+(pedant's MLPack approach — decision-tree default so the cell list
+is the *exceptions*, not the function). Both ~150-300 LOC.
