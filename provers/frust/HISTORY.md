@@ -1588,3 +1588,31 @@ no-cert 415 → 351, 0 INVALID.** Recovered `random_bv` (~50),
 **Remaining no-cert (~351)**: dominated by `bmc_circuits` (~220
 arbsolve-exhausted UNSAT — research-approach: need FEx-chain emission
 or extension variables); `cbmc/{succinct,inductive}` (~50, same).
+
+## Refined-loop iteration 64: report milestone + gap analysis (2026-05-09)
+
+**Report** (`docs/dev_reports/2026-05-09_*_iter63-cert-completeness.html`):
+frust-v2.0 = **2451/3571 (68%), 2045 valid certs.** Highest valid-cert
+count by 2.1× over pedant (960). 18 behind dqbdd (2469, no certs).
+
+**Gap analysis vs dqbdd** (where we lose 220, win 202):
+- `pec_circuits/miter` (59): Padoa defines 1080/1084, but the 4
+  undefined have |dep|=72 → const arbiter only → Bail.
+  Research-approach wall: need partial-key arbiters with sound
+  cell-key selection.
+- `peano/instances` (34): 126 undefined, all full-dep, no
+  consistency-shape pairs (`detect_partners` 0/6931, all overlap).
+  Genuine 2^16-cell arbitration. Pedant also UNKNOWN; dqbdd wins via
+  BDD.
+- `bmc_circuits/succinct` (52, but frust wins 81 unique): chained
+  consistency `(t==t'+1)→(y(t)↔next(t'))`, partner detection finds
+  12/~70 pairs. Chained-pattern detection is the architectural lead.
+- `random_qbf/3qbf` (4): pure expansion problem, |U|=20. Pedant also
+  UNKNOWN; dqbdd/hqs win via BDD/expansion.
+
+**Constraint named for the leads**: peano/pec are research-approach
+(partial-key arbiters, BDD-style pruning); succinct chains are
+architectural (extend `detect_partners` to chains).
+
+**Instrumentation added**: `FRUST_DEBUG_PARTNER` env-gated debug for
+`detect_partners` showing tried/sat/budget/overlap counts.

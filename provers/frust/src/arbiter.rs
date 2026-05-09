@@ -131,6 +131,10 @@ pub fn detect_partners(f: &Formula, undef: &[Var]) -> HashMap<Var, (Var, Vec<(Va
     }
     let mut sm = vec![0i8; n + n_sel + 1];
     let mut out: HashMap<Var, (Var, Vec<(Var, Var)>)> = HashMap::new();
+    let mut tried = 0usize;
+    let mut budgeted = 0usize;
+    let mut sat = 0usize;
+    let mut overlap = 0usize;
     for ys in by_size.values() {
         let mut taken: BTreeSet<Var> = BTreeSet::new();
         for i in 0..ys.len() {
@@ -144,8 +148,10 @@ pub fn detect_partners(f: &Formula, undef: &[Var]) -> HashMap<Var, (Var, Vec<(Va
                 }
                 let dj: Vec<Var> = f.deps[&yj].iter().copied().collect();
                 if di.iter().any(|u| f.deps[&yj].contains(u)) {
+                    overlap += 1;
                     continue;
                 }
+                tried += 1;
                 let bij: Vec<(Var, Var)> = di.iter().copied().zip(dj.iter().copied()).collect();
                 let sels: Vec<Lit> = bij.iter().map(|&(a, b)| sel(a, b)).collect();
                 let mut a1 = sels.clone();
@@ -154,11 +160,22 @@ pub fn detect_partners(f: &Formula, undef: &[Var]) -> HashMap<Var, (Var, Vec<(Va
                 let mut a2 = sels;
                 a2.push(-(ys[i] as Lit));
                 a2.push(yj as Lit);
-                if chk.solve(&a1, &mut sm, 5_000)
-                    || chk.budget_hit
-                    || chk.solve(&a2, &mut sm, 5_000)
-                    || chk.budget_hit
-                {
+                let r1 = chk.solve(&a1, &mut sm, 5_000);
+                if chk.budget_hit {
+                    budgeted += 1;
+                    continue;
+                }
+                if r1 {
+                    sat += 1;
+                    continue;
+                }
+                let r2 = chk.solve(&a2, &mut sm, 5_000);
+                if chk.budget_hit {
+                    budgeted += 1;
+                    continue;
+                }
+                if r2 {
+                    sat += 1;
                     continue;
                 }
                 out.insert(ys[i], (yj, bij.clone()));
@@ -168,6 +185,16 @@ pub fn detect_partners(f: &Formula, undef: &[Var]) -> HashMap<Var, (Var, Vec<(Va
                 break;
             }
         }
+    }
+    if std::env::var("FRUST_DEBUG_PARTNER").is_ok() {
+        eprintln!(
+            "c [partner] {} tried, {} sat, {} budget, {} overlap, {} pairs",
+            tried,
+            sat,
+            budgeted,
+            overlap,
+            out.len() / 2
+        );
     }
     out
 }
