@@ -1791,3 +1791,46 @@ constraint. This is conflict generalization à la PDR's IC3-style
 
 The `bmc_circuits/{succinct,inductive}` family (419+168 unsolved) is
 the goal-1 cluster; the arbsolve round count is the wall.
+
+## Refined-loop iteration 71: cell generalization (2 attempts, both reverted) (2026-05-09)
+
+**Hypothesis** (from iter70's lead): generalize the arbiter cell
+antecedent so one round covers a cube of rows instead of one row.
+Two attempts; both reverted on INVALID.
+
+**Attempt 1 — forcing-under-arbiters generalization.** When `consist`
+gives `cmodel[y]=want`, probe `dep_lits ∪ arbiters ∪ {¬want}`. If
+UNSAT, `last_core()` gives a sub-cube; commit the cell over that cube.
+Result: alu_add_n4_indinv **4359→669 rounds, 4096→379 cells, 1.15s→
+0.16s, VALID cert** — but **11 INVALID elsewhere** (peano, pec,
+random_bv). Cause: the cell is committed permanently, but its forcing
+core depends on arbiter assumptions that arbsolve can later re-pick.
+The cell `(generalized_dep, want)` outlives the arbiter assignment that
+justified it.
+
+**Attempt 2 — matrix-only forcing.** Same probe but only generalize
+when the core has *no* arbiter lits (forcing comes from the matrix
+alone, valid regardless of re-picks). Result: **still 1 INVALID**
+(`cbmc/inductive/fib_ok_n4_indinv`) and net −0 vs iter70. The
+remaining unsoundness wasn't pinned down before reverting; suspect an
+interaction between a generalized cell and a *later* full cell at an
+overlapping row when both feed the priority-decoder cert.
+
+**Constraint named: representation.** Sound cell generalization needs
+**conditional cells** — the cell antecedent must include the arbiter
+lits it depends on, and the cell must be deactivated when arbsolve
+re-picks those arbiters. That's a change to the `(y, dep_lits, val)`
+cell representation and the cert reconstruction. ~150-200 LOC. The
+6.5× speedup on alu_add_n4_indinv (4359→669 rounds) confirms the
+round-count bottleneck is real and the generalization direction is
+right; the implementation needs the conditional-cell architecture.
+
+**Lead for iter72+**: implement conditional cells, OR sidestep the
+issue by **batching cell allocation** — instead of one cell per round
+(one validity counterexample), enumerate all rows in the smallest
+non-trivial cube containing U* in one round (e.g., flip the lowest-
+order universal: 2 cells per round instead of 1; still O(cells) but
+half the validity solves). OR: encode the cell space directly in the
+validity solver as Pedant does (the arbiter cell vars become decision
+vars in `validity` with default-function clauses, no separate
+arbsolve loop). The third is the architectural unification (goal 3).
