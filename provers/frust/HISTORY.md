@@ -1764,3 +1764,30 @@ that makes validity converge faster.
 be cut by skipping work; it needs a structural change to *what each
 round learns* (e.g., conflict generalization across rows, or forcing
 clause subsumption). Recorded as a wall.
+
+## Refined-loop iteration 70: round-count bottleneck profiled (2026-05-09)
+
+**Profile**: `bmc_circuits/inductive/alu_add_n4_indinv` has 140
+defined (all interpolated), **2** undefined (`inv`, `inv'`, partnered
+by `detect_partners`), 4096 cells (2^12). CEGAR converges SAT in
+**4359 rounds** (~1 round per cell), 10 s. Pedant solves in 0.2 s.
+
+**Constraint named: algorithmic.** The CEGAR loop's per-round cost is
+fixed; the round count is **linear in the cell count** because each
+validity counterexample teaches arbsolve about *one* cell. Pedant
+avoids this by encoding the cell space as decision variables in a
+single CDCL whose clause structure forces cells via propagation —
+their loop count is the number of cells *not implied* by clauses, not
+the total. frust's `consist` solver carries the cell-link clauses but
+the `arb_core` conflict extraction only blocks one assignment at a
+time.
+
+**Lead for iter71+**: generalize the arbsolve conflict clause. After
+`consist`-UNSAT under (U*, arbiters), the core is one binary or
+ternary clause over arbiter vars. Run `consist` at *neighboring rows*
+(flip one universal in U*) and union the cores — many cells share one
+constraint. This is conflict generalization à la PDR's IC3-style
+`generalize`. ~50 LOC, structural change.
+
+The `bmc_circuits/{succinct,inductive}` family (419+168 unsolved) is
+the goal-1 cluster; the arbsolve round count is the wall.
