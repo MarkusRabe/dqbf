@@ -60,7 +60,7 @@ subsets. Pass all of them to `--solvers` so each tab is populated:
 
 ```sh
 dqbf-bench multi --root benchmarks/train \
-  --solvers frust-vM.N,frust-vM.0,dqbdd,pedant,hqs,forkres,cadet,caqe,rareqs,abc-bmc,abc-pdr,strix \
+  --solvers frust-vM.N,dqbdd,pedant,hqs,cadet,caqe,rareqs,abc-bmc,abc-pdr,strix \
   -j 32 --timeout 10 -o results/train.jsonl --report results/train.html \
   --certdir results/certs --verify-certs
 ```

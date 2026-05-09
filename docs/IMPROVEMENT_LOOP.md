@@ -102,7 +102,7 @@ results into a heuristic decision.
 
    ```sh
    python -m benchmarks.runner.cli multi --root benchmarks/train \
-     --solvers frust-vM.N,frust-vM.0,dqbdd,pedant,hqs,forkres,cadet,caqe,rareqs,abc-bmc,abc-pdr,strix \
+     --solvers frust-vM.N,dqbdd,pedant,hqs,cadet,caqe,rareqs,abc-bmc,abc-pdr,strix \
      --timeout 10 -j 32 \
      -o results/train.jsonl --report results/train.html \
      --certdir results/certs --verify-certs
