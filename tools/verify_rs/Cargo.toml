@@ -1,0 +1,14 @@
+[package]
+name = "dqbf-verify-rs"
+version = "0.1.0"
+edition = "2021"
+description = "Independent DQBF certificate checker (no shared code with provers/ or tools/verify/)."
+
+[[bin]]
+name = "dqbf-verify-rs"
+path = "src/main.rs"
+
+[dependencies]
+flate2 = "1"
+
+[dev-dependencies]

@@ -1,0 +1,1 @@
+[{"clause":[1,2],"rule":"axiom"},{"clause":[1,2],"rule":"axiom"},{"clause":[1],"rule":"res","premises":[0,1],"pivot":2},{"clause":[],"rule":"ured","premises":[2]}]

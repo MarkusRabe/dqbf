@@ -58,3 +58,4 @@ results/.bench_cache/
 benchmarks/train/pec_circuits/miter/*.dqdimacs.gz
 benchmarks/train/pec_circuits/miter/manifest.json
 provers/frust/target/
+tools/verify_rs/target/
