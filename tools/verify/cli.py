@@ -23,9 +23,16 @@ def main() -> None:
 @click.option("--solve", "do_solve", is_flag=True, help="run a SAT solver and report VALID/INVALID")
 def sat_cmd(formula: str, cert_aag: str, cnf_out: str, map_out: str | None, do_solve: bool) -> None:
     """Emit a DIMACS CNF whose UNSAT proves the AIGER Skolem cert valid."""
-    f = load_dqdimacs(formula)
-    aig = load_aag(cert_aag)
-    enc = encode_verification(f, aig)
+    # Fail-INVALID, never fail-silent: a malformed `.aag` or `.dqdimacs`
+    # must surface as `INVALID`, not a stack trace.
+    try:
+        f = load_dqdimacs(formula)
+        aig = load_aag(cert_aag)
+        enc = encode_verification(f, aig)
+    except Exception as e:
+        print("INVALID", flush=True)
+        print(f"verifier error: {e}", file=sys.stderr)
+        sys.exit(1)
     enc.write_dimacs(cnf_out)
     if map_out:
         enc.write_map(map_out)
@@ -54,9 +61,20 @@ def sat_cmd(formula: str, cert_aag: str, cnf_out: str, map_out: str | None, do_s
 @click.argument("formula", type=click.Path(exists=True))
 @click.argument("proof", type=click.Path(exists=True))
 def unsat_cmd(formula: str, proof: str) -> None:
-    f = load_dqdimacs(formula)
-    p = load_proof(proof)
-    ok = verify_proof(f, p)
+    # Fail-INVALID, never fail-silent: a malformed/truncated proof
+    # (e.g., a prover that hit its timeout mid-write) must surface as
+    # `INVALID`, not as a stack trace. The error message goes to
+    # stderr so the harness still sees the cause.
+    try:
+        f = load_dqdimacs(formula)
+        p = load_proof(proof)
+        ok = verify_proof(f, p)
+    except Exception as e:
+        # Flush stdout first so the verdict line precedes the error
+        # message even when the caller merges stdout+stderr.
+        print("INVALID", flush=True)
+        print(f"verifier error: {e}", file=sys.stderr)
+        sys.exit(1)
     print("VALID" if ok else "INVALID")
     sys.exit(0 if ok else 1)
 

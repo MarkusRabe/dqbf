@@ -183,7 +183,16 @@ def solve_cnf(n_vars: int, clauses: list[list[int]]) -> tuple[bool | None, list[
             for c in clauses:
                 tf.write(" ".join(str(x) for x in c) + " 0\n")
             tmp = tf.name
-        cp = subprocess.run([path, tmp], capture_output=True, text=True)
+        try:
+            # Cap the SAT call: a hung solver must not hang the
+            # verifier — "couldn't verify" must surface as a non-VALID
+            # outcome, not an indefinite wait. The bench harness has
+            # its own subprocess timeout, so this only matters when
+            # called directly.
+            cp = subprocess.run([path, tmp], capture_output=True, text=True, timeout=300)
+        except subprocess.TimeoutExpired:
+            Path(tmp).unlink(missing_ok=True)
+            return (None, None)
         Path(tmp).unlink(missing_ok=True)
         if cp.returncode == 10:
             model = [

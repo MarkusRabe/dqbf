@@ -119,6 +119,24 @@ Like FEx, but with `c3` (universal lits) added to both halves and
 | X2 | dep(C) computed against original prefix vs. extended prefix | After an FEx, the prefix has grown. `dep(C)` for a clause containing the fresh var must use the *extended* prefix. | `adv_fex_then_bad_ured` |
 | X3 | clause comparison semantics | sets vs. sorted-vecs vs. raw arrays; both implementations must compare as sets | `adv_unsorted_lits`, `adv_dup_lits` |
 | X4 | empty `clause` in non-final step | an empty clause derived early should make the rest of the proof dead but still acceptable (the proof *is* a refutation as soon as ⊥ appears) — both verifiers must agree | `valid_early_empty` (a *valid* case, included to pin down behaviour) |
+| X5 | Formula type duck-typing | `tools/verify/unsat.py` accepts any `Formula` with the right methods; the repo has two such types (`tools.verify.formats.Formula` and `core.formula.Formula`). They must share method names or the proof checker silently crashes (`f672573` episode). | `tools/verify/unsat_test.py::test_f672573_regression_fex_returns_not_raises` |
+| X6 | error path returns VALID | any code path that hits an error (parse, missing file, SAT-solver crash) must not fall through to a VALID verdict. The Rust verifier has no such path; the Python verifier's `solve_cnf` returns `(None, None)` on error → exit 3 ("skipped"), never VALID. | error-path tests in both verifiers |
+| X7 | SAT solver output parse | the Rust verifier prefers the `s UNSATISFIABLE`/`s SATISFIABLE` text over the exit code; a crashed solver that emitted partial output could mislead it. Low risk (the SAT solver is a trusted dependency, not adversarial input), but check the exit code first. | flagged, not yet tested |
+| X8 | SAT solver hangs | both verifiers shell out to a SAT solver without a timeout in the `cross_check_test.sh` path; the bench harness wraps in its own timeout, but a direct invocation can hang. | Python `solve_cnf` now has a 300 s timeout; Rust still doesn't. |
+
+## Cross-check disagreement classification
+
+The cross-check (`cross_check_test.sh`) asserts the dangerous
+direction never happens: rust=VALID, python=INVALID has zero
+instances. The opposite direction (python=VALID, rust=INVALID) has
+three instances; each is classified per `docs/notes/verifier_risks.md`:
+
+| disagreement | classification |
+|---|---|
+| axiom with spurious `premises` (A3) | (a) benign metadata leniency — Python ignores the field; Rust rejects. Both sound. |
+| no-op `ured` (D6) | (a) benign metadata leniency — Python accepts (drops empty set); Rust rejects (suspicious). Both sound. |
+| input symbol mislabel + constant output (C3) | (b) low-severity exploitable gap in Python — cone check passes vacuously when the output is constant. Rust rejects the symbol up front. The Python miter check is a backstop. Fix queued. |
+| fused res+∀Red | (c) spec ambiguity — both verifiers accept the `.frp` emitter's Q-resolution convention. Note for the journal revision. |
 
 ## Test inventory
 

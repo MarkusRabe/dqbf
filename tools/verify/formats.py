@@ -31,7 +31,16 @@ class Formula:
     def is_existential(self, v: int) -> bool:
         return v in self.dependencies
 
-    def with_existential(self, y: int, deps: frozenset[int]) -> Formula:
+    def add_existential(self, y: int, deps: frozenset[int]) -> Formula:
+        # Same name as `core.formula.Formula.add_existential` so callers
+        # that pass either Formula type to `verify_proof` keep working.
+        # Until f672573 this was `with_existential`; the proof checker's
+        # FEx/SFEx path called `with_existential`, which crashed for
+        # callers passing `core.formula.Formula` (no such method). The
+        # f672573 "fix" renamed the *call site* to `add_existential`,
+        # which inverted the breakage: it then crashed for callers
+        # passing this `formats.Formula` — which is what `cli.py` and
+        # `unsat_test.py` do. Renaming the *method* makes both work.
         d = dict(self.dependencies)
         d[y] = deps
         return Formula(max(self.n_vars, y), self.universals, d, self.clauses)
