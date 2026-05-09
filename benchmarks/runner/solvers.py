@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 import sys
 from dataclasses import dataclass
@@ -24,14 +25,26 @@ def _exists(p: str) -> bool:
     return Path(p).exists() or shutil.which(p) is not None
 
 
+_FRUST_VER_RE = re.compile(r"^v\d+\.\d+$")
+
+
 def _discover_frust_versions() -> list[str]:
     """Versioned frust snapshot binaries at `/tmp/frust-v*`. Their report
     column is named after the binary, so the loop must `cp` to the
-    *correct* tag name, not a stale alias."""
+    *correct* tag name, not a stale alias.
+
+    The version is validated against a strict pattern before it's used
+    to build an executable path: `/tmp` is world-writable, so a stray
+    `frust-v$(...)` file shouldn't end up in a command list. (`cmd` is
+    already a list — there's no shell — but the report column name and
+    cache key would still be polluted.)
+    """
     return sorted(
-        p.name.removeprefix("frust-")
+        v
         for p in Path("/tmp").glob("frust-v*")
         if p.is_file()
+        for v in (p.name.removeprefix("frust-"),)
+        if _FRUST_VER_RE.fullmatch(v)
     )
 
 
