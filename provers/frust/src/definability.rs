@@ -278,14 +278,14 @@ pub fn extract_interpolants(
             }
             let unsat = !cdcl.solve(&[y as Lit, -shift(y as Lit)], &mut model, 50_000);
             if cdcl.budget_hit {
-                decided.insert(y);
-                if undef_set.contains(&y) {
-                    // Conservatively a root: the CEGAR loop's per-cell
-                    // arbiter is sound for any unconstrained y; an
-                    // interpolant we couldn't derive in budget isn't.
-                    roots.push(y);
-                    linkable.push(y);
-                }
+                // Retry on the next pass: with more linked z's the proof
+                // is shorter (some of the carry chain is already known
+                // unique). The deadline cuts the fixpoint; unreached
+                // undef-y become roots via the post-loop. (iter76 made
+                // budget-hit decide-immediately — that turned a 50k-
+                // conflict budget miss into a permanent root for
+                // `peano_add_n10` result bits, even though they're
+                // interpolatable once the lookup table is linked.)
                 continue;
             }
             if !unsat {

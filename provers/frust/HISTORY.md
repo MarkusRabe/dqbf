@@ -2043,3 +2043,41 @@ interpolation-chain change moved frust from 3rd to 1st on the train
 set. Goal 1 from CLAUDE.md ("solve the most problems by a significant
 margin") is met on this set; the margin to pedant (2397) is ~13%.
 Report archived to `docs/dev_reports/2026-05-09_*_iter78-*.html`.
+
+## Refined-loop iteration 79: budget-hit retry + itp budget bump (kept retry, reverted bump) (2026-05-09)
+
+**Sample**: `peano/instances` (34 unsolved). `peano_add_n10`: 10 roots
+with |dep|=20 (the synthesis result bits). Confirmed via debug print
+that the 10 roots are *genuinely SAT-free* under all 89 linked z's,
+not budget casualties — the matrix doesn't determine `add(a,b)` at a
+fixed `(a,b)`; it determines it by *induction* over the recursion
+chain `add(a,0) → add(a,1) → … → add(a,b)`, which is row-coupling
+Padoa can't see (the two-copy formula fixes one (a,b)).
+
+**Constraint named: research-approach.** The cell representation
+needs `2^20` rows; the function is determined by induction not by a
+single-row constraint. This is the same shape as `*_indinv` (the inv
+function is determined by the consecution constraint, also row-
+coupling). dqbdd/hqs solve these because their BDD/AIG over the
+Skolem domain captures the inductive structure. frust would need a
+recurrence solver, not a cell table. Recorded as a research wall.
+
+**Changes** (iter79a kept, iter79b reverted as noise):
+- (a) iter76's budget-hit handling decided y immediately (never
+  retried). Reverted to `continue` (retry next pass with more linked
+  z's). Sound either way; the difference is whether a y that's
+  expensive but provable on pass 2 stays a root.
+- (b) Interpolation budget 0.3→0.45 of remaining. Result: −1 (noise).
+  Reverted. The remaining unsolved aren't budget-bound; they're
+  structurally-unrepresentable.
+
+**Result: 2692→2691/3571 (−1, noise band), 0 INVALID.**
+
+**Gotchas**:
+- `est_cells` caps `|dep|` at 8 (`1usize << dep.min(8)`), so it
+  underestimates by `2^(|dep|-8)` for |dep|>8 roots. The post-
+  interpolation gate at `est_cells > 8192` doesn't fire for
+  `peano_add_n10` (est_cells=2560 vs actual ~10M) and the cegar
+  burns budget before Bailing. Lazy-Bail would be cheaper. Not fixed
+  this iter — the gate change is risky (it gates out instances where
+  est_cells is wrong in the *other* direction).
