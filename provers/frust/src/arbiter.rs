@@ -668,6 +668,20 @@ pub fn validity_cegar(
             }
             // Arbiter: per-cell when |dep| fits the per-undef share of
             // ARB_BUDGET; else a single constant.
+            //
+            // iter77 tried a *prefix* cell here (one constant per cube
+            // of `2^(|dep|-cap)` rows) for the `*_indinv` family — a
+            // depth-`cap` tree of `2^cap` cells. **Reverted, −34.**
+            // The constant fallback Bails fast (1-2 rounds: arbsolve
+            // is UNSAT after both `±const` are blocked) and falls
+            // through to Partial. The prefix tree spends ~8000 rounds
+            // discovering it can't represent the function before
+            // Bailing, eating the whole budget. The lesson: a
+            // *bigger* representation that still can't represent the
+            // function is strictly worse than a *smaller* one that
+            // fails fast — what's needed is a representation that
+            // *can* represent it (decision-tree default function or
+            // a learned hyperplane), not a longer prefix.
             let cell_dep = if dep_lits.len() > cell_dep_cap {
                 *any_const_arbiter = true;
                 vec![]

@@ -2004,3 +2004,33 @@ the matrix-copy block slows validity). Gains: `cbmc/succinct` +105,
 - The brute-force cegar sanity check (`consist.solve` at every U row
   ≤ 4096) caught the bug immediately. Worth re-adding under
   `FRUST_VALIDATE_CEGAR` for future arbiter changes.
+
+## Refined-loop iteration 77: prefix arbiter cells (reverted, −34) (2026-05-09)
+
+**Hypothesis** (Option A from the directive): when `|dep| > cell_dep_cap`,
+the constant arbiter is too restrictive — replace `cell_dep = vec![]`
+with `cell_dep = dep_lits[..cell_dep_cap]` (a fixed-prefix decision
+tree of depth `cap`). For `*_indinv` (inv functions over 16 state bits,
+`cap≈12-13`), this should represent functions the constant can't.
+
+**Result: 2692→2658/3571 (−34). Reverted.**
+
+**Why it backfired** (general lesson for the cell-representation
+search): the prefix tree is a *bigger* representation that *still*
+can't represent the inv function (which depends on bits not in the
+prefix). The constant fallback Bails after 1-2 rounds (arbsolve is
+UNSAT once both `±const` are blocked) and falls through to Partial
+mode. The prefix tree spends thousands of rounds discovering it
+can't represent the function before Bailing. **A representation that
+fails fast is strictly better than one that fails slow.** The real
+fix is one that *can* represent the function — a learned default
+(decision-tree, hyperplane, parity) so cells are *exceptions*, not
+the function — or fall through faster (gate on a quick "can a
+constant Skolem possibly work" check).
+
+**Constraint refined**: the iter73 "circuit not table" diagnosis
+applies here as "not a *bigger* table — a *learnable* circuit." The
+cdcl-multi-learn finding (a propagation-equivalent representation is
+worth nothing) is the same shape: the prefix table propagates
+exactly as the constant does until the omitted bits matter, then it
+Bails. No new propagation power.
