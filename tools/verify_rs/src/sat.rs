@@ -266,8 +266,23 @@ pub fn verify(f: &Formula, aag: &Aag, sat_solver: &Path, scratch: &Path) -> Verd
     cnf.push(viol);
 
     // ── 4. Call the SAT solver ──────────────────────────────────────
-    let cnf_path = scratch.join("verify_rs_miter.cnf");
-    let mut out = match std::fs::File::create(&cnf_path) {
+    // Process- and call-unique name. Two reasons: the bench runner
+    // verifies certs at j=32 in the same scratch dir (a fixed name
+    // would race), and a predictable name in a shared dir is a
+    // symlink-attack target. `O_EXCL` refuses to follow a pre-placed
+    // symlink and refuses to clobber.
+    static MITER_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let seq = MITER_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let cnf_path = scratch.join(format!(
+        "verify_rs_miter_{}_{}.cnf",
+        std::process::id(),
+        seq
+    ));
+    let mut out = match std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true) // O_CREAT | O_EXCL
+        .open(&cnf_path)
+    {
         Ok(f) => f,
         Err(e) => return Verdict::Invalid(format!("write cnf: {e}")),
     };
@@ -289,6 +304,7 @@ pub fn verify(f: &Formula, aag: &Aag, sat_solver: &Path, scratch: &Path) -> Verd
     let result = std::process::Command::new(sat_solver)
         .arg(&cnf_path)
         .output();
+    let _ = std::fs::remove_file(&cnf_path);
     match result {
         Ok(o) => {
             let txt = String::from_utf8_lossy(&o.stdout);
