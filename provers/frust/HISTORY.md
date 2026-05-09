@@ -1705,3 +1705,43 @@ the unification doesn't reduce special cases, it moves them.**
 **Result: ±0**, gap analysis recorded. The actionable lead from this
 data: replace constant-arbiter fallback with a learned default
 (use a sibling's interpolant when one shares the dep set).
+
+## Refined-loop iteration 68: sibling-interpolant defaults (reverted, −38) (2026-05-09)
+
+**Hypothesis (from iter67's lead)**: replace constant arbiter `y ↔ a`
+for undef-y with `|dep|>cap` by `y ↔ (z ⊕ a)` where z is a defined
+sibling with `dep(z) ⊆ dep(y)`. Both `a` polarities are non-constant
+Skolems, so arbsolve searches "follow z or its complement" instead of
+"constant 0 or 1" — pedant's MLPack default-function trick made
+principled (interpolant-derived rather than random).
+
+**Implementation**: `def_root_lit: HashMap<Var, Lit>` tracks each
+defined-y's interpolant root in validity; lazy `sibling: HashMap<Var,
+Option<Var>>` lookup; XOR link clauses `(¬av→y↔z)∧(av→y↔¬z)` in
+validity and consist (assumption-guarded by `ac`); `ForcingCert.sib`
++ `forcing_to_skolem` emits `SkolemFn::Aig(z⊕delta)`.
+
+**Two soundness bugs found and fixed during the loop**:
+1. The first build returned `vec![]` for the sibling cell *without*
+   setting `any_const_arbiter` — arbsolve-UNSAT then returned
+   `CegarOut::Unsat` instead of `Bail`, and `conj_k2_s07001_000`
+   reported UNSAT (pedant says SAT). Sibling-default is the same
+   incompleteness class as constant; both must Bail.
+2. The second build applied sibling-default to *defined-y* on the
+   flip-SAT fall-through too. Defined-y is matrix-forced; pinning it
+   to z⊕a in consist is inconsistent and arbsolve exhausts at round 1.
+   Fixed: sibling-default only for `undef_set` members.
+
+**Result: −38 (2405 → 2367), 0 INVALID, all sound after fixes.**
+Gains: `conj_k2` (+4 UNSAT, pedant-confirmed), random_qbf (+3).
+Losses: `pec_circuits` (~30), `hwmcc_legacy`, `bmc_circuits`. Cause:
+the XOR encoding doubles the validity link clauses per cell (4 vs 2),
+and the validity solver is the hot loop — the per-cell overhead
+exceeds the conjunction wins.
+
+**Constraint named: research-approach.** Pedant's advantage isn't from
+non-constant defaults alone — its structure is one *single* co-SAT
+call (`Tseitin(¬matrix) ∧ default-defs`), not CEGAR rounds. frust's
+CEGAR rounds × per-cell clauses is the cost center; making the cells
+fancier doesn't change the round count. The next angle is reducing
+*rounds*, not improving *cell representation*.
