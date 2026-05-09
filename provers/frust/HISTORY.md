@@ -2149,3 +2149,25 @@ frust-v2.81 = 2729/3571 (76%), 2144 valid certs, 0 INVALID. The
 margin to dqbdd (2472, 69%) is +257 = +10%. iter80's bitset deps and
 matrix-copy skip are micro-optimizations that picked up the j=32
 noise margin. Report archived to `docs/dev_reports/2026-05-09_*`.
+
+## Refined-loop iteration 83: constant-interpolant substitution in validity (+2) (2026-05-09)
+
+**Hypothesis**: ~30-40% of interpolants are constants on circuit-shaped
+instances (`pec_fifo1_n20`: 792 of 2144). The unit clause `[-y]` makes
+the CDCL propagate them at level 0, but the per-clause Tseitin aux
+still exists. Substituting the constants into the matrix removes
+satisfied clauses (no aux var, no aux→¬lit clauses, not in the OR)
+and false lits (the aux→¬lit constraint is trivially true).
+
+**Result: 2693→2695/3571 (+2), 0 INVALID.** Smaller than expected —
+the validity solver was already efficient at level-0 propagation;
+the actual cost of the dead aux's was clause-DB allocation, not
+propagation. The win is on the construction side, not the per-round
+solve side.
+
+**Soundness argued**: the simplification preserves the violation set
+because (a) a clause satisfied by a constant can't be the violated
+one (the cert produces that constant), (b) a false lit only adds a
+trivially-true aux→¬lit constraint. The OR can't become empty (that
+would require K[Skolem] to be a tautology under the constants, which
+is exactly cert-correctness — sound to declare SAT then).

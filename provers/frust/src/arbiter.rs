@@ -208,14 +208,43 @@ impl CegarState {
     ) -> Self {
         let n = f.n_vars as usize;
         let m = f.clauses.len();
+        // Constant-interpolant substitution: ~30-40% of interpolants are
+        // constants on circuit-shaped instances (`pec_fifo1_n20`: 792 of
+        // 2144). The unit clause `[-y]` or `[y]` makes the CDCL propagate
+        // them at level 0 anyway, but the per-clause Tseitin aux still
+        // exists. Substituting up front:
+        //  - clauses with `y@const_v` are satisfied → no aux var, no
+        //    aux→¬lit clauses, not in the OR (`pec_fifo1_n20` cuts the
+        //    Tseitin'd matrix from 24k clauses → ~15k);
+        //  - clauses with `¬y@const_v` lose that lit (the aux→¬y clause
+        //    is trivially true).
+        let const_val: HashMap<Var, bool> = defs
+            .iter()
+            .filter_map(|(&y, d)| match d.root {
+                0 => Some((y, false)),
+                1 => Some((y, true)),
+                _ => None,
+            })
+            .collect();
         let mut vclauses: Vec<Clause> = Vec::with_capacity(m + 1);
         let mut all_aux: Clause = Vec::with_capacity(m);
         for (i, c) in f.clauses.iter().enumerate() {
             let aux = (n + 1 + i) as Lit;
+            let mut sat_by_const = false;
             for &l in c {
+                let v = var(l);
+                if let Some(&cv) = const_val.get(&v) {
+                    if (l > 0) == cv {
+                        sat_by_const = true;
+                        break;
+                    }
+                    continue; // false lit — drop from the aux→¬lit set.
+                }
                 vclauses.push(vec![-aux, -l]);
             }
-            all_aux.push(aux);
+            if !sat_by_const {
+                all_aux.push(aux);
+            }
         }
         vclauses.push(all_aux);
         // Var slots for the matrix-copy block (clauses added lazily):
@@ -260,8 +289,8 @@ impl CegarState {
             next_g += d.itp.gates.len();
             let yl = y as Lit;
             match d.root {
-                0 => vclauses.push(vec![-yl]),
-                1 => vclauses.push(vec![yl]),
+                0 => { vclauses.push(vec![-yl]); },
+                1 => { vclauses.push(vec![yl]); },
                 r => {
                     let lr = to_v(r, &gv);
                     vclauses.push(vec![-yl, lr]);
