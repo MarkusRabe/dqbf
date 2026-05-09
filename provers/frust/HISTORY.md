@@ -1940,3 +1940,67 @@ truly-free-undef-y wall. Two viable architecture changes:
 Both address the same constraint: the `2^|dep|`-cell representation
 for a free function is too large; the cert must be a *circuit*, not
 a *table*.
+
+## Refined-loop iteration 76: interpolation chains for undef-y (+239) (2026-05-09)
+
+**Sample**: `cbmc/succinct` (151 unsolved, biggest cluster). e.g.
+`bitrev_bug_n4_k032`: 142 of 170 e-vars Padoa-undefined → 142 cell
+keys → 8192-arbiter budget exhausted at 7592 cells → timeout. The
+142 are Tseitin gates over *other free e-vars* (the trace state):
+`y_t = T(y_{t-1}, U)`. The matrix uniquely determines `y_t` given
+`y_{t-1}`, but Padoa's link set only contains *defined*-z's, so the
+chain can't bootstrap from the free initial state.
+
+**Constraint named: architectural** — the iter73 conclusion ("the
+cert must be a circuit, not a table") applies to the interpolated
+side, not just the cells. Per-cell arbiters are point-by-point
+enumeration; the chained-interpolant cert composes through free
+roots, which is the circuit form.
+
+**Change** (`139134f` → `2718668`-style multi-file change, ~80 LOC):
+`extract_interpolants` now takes `undefined` too. The fixpoint links
+*roots* (decided-free undef-y's) as well as already-interpolated y's.
+A Padoa-undef y that becomes UNSAT given `dep ∪ {roots}` is promoted
+to interpolated; the cert reads the roots' outputs (already supported
+by `SkolemFn::Aig` + the AIGER writer's DFS post-order). The ones
+that stay free after the fixpoint are the *roots* the CEGAR loop
+must search. `est_cells` gate moved to *after* interpolation
+(post-interpolation cell count is what arbsolve actually enumerates).
+
+**INVALID cert found and fixed during step 4** (3 attempts before
+0-INVALID): `bitrev_bug_n4_k032` produced an INVALID SAT cert. Root
+cause: the cegar's forcing path tried `consist.solve(dep|U* + ¬want)`
+for *interpolated promoted-undef* y's. `consist` has no interpolant
+constraints, so its `cmodel[y]` is a free choice that can disagree
+with the interpolant value (which depends on roots). The forcing
+clause it produces then contradicts the interpolant in `validity`,
+which masks the true counterexample row (`validity@row0 + cells`
+became UNSAT while `consist@row0 + cells` was also UNSAT — a
+contradiction). Fix: skip the forcing/cell path entirely for any y
+in `defs` (`if defs.contains_key(&y) { continue; }`). Diagnosed via
+a brute-force cegar sanity check (solve `consist` at every U row
+with the final cells) — kept the diagnostic technique in the
+HISTORY for the next agent.
+
+**Result: 2401→2692/3571 (+294 −55 = +239), 2155 valid certs, 0
+INVALID.** 0/145 mismatches against pedant on the gains. Most of
+the −55 is j=32 timeout noise (re-ran 8 random losses unloaded:
+6/8 also timeout in v2.75); 2 real regressions (`sat_accum_n32_k024`
+where SlotDpll was faster, `pec_mutex_n16_k8_bb1_complete` where
+the matrix-copy block slows validity). Gains: `cbmc/succinct` +105,
+`collatz/tonly` +33, `bmc_circuits/succinct/*` +130. The
+`bitrev_bug_n4_k032` rounds dropped 11252→4944.
+
+**Gotchas**:
+- The cdcl-multi-learn report (Phase 6) showed ext-factoring is
+  propagation-equivalent (0.5-0.8× across all classes) — Option B
+  (extension-variable arbiter cells) is the same trap. The
+  interpolation chain is genuinely different: it shrinks the
+  *representation*, not just the proof.
+- The forcing-clause path's `core_ok` check protects against
+  conditional cores, but doesn't protect against `consist`'s free
+  choice disagreeing with an interpolant — those are different
+  failure modes. The fix is to never try forcing for interpolated y's.
+- The brute-force cegar sanity check (`consist.solve` at every U row
+  ≤ 4096) caught the bug immediately. Worth re-adding under
+  `FRUST_VALIDATE_CEGAR` for future arbiter changes.

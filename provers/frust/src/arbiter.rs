@@ -564,6 +564,21 @@ pub fn validity_cegar(
             if !eager && want == got && got != 0 {
                 continue;
             }
+            // Interpolated y's are constrained by their interpolant in
+            // validity. Adding a forcing clause for them is redundant
+            // (the interpolant pins y) and DANGEROUS: the interpolant
+            // is over (dep ∪ roots), so y's value at a row depends on
+            // the cells; consist's `cmodel[y]` doesn't track that
+            // (consist has no interpolant constraints), so the forcing
+            // clause it produces can disagree with the interpolant. The
+            // disagreement makes (forcing ∧ interpolant) UNSAT in
+            // validity, masking the true counterexample row. (iter76:
+            // bitrev_bug_n4_k032 INVALID cert traced to exactly this —
+            // validity@row0 UNSAT with cells while consist@row0+cells
+            // UNSAT, contradiction.)
+            if defs.contains_key(&y) {
+                continue;
+            }
             let dep_lits: Vec<Lit> = dep_set[&y]
                 .iter()
                 .map(|&u| {

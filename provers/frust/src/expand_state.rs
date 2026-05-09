@@ -242,27 +242,46 @@ impl ExpandState {
                         s.defined.len(),
                         s.undefined.len()
                     );
-                    // Compute the cell-budget gate *after* partner
-                    // detection: a (y, y') consistency pair shares one
-                    // cell, so the effective key count is undef − n_pairs.
-                    // Without this, succinct/inductive formulas (296 undef
-                    // in 148 pairs at |dep|=5) were gated to SlotDpll
-                    // even though the partnered cell count fits easily.
-                    let partner = crate::arbiter::detect_partners(f, &s.undefined);
+                    // Coarse pre-gate on |E| only: interpolation runs
+                    // O(|E|) Padoa solves, so genuinely huge instances
+                    // (collatz n64) shouldn't pay the cost. The fine
+                    // est_cells gate runs *after* interpolation — undef
+                    // y's that become interpolated drop out of the cell
+                    // count, so gating on `s.undefined` is too pessimistic.
+                    if s.defined.len() + s.undefined.len() > 3000 {
+                        self.mode = if nu_full > self.expand_us.len() {
+                            Mode::Partial
+                        } else {
+                            Mode::SlotDpll
+                        };
+                        return self.step(f, cdcl, deadline, start, debug);
+                    }
+                    let itp_dl = start.elapsed().as_secs_f64() + (deadline - now) * 0.3;
+                    let (defs, roots) = crate::definability::extract_interpolants(
+                        f,
+                        &s.defined,
+                        &s.undefined,
+                        itp_dl,
+                        start,
+                        debug,
+                    );
+                    let partner = crate::arbiter::detect_partners(f, &roots);
                     let n_pairs = partner.len() / 2;
-                    let est_cells: usize = s
-                        .undefined
+                    let est_cells: usize = roots
                         .iter()
                         .filter(|&&y| partner.get(&y).map_or(true, |(p, _)| *p > y))
                         .map(|y| 1usize << f.deps[y].len().min(8))
                         .sum();
-                    let eff_undef = s.undefined.len().saturating_sub(n_pairs);
+                    let eff_undef = roots.len().saturating_sub(n_pairs);
                     dbg_ex!(
                         debug,
-                        "partner: {} pairs of {} undef → est_cells {}",
-                        n_pairs,
+                        "interpolated {}/{} (undef {}→{} roots, {} pairs, est_cells {})",
+                        defs.len(),
+                        s.defined.len() + s.undefined.len(),
                         s.undefined.len(),
-                        est_cells
+                        roots.len(),
+                        n_pairs,
+                        est_cells,
                     );
                     if est_cells > 8192 && eff_undef > 100 {
                         self.mode = if nu_full > self.expand_us.len() {
@@ -272,24 +291,8 @@ impl ExpandState {
                         };
                         return self.step(f, cdcl, deadline, start, debug);
                     }
-                    let itp_dl = start.elapsed().as_secs_f64() + (deadline - now) * 0.3;
-                    let defs = crate::definability::extract_interpolants(
-                        f, &s.defined, itp_dl, start, debug,
-                    );
-                    if debug {
-                        eprintln!(
-                            "c [expand] interpolated {}/{} defined ({} forcing-loop)",
-                            defs.len(),
-                            s.defined.len(),
-                            s.defined.len() - defs.len()
-                        );
-                    }
-                    self.cegar = Some(crate::arbiter::CegarState::new(
-                        f,
-                        &s.undefined,
-                        &defs,
-                        partner,
-                    ));
+                    self.cegar =
+                        Some(crate::arbiter::CegarState::new(f, &roots, &defs, partner));
                     self.cegar.as_mut().unwrap().defs = defs;
                 }
                 None => {

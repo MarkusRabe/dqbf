@@ -176,13 +176,25 @@ pub fn padoa_split(
 /// once; each y solves on a fresh *clone* of it so the proof is minimal
 /// (sharing learned clauses across y's gave correct but bloated
 /// interpolants — alu_add went 452→1001 gates and CEGAR doubled).
+///
+/// `undefined` are the Padoa-undef y's. They're *also* candidates: a
+/// Padoa-undef y can still be unique given dep(y) ∪ {already-decided
+/// undef-z}. (Padoa only links *defined*-z's, so a Tseitin gate over
+/// other free e-vars — `y_t = T(y_{t-1}, U)` — is misclassified as
+/// truly free.) The fixpoint promotes such y's to interpolated; the
+/// undef-y's that remain free after the fixpoint are the *roots* the
+/// CEGAR loop must search. Their cell count is what arbsolve has to
+/// enumerate, so shrinking 138→5 collapses the round count.
+///
+/// Returns `(interpolants, roots)`. `roots ⊆ undefined`.
 pub fn extract_interpolants(
     f: &Formula,
     defined: &[Var],
+    undefined: &[Var],
     deadline: f64,
     start: &std::time::Instant,
     debug: bool,
-) -> HashMap<Var, Def> {
+) -> (HashMap<Var, Def>, Vec<Var>) {
     let n = f.n_vars as Lit;
     let m = f.clauses.len();
     let nu = n as Var;
@@ -198,11 +210,16 @@ pub fn extract_interpolants(
         .iter()
         .flat_map(|c| c.iter().map(|&l| var(l)))
         .collect();
+    let undef_set: HashSet<Var> = undefined.iter().copied().collect();
     let mut order: Vec<Var> = defined
         .iter()
+        .chain(undefined.iter())
         .copied()
         .filter(|y| live.contains(y))
         .collect();
+    // Process by (|dep|, var-id). Var-id is the BMC unrolling order for
+    // succinct/inductive encodings (step-0 vars precede step-1), so the
+    // chain `y_0 → y_1 → …` bootstraps from one root, not k of them.
     order.sort_by_key(|&y| (f.deps[&y].len(), y));
 
     // Build a base CDCL once (copy-A | copy-B, no links) with
@@ -222,24 +239,36 @@ pub fn extract_interpolants(
     let mut model = vec![0i8; 2 * n as usize + 1];
 
     let mut out: HashMap<Var, Def> = HashMap::new();
-    let mut done_order: Vec<Var> = Vec::new();
-    // Fixpoint: each pass links z's already in `out`, so the reference
-    // graph stays acyclic. A y that needs a same-dep z fails pass 1 but
-    // succeeds pass 2 once z is in `out`.
+    // Linkable z's: interpolated y's *and* free roots. Both are decided
+    // — their Skolem function is known (an interpolant or the cell
+    // table) — so subsequent y's can be unique-given-them. Roots come
+    // first in `linkable` because they have the smallest dep (sort
+    // order) and are processed first.
+    let mut linkable: Vec<Var> = Vec::new();
+    // y's already processed in this fixpoint with no progress possible:
+    // - undef-y that came back SAT given current links → free root.
+    //   It's *added* to `linkable` (others can reference it) but marked
+    //   `decided` so it's never re-processed (re-processing could find
+    //   it unique given a *later*-processed root → cycle in the cert).
+    // - any y the budget hit — re-trying every pass burns the deadline.
+    let mut decided: HashSet<Var> = HashSet::new();
+    let mut roots: Vec<Var> = Vec::new();
+    // Fixpoint: each pass links z's already in `linkable`, so the
+    // reference graph stays acyclic by construction.
     'passes: loop {
-        let before = out.len();
+        let before = out.len() + roots.len();
         for &y in &order {
-            if out.contains_key(&y) {
+            if out.contains_key(&y) || decided.contains(&y) {
                 continue;
             }
             if start.elapsed().as_secs_f64() >= deadline {
                 break 'passes;
             }
             let dy: BTreeSet<Var> = f.deps[&y].clone();
-            let linked_z: Vec<Var> = done_order
+            let linked_z: Vec<Var> = linkable
                 .iter()
                 .copied()
-                .filter(|&z| f.deps[&z].is_subset(&dy))
+                .filter(|&z| z != y && f.deps[&z].is_subset(&dy))
                 .collect();
             let mut cdcl = base.clone();
             for &u in dy.iter().chain(linked_z.iter()) {
@@ -248,7 +277,28 @@ pub fn extract_interpolants(
                 cdcl.add_external(&[a, -b]);
             }
             let unsat = !cdcl.solve(&[y as Lit, -shift(y as Lit)], &mut model, 50_000);
-            if cdcl.budget_hit || !unsat {
+            if cdcl.budget_hit {
+                decided.insert(y);
+                if undef_set.contains(&y) {
+                    // Conservatively a root: the CEGAR loop's per-cell
+                    // arbiter is sound for any unconstrained y; an
+                    // interpolant we couldn't derive in budget isn't.
+                    roots.push(y);
+                    linkable.push(y);
+                }
+                continue;
+            }
+            if !unsat {
+                if undef_set.contains(&y) {
+                    // Free root. Decided once: re-processing under a
+                    // later-decided z would create a y→z→y reference
+                    // cycle in the cert.
+                    decided.insert(y);
+                    roots.push(y);
+                    linkable.push(y);
+                }
+                // Defined-y SAT here means it needs more z's; leave for
+                // the next pass (the original behaviour).
                 continue;
             }
             let shared: HashSet<Var> = dy.iter().chain(linked_z.iter()).copied().collect();
@@ -262,22 +312,36 @@ pub fn extract_interpolants(
             let a_local = |v: Var| v <= nu && !shared.contains(&v);
             if let Some((itp, root)) = mcmillan(&cdcl, side, &shared, a_local) {
                 out.insert(y, Def { itp, root });
-                done_order.push(y);
+                linkable.push(y);
+            } else if undef_set.contains(&y) {
+                decided.insert(y);
+                roots.push(y);
+                linkable.push(y);
             }
         }
-        if out.len() == before {
+        if out.len() + roots.len() == before {
             break;
+        }
+    }
+    // Padoa-undef y's never reached (deadline) are roots — sound,
+    // because the cell arbiter is a fallback for any free y.
+    for &y in undefined {
+        if live.contains(&y) && !out.contains_key(&y) && !decided.contains(&y) {
+            roots.push(y);
         }
     }
     if debug {
         eprintln!(
-            "c [def] interpolants: {}/{} extracted (gates: {})",
-            out.len(),
+            "c [def] interpolants: {}/{} defined + {}/{} undef→linked (gates: {}, roots {})",
+            out.values().filter(|_| true).count() - undefined.iter().filter(|y| out.contains_key(y)).count(),
             defined.len(),
-            out.values().map(|d| d.itp.gates.len()).sum::<usize>()
+            undefined.iter().filter(|y| out.contains_key(y)).count(),
+            undefined.len(),
+            out.values().map(|d| d.itp.gates.len()).sum::<usize>(),
+            roots.len(),
         );
     }
-    out
+    (out, roots)
 }
 
 /// Cross-check each interpolant against the matrix at `k` random rows.
@@ -397,7 +461,7 @@ mod tests {
         // ∀u ∃y(u): (¬u∨y)(u∨¬y)  ⟹  y ↔ u.
         let f = build(&[1], &[(2, &[1])], &[&[-1, 2], &[1, -2]]);
         let start = std::time::Instant::now();
-        let defs = extract_interpolants(&f, &[2], 5.0, &start, false);
+        let defs = extract_interpolants(&f, &[2], &[], 5.0, &start, false).0;
         let d = &defs[&2];
         assert_eq!(d.itp.inputs, vec![1]);
         // y ↔ u: at u=0 → y=0; u=1 → y=1.
@@ -414,7 +478,7 @@ mod tests {
             &[&[-1, -2, 3], &[1, -3], &[2, -3]],
         );
         let start = std::time::Instant::now();
-        let defs = extract_interpolants(&f, &[3], 5.0, &start, false);
+        let defs = extract_interpolants(&f, &[3], &[], 5.0, &start, false).0;
         let d = &defs[&3];
         // Find input order
         let i1 = d.itp.inputs.iter().position(|&v| v == 1).unwrap();
@@ -442,7 +506,7 @@ mod tests {
             &[&[-1, -2, -3], &[-1, 2, 3], &[1, -2, 3], &[1, 2, -3]],
         );
         let start = std::time::Instant::now();
-        let defs = extract_interpolants(&f, &[3], 5.0, &start, false);
+        let defs = extract_interpolants(&f, &[3], &[], 5.0, &start, false).0;
         let d = &defs[&3];
         let i1 = d.itp.inputs.iter().position(|&v| v == 1).unwrap();
         let i2 = d.itp.inputs.iter().position(|&v| v == 2).unwrap();
@@ -471,7 +535,7 @@ fn interpolant_validate_pec() {
     let f = crate::parse::parse(&buf).expect("parse");
     let start = std::time::Instant::now();
     let split = padoa_split(&f, 5.0, &start, false).expect("padoa");
-    let defs = extract_interpolants(&f, &split.defined, 30.0, &start, false);
+    let defs = extract_interpolants(&f, &split.defined, &split.undefined, 30.0, &start, false).0;
     assert!(validate_interpolants(&f, &defs, 20).is_none());
 }
 
@@ -491,7 +555,7 @@ fn _old_e179_debug() {
     let f = crate::parse::parse(&buf).expect("parse");
     let start = std::time::Instant::now();
     let split = padoa_split(&f, 5.0, &start, false).expect("padoa");
-    let defs = extract_interpolants(&f, &split.defined, 30.0, &start, false);
+    let defs = extract_interpolants(&f, &split.defined, &split.undefined, 30.0, &start, false).0;
     eprintln!("e179 in defined: {}", split.defined.contains(&179));
     eprintln!("e179 has interpolant: {}", defs.contains_key(&179));
     // Which z's would Padoa link for e179?
@@ -633,7 +697,7 @@ fn interpolant_pec_sample() {
         start.elapsed().as_secs_f64()
     );
     let t1 = std::time::Instant::now();
-    let defs = extract_interpolants(&f, &split.defined, 30.0, &start, true);
+    let defs = extract_interpolants(&f, &split.defined, &split.undefined, 30.0, &start, true).0;
     let mut sizes: Vec<usize> = defs.values().map(|d| d.itp.gates.len()).collect();
     sizes.sort_unstable();
     eprintln!(
