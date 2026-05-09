@@ -350,22 +350,29 @@ pub fn reconstruct_circuit(f: &Formula, stack: &[(Clause, Lit)]) -> Option<Skole
             return None;
         }
         let dy = &f.deps[&yv];
-        // Dep-nesting check (see doc comment).
-        for &q in c.iter().filter(|&&q| q != *l) {
-            let qv = var(q);
-            if let Some(dq) = f.deps.get(&qv) {
-                if !dq.is_subset(dy) {
-                    return None;
-                }
-            } else if !dy.contains(&qv) {
-                return None;
-            }
-        }
         let want_true = *l > 0;
         let old = root[&yv];
+        // `sat_others = ⋁ q-value` over the other lits in `C`. Lits whose
+        // var depends on bits outside `dep(y)` are dropped (treated as
+        // false): the repaired `y` can't read them. **Sound** because
+        // dropping makes the set *unconditional* — `y := pol(l)` even
+        // when another lit satisfies `C` — which is one valid choice.
+        // The truth-table reconstructor's row-loop has the same
+        // nondeterminism (writes from rows sharing a `dep(y)`-key but
+        // differing on out-of-dep bits all hit the same table entry;
+        // last write wins). The explicit unconditional choice is the
+        // simplest deterministic policy.
         let mut sat_others = 0u32;
         for &q in c.iter().filter(|&&q| q != *l) {
             let qv = var(q);
+            let in_dep = if let Some(dq) = f.deps.get(&qv) {
+                dq.is_subset(dy)
+            } else {
+                dy.contains(&qv)
+            };
+            if !in_dep {
+                continue;
+            }
             let ql = if let Some(&r) = root.get(&qv) {
                 // Existential: read its *current* node, not an input
                 // labelled `qv` (which would create a forward reference

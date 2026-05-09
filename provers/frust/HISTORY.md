@@ -1616,3 +1616,22 @@ architectural (extend `detect_partners` to chains).
 
 **Instrumentation added**: `FRUST_DEBUG_PARTNER` env-gated debug for
 `detect_partners` showing tried/sat/budget/overlap counts.
+
+## Refined-loop iteration 65: BCE-circuit unconditional-set for out-of-dep refs (2026-05-09)
+
+**Sample**: 3 SAT-no-cert in `bitwidth_scaling/build` (`inc_n20/24/32`).
+**Constraint named: implementation roughness** — `reconstruct_circuit`
+bailed when a stack clause referenced a var with `dep ⊄ dep(y)`
+(specifically the dep-∅ existential's blocked clause referencing
+dep-20 vars).
+
+**Change** (`bce.rs::reconstruct_circuit`): instead of bailing, drop
+out-of-dep lits from `sat_others` (treat as false → unconditional set
+`y := pol(l)`). Sound because the truth-table reconstructor's row
+loop has the same nondeterminism (rows differing only on out-of-dep
+bits write the same `dep(y)`-key entry; last-write-wins) — the
+unconditional set is one valid choice and is what the row loop
+converges to in practice.
+
+**Result**: solved ±4 (noise), valid certs 2057 → 2059 (+2), no-cert
+351 → 345, 0 INVALID. Recovered `bitwidth_scaling/inc_n*`.
