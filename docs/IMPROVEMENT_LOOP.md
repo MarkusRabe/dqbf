@@ -226,6 +226,30 @@ blocker was architectural. A "Next" section in CLAUDE.md naming the
 you find yourself adjusting a number for the third time, the number is
 not the problem.
 
+### Don't enumerate; generalize conflicts
+
+When a loop visits one row/cell/slot/assignment per round and the
+round count scales linearly with the search-space size, that's
+enumeration and it is the wrong shape — bigger budgets don't fix it.
+The fix is **conflict generalization**: after each conflict, find the
+smallest subcube of the conditioning assignment that still conflicts
+(drop literals one at a time, re-check) and learn that cube. One round
+then teaches the search about exponentially many points. This is
+PDR's `generalize` (Bradley FMCAD'11), CDCL's 1-UIP, and CEGAR's
+counterexample-guided refinement — the same idea at three levels.
+
+Two pitfalls (both hit at iters 70-71):
+- **The learned cube must be unconditionally valid.** If the conflict
+  depended on mutable state (a tentative arbiter assignment, a cached
+  model), the cube is only valid while that state holds — committing
+  it permanently is unsound (iter71's 11-INVALID lesson).
+- **Generalization that doesn't fold into a CDCL is fragile.** When
+  the search loop is hand-rolled (arbsolve, slot-DPLL), invalidating
+  a learned cube on state change is bookkeeping that the CDCL would
+  do for free via watched literals and backjump. Prefer encoding the
+  search space as decision variables in an existing CDCL over a
+  separate enumeration loop.
+
 ## Gate
 
 The hard line is **zero INVALID certs** — that never bends.
