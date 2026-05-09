@@ -1559,3 +1559,32 @@ handles the polarity. ~5 LOC.
 **Result**: solved ±2 (noise), **valid certs 1672 → 1995 (+323),
 no-cert 737 → 415, 0 INVALID.** Recovered `random_qbf` (145),
 `random_bv` (~80), `pec_circuits` (~50), `cbmc/flat` (~30).
+
+## Refined-loop iteration 63: row-UNSAT reprove fall-through (2026-05-09)
+
+**Sample**: `random_bv/mixed`, `cbmc/flat` UNSAT-no-cert. All verify
+VALID standalone with `--proof` only. **Constraint named:
+implementation roughness** — same flag-interaction bug class as
+iter62, but in *inner* learned-clause chains, not just the final
+chain.
+
+**Root cause**: when a clause unit-propagates a universal `u` before
+its assumption is reached, *learned clauses* tracing through `u`
+record a chain step `(reason[u], u)` with universal pivot. iter62's
+fix only handled the *final* chain (assumption-violated path);
+`analyze`'s chains have the same structure. The proper fix would be
+in `analyze` (treat non-decision vars as leaves), but that touches the
+hot loop and risks subtle SAT-path regressions.
+
+**Change** (minimal, `search.rs`): when `reprove_row_unsat` returns
+`None`, **fall through to saturate** instead of returning UNSAT-no-
+proof. saturate works on the full Q-resolution calculus and closes
+these in <0.5 s. The verdict is held; saturate is best-effort cert.
+
+**Result**: solved ±2 (noise), **valid certs 1995 → 2057 (+62),
+no-cert 415 → 351, 0 INVALID.** Recovered `random_bv` (~50),
+`cbmc/flat` (~10).
+
+**Remaining no-cert (~351)**: dominated by `bmc_circuits` (~220
+arbsolve-exhausted UNSAT — research-approach: need FEx-chain emission
+or extension variables); `cbmc/{succinct,inductive}` (~50, same).

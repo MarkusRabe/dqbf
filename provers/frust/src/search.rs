@@ -313,12 +313,21 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                     } else {
                         None
                     };
-                    return Output {
-                        verdict: Verdict::Unsat,
-                        proof,
-                        skolem: None,
-                        stats: "expand-row-unsat".into(),
-                    };
+                    if proof.is_some() {
+                        return Output {
+                            verdict: Verdict::Unsat,
+                            proof,
+                            skolem: None,
+                            stats: "expand-row-unsat".into(),
+                        };
+                    }
+                    // Reprove failed (e.g. universal pivot in the chain
+                    // when the matrix is propositionally UNSAT before
+                    // assumptions). Fall through to saturate — it works
+                    // on the full Q-resolution calculus and often closes
+                    // these in <0.5 s.
+                    known_unsat = true;
+                    expand_done = true;
                 }
                 crate::expand_state::Step::Done => expand_done = true,
                 crate::expand_state::Step::Pending => {}

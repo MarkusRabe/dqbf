@@ -253,9 +253,7 @@ impl ExpandState {
                     let est_cells: usize = s
                         .undefined
                         .iter()
-                        .filter(|&&y| {
-                            partner.get(&y).map_or(true, |(p, _)| *p > y)
-                        })
+                        .filter(|&&y| partner.get(&y).map_or(true, |(p, _)| *p > y))
                         .map(|y| 1usize << f.deps[y].len().min(8))
                         .sum();
                     let eff_undef = s.undefined.len().saturating_sub(n_pairs);
@@ -279,7 +277,10 @@ impl ExpandState {
                         f, &s.defined, itp_dl, start, debug,
                     );
                     self.cegar = Some(crate::arbiter::CegarState::new(
-                        f, &s.undefined, &defs, partner,
+                        f,
+                        &s.undefined,
+                        &defs,
+                        partner,
                     ));
                     self.cegar.as_mut().unwrap().defs = defs;
                 }
