@@ -1910,3 +1910,33 @@ sets can witness blockedness where the original vars can't, possibly
 eliminating the undef-y entirely) or (b) a learned default function
 (pedant's MLPack approach — decision-tree default so the cell list
 is the *exceptions*, not the function). Both ~150-300 LOC.
+
+## Refined-loop iterations 75-80: forcing threshold tuning (reverted, noise) (2026-05-09)
+
+**iter 75**: lowered the iter72 forcing-trigger gate from
+`dep_lits.len() > 4` to `> 0` (try forcing for all undef-y, not
+just large-dep). Result: 2401/3571 (−6 vs iter72's 2407), gained 5
+in `bmc_circuits/succinct`, lost 5 in the same family — j=32 noise.
+**Reverted** (the gate was correct: small-|dep| undef-y rarely have
+matrix-only forcing, so the extra `consist.solve` is wasted work).
+
+**iters 76-80 not run** (context budget exhausted on the fork).
+
+**Lead for the next agent** (recorded for continuity): the gap to
+pedant on `bmc_circuits/{succinct,inductive}` and `cbmc` is the
+truly-free-undef-y wall. Two viable architecture changes:
+1. **FEx-augmented DQBF-BCE preprocessing** (`docs/notes/bce_ext.md`):
+   introduce fork variables targeted at clauses whose only obstruction
+   is the dep-subset check; re-run BCE; the fork var has a smaller dep
+   set and may witness blockedness that eliminates undef-y entirely.
+   ~150 LOC in `bce.rs`. Genuinely novel preprocessing — no published
+   equivalent.
+2. **Decision-tree default function** (pedant's MLPack approach): the
+   priority decoder cert already supports a default expression
+   (currently implicit `false`). Parameterize it as a small decision
+   tree over `dep(y)` learned from `cmodel` samples. CEGAR allocates
+   exception cells only where the tree is wrong. ~80 LOC in
+   `forcing_to_skolem` + the cert's `SkolemFn::Clauses` path.
+Both address the same constraint: the `2^|dep|`-cell representation
+for a free function is too large; the cert must be a *circuit*, not
+a *table*.
