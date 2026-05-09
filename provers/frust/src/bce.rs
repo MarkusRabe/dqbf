@@ -310,6 +310,94 @@ pub fn ate_pass(
     removed
 }
 
+/// Build a circuit-form Skolem directly from the BCE stack, without
+/// iterating 2^|U| rows. Used when BCE empties the matrix (any base
+/// Skolem works — start at constant 0) and |U| > 16 makes the
+/// truth-table reconstructor unaffordable.
+///
+/// The repair rule is `reconstruct`'s row loop lifted to a circuit:
+/// reverse the stack; for each blocked `(C, l)` with `var(l) = y`, the
+/// new `y` is `if ¬sat(C\{l}) then pol(l) else y_old` — an ITE.
+/// `sat(C\{l})` reads other vars at their *current* (post-later-repair)
+/// definition.
+///
+/// **Returns `None` (caller falls back to no-cert) when the dep sets
+/// aren't nested**: the row loop reads `q`'s value at the *full*
+/// universal row `ub` and writes `y`'s entry at `pext(ub, dep(y))`, so
+/// if `dep(q) ⊄ dep(y)` the same `dep(y)`-key gets contradicting
+/// writes. BCE soundness guarantees this doesn't matter for the
+/// *truth-table* form (the last write wins, and any choice is valid),
+/// but in *circuit* form `y` would read `q` through bits outside
+/// `dep(y)` and the verifier's structural check would reject it. We
+/// stay on the safe side and require `dep(q) ⊆ dep(y) ∪ universals(C)`
+/// for every `q` referenced. Covers `bitwidth_scaling` (all
+/// existentials have `dep = U` after BCE).
+pub fn reconstruct_circuit(f: &Formula, stack: &[(Clause, Lit)]) -> Option<Skolem> {
+    use crate::aiger::SkolemFn;
+    use crate::interpolant::Itp;
+    use std::collections::HashMap;
+    // One *shared* AIG: every existential's running root lives here, so
+    // cross-existential reads see the value at the time of the read,
+    // matching the row-loop's `lit_val(bits, q, ub)` (which reads q's
+    // table as it stands *during* the iteration, not the final table).
+    // This breaks cycles: the read is to a previously-built node, never
+    // forward.
+    let mut itp = Itp::new();
+    let mut root: HashMap<Var, u32> = f.deps.keys().map(|&y| (y, 0u32)).collect();
+    for (c, l) in stack.iter().rev() {
+        let yv = var(*l);
+        if !f.deps.contains_key(&yv) {
+            return None;
+        }
+        let dy = &f.deps[&yv];
+        // Dep-nesting check (see doc comment).
+        for &q in c.iter().filter(|&&q| q != *l) {
+            let qv = var(q);
+            if let Some(dq) = f.deps.get(&qv) {
+                if !dq.is_subset(dy) {
+                    return None;
+                }
+            } else if !dy.contains(&qv) {
+                return None;
+            }
+        }
+        let want_true = *l > 0;
+        let old = root[&yv];
+        let mut sat_others = 0u32;
+        for &q in c.iter().filter(|&&q| q != *l) {
+            let qv = var(q);
+            let ql = if let Some(&r) = root.get(&qv) {
+                // Existential: read its *current* node, not an input
+                // labelled `qv` (which would create a forward reference
+                // / cycle through the AIGER writer's per-output cones).
+                if q > 0 {
+                    r
+                } else {
+                    r ^ 1
+                }
+            } else {
+                itp.lit(q) // universal input
+            };
+            sat_others = itp.mk_or(sat_others, ql);
+        }
+        let c_not = sat_others ^ 1;
+        let new_root = if want_true {
+            itp.mk_or(c_not, old)
+        } else {
+            itp.mk_and(sat_others, old)
+        };
+        root.insert(yv, new_root);
+    }
+    // The single shared Itp gets cloned per output. Clones are cheap
+    // (Vec/HashMap clones) and the AIGER writer dedupes structurally
+    // via its own strash; the per-output Itp is just a delivery vehicle.
+    let mut sk: Skolem = Skolem::new();
+    for (&y, &r) in &root {
+        sk.insert(y, SkolemFn::Aig(itp.clone(), r));
+    }
+    Some(sk)
+}
+
 /// Walk the BCE stack in reverse; for each (C, l), set sk[var(l)](k):=true
 /// wherever ∃ universal assignment α with α|_dep(l)=k and sk(α) ⊭ C.
 /// Requires |U| ≤ 64 (we enumerate 2^|U| assignments).

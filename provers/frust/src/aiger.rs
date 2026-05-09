@@ -1,7 +1,7 @@
 //! Minimal .aag writer for Skolem certificates.
 
 use crate::formula::{var, Formula, Lit, Var};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::io::Write;
 
 /// One Skolem function. `Table` is a 2^ndeps-bit truth table; `Clauses`
@@ -20,6 +20,7 @@ pub type Skolem = BTreeMap<Var, SkolemFn>;
 struct Aig {
     n_inputs: usize,
     gates: Vec<(u32, u32, u32)>,
+    strash: HashMap<(u32, u32), u32>,
 }
 
 impl Aig {
@@ -30,8 +31,28 @@ impl Aig {
         self.n_inputs as u32 + self.gates.len() as u32
     }
     fn mk_and(&mut self, a: u32, b: u32) -> u32 {
+        if a == 0 || b == 0 {
+            return 0;
+        }
+        if a == 1 {
+            return b;
+        }
+        if b == 1 {
+            return a;
+        }
+        if a == b {
+            return a;
+        }
+        if a == (b ^ 1) {
+            return 0;
+        }
+        let key = if a < b { (a, b) } else { (b, a) };
+        if let Some(&g) = self.strash.get(&key) {
+            return g;
+        }
         let v = self.max_var() + 1;
         self.gates.push((2 * v, a, b));
+        self.strash.insert(key, 2 * v);
         2 * v
     }
     fn mk_or(&mut self, a: u32, b: u32) -> u32 {
@@ -43,8 +64,6 @@ impl Aig {
         self.mk_or(a, b)
     }
 }
-
-use std::collections::HashMap;
 
 fn shannon(aig: &mut Aig, bits: &[u64], n: usize, inputs: &[u32]) -> u32 {
     let mut memo: HashMap<(usize, Vec<u64>), u32> = HashMap::new();
@@ -120,6 +139,7 @@ pub fn write_skolem_aag<W: Write>(w: &mut W, f: &Formula, sk: &Skolem) -> std::i
     let mut aig = Aig {
         n_inputs: f.universals.len(),
         gates: Vec::new(),
+        strash: HashMap::new(),
     };
     let u_lit: BTreeMap<Var, u32> = f
         .universals

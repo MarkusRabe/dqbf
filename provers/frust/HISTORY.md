@@ -1501,3 +1501,34 @@ CEGAR can't prune efficiently. A "BCE-eliminate the internal Tseitin
 gates" pre-pass would remove most of the 141 (they're pure literals or
 blocked once the step-function output is fixed) — but that's a
 substantial encoding-level change.
+
+## Refined-loop iteration 61: BCE-stack circuit reconstruction (2026-05-09)
+
+**Sample**: 25 SAT-no-cert in `bitwidth_scaling/build` and 11 in
+`synthesis_invertibility` — all BCE-empties-matrix at |U|>16.
+**Constraint named: implementation roughness** — `reconstruct` iterates
+2^|U| rows × |stack| repairs (256M ops at |U|=24) and bails at nu>20;
+the no-cert path returns `skolem: None`.
+
+**Change** (`bce.rs::reconstruct_circuit` + `aiger.rs` strash):
+- The BCE-stack repair `bits[y][k] := old ∨ ¬sat(C\{l})` is a circuit,
+  not a table. `reconstruct_circuit` builds one shared AIG; for each
+  blocked `(C, l)` in reverse, `y' := ITE(¬sat(C\{l}), pol(l), y_old)`.
+  Existential refs read the *current root in the same AIG*, matching
+  the row-loop's fixpoint (and breaking the cyclic e120↔e119 reference
+  the per-output-DFS choked on).
+- Gated by **dep nesting**: bails if any referenced `q` has
+  `dep(q) ⊄ dep(y)`. The truth-table form is robust to that (BCE
+  soundness makes the last-write-wins choice valid), but the circuit
+  form would read outside `dep(y)` and the verifier's structural check
+  would reject. Conservative; covers `bitwidth_scaling` where every
+  existential has `dep = U`.
+- `Aig::mk_and` now strashes (consts, dup, complement, hash-lookup) so
+  the per-output emission of the shared Itp stays linear.
+
+**Result**: solved ±3 (noise band), **valid certs 1640 → 1672 (+32),
+no-cert 769 → 737, 0 INVALID.** add_n12 cert: 126 gates (was no-cert
+because the truth-table would have needed 95 × 2^24 entries).
+
+**Gotcha**: `Itp` lacked `#[derive(Clone)]`; the shared-Itp design
+needs cheap clones (Vec/HashMap). Added; benign elsewhere.

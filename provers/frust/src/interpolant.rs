@@ -21,6 +21,7 @@ use std::collections::{HashMap, HashSet};
 /// Tiny structurally-hashed AIG. Lit 0=⊥, 1=⊤; even=positive, lsb=neg.
 /// Node IDs are allocated from a single counter so inputs added after a
 /// gate never collide with that gate's lit.
+#[derive(Clone)]
 pub struct Itp {
     pub inputs: Vec<Var>,
     in_lit: HashMap<Var, u32>,

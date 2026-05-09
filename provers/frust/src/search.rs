@@ -253,11 +253,18 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                 stats: "BCE empties matrix".into(),
             };
         }
+        // |U|>16: truth-table reconstruction is unaffordable, but the
+        // BCE stack repair lifts to a circuit when dep sets are nested.
+        let sk = if cfg.extract_cert {
+            crate::bce::reconstruct_circuit(f, &sat_bce.stack)
+        } else {
+            None
+        };
         return Output {
             verdict: Verdict::Sat,
             proof: None,
-            skolem: None,
-            stats: "BCE empties matrix (no cert at |U|>16)".into(),
+            skolem: sk,
+            stats: "BCE empties matrix (circuit reconstruction)".into(),
         };
     }
     let mut forks = 0usize;
