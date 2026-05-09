@@ -1635,3 +1635,33 @@ converges to in practice.
 
 **Result**: solved ±4 (noise), valid certs 2057 → 2059 (+2), no-cert
 351 → 345, 0 INVALID. Recovered `bitwidth_scaling/inc_n*`.
+
+## Refined-loop iteration 66: arbsolve-exhausted cert wall confirmed (2026-05-09)
+
+**Sample**: 164 `bmc_circuits/succinct` UNSAT-no-cert. Saturate-only
+(no `--cert`) returns UNKNOWN on all 5 sampled. **These are frust's
+unique solves** — pedant and dqbdd are *both* UNKNOWN on all 164.
+The verdict comes from CEGAR's `arbsolve_exhausted` path: every
+per-cell arbiter assignment for the undefined existentials hits a
+universal row where the matrix is unsatisfiable, so no Skolem of any
+shape exists.
+
+**Constraint named: research-approach.** The Q-resolution proof
+exists (journal completeness), but the construction has to express
+the arbsolve conflict tree as an FEx/SFEx derivation over the
+original matrix. The arbiter conflict clauses encode universal-row
+constraints; each one corresponds to a Q-res derivation that has to
+be threaded through the right FEx fork. ~500 LOC; risk of unsound
+proof emission. Deferred — these are a *strength* of the algorithm,
+not a soundness gap.
+
+**No-cert breakdown (345 total)**: ~250 arbsolve-exhausted UNSAT
+(research wall, frust-unique), ~50 truly-hard saturation, ~45 budget
+exhaustion under j=32 contention.
+
+**Status after 6 iters of cert work (61-66)**: valid certs **1640 →
+2059 (+419)**, no-cert **769 → 345 (−424)**. The cert pipeline is
+now sound for: BCE-empties-matrix circuit reconstruction (any |U|),
+assumption-violated chain self-loops, row-UNSAT reprove fall-through,
+out-of-dep stack references. The remaining gap is the FEx-chain for
+arbsolve-exhausted.
