@@ -2115,3 +2115,30 @@ proof is the validity argument); only the cells need a SAT check.
 That would shrink the validity solver to `Tseitin(¬K) ∧ cells`
 without the itp gates. Bigger architectural change — recorded for
 the next agent.
+
+## Refined-loop iteration 81: arbsolve churn diagnosis (no change) (2026-05-09)
+
+**Sample**: `cbmc/succinct` (37 unsolved). `gcd_sub_bug_n6_k008`:
+543 cells over 66 roots (after interpolation chain), 19000 rounds in
+10s, ~10-lit `arb_core` per conflict, ~12000 arbsolve learned clauses.
+Each `consist`-UNSAT learns one ~10-lit clause in arbsolve; the cell
+space `2^543` is constrained but not collapsing.
+
+**Constraint named: research-approach.** CEGIS converges in
+O(information-content-of-the-function) counterexamples, not
+O(cell-count). For roots that are *truly* free (Padoa-SAT given all
+linkable z's), the information content is the table itself — `2^|dep|`
+bits. The interpolation chain shrank 610→66 roots; the residual is
+~8 cells per root with |dep|≈3, so ~3 bits per root = 200 bits =
+`2^200` Skolems. CEGIS samples one row at a time. dqbdd/hqs solve
+these symbolically (BDD expansion), which captures the Skolem in
+O(BDD size); the cell table can't.
+
+**No change kept this iter.** `est_cells.min(8)` underestimation was
+considered but the gate at `eff_undef > 100` already prevents the
+cegar from running on instances where fall-through is faster; the
+slow ones have `eff_undef ≤ 100` and no better fall-through.
+
+Lead for the next agent: pre-substitute constant interpolants into
+the matrix (and into `validity`'s aux clauses) — many interpolants
+are constants (`root ∈ {0,1}`) and removing them shrinks every CDCL.
