@@ -1665,3 +1665,43 @@ now sound for: BCE-empties-matrix circuit reconstruction (any |U|),
 assumption-violated chain self-loops, row-UNSAT reprove fall-through,
 out-of-dep stack references. The remaining gap is the FEx-chain for
 arbsolve-exhausted.
+
+## Refined-loop iteration 67: gap analysis + mode-unification soundness wall (2026-05-09)
+
+**Sample**: the 338 pedant-solvable / frust-unknown set, dominated by
+`bmc_circuits/{succinct,inductive}` (157), `cbmc/succinct` (51),
+`pec_circuits/miter` (34), `conjunction` (19). Median pedant time 2.2s.
+
+**Concrete failure on `conj_k2_s07001_000`** (404 ∃, |U|=32, 333
+defined, 71 undefined at |dep|∈{8,16}): `est_cells = 18176 > 8192`,
+`cell_dep_cap = (8192/71).next_pow.tz = 7 < 8` → all 71 undef get
+constant arbiters. Constant Skolems can't represent the function;
+arbsolve exhausts after a few conflicts → Bail → deepening loops.
+Pedant solves SAT in 0.2s with **0 arbiters** — its MLPack default
+function for undef-y is non-constant, learned. Tested
+`ARB_BUDGET=65536`: still Bail because some undef are at |dep|=16 >
+cap=10. The budget is the wrong knob.
+
+**Constraint named: algorithmic.** The CEGAR loop's per-cell arbiter
+representation can't scale to many undefined-y at large |dep|. Needs
+either generalising over-approximation (PDR-style frames) or default
+functions guided by sibling interpolants. Both are substantial; the
+data point is that pedant gets these with non-constant defaults.
+
+**Mode unification (goal 3) — soundness wall named.** Tried deleting
+`Mode::Partial` and routing fall-throughs to `Mode::SlotDpll`. The
+SlotDpll free pass at `partial=true` enumerates 2^16 rows of the
+top-16 universals, builds a `first_seen` table indexed by the
+`expand_us`-masked key, and would emit a SAT cert from it. **That cert
+is unsound for partial** — the existentials' actual deps include the
+4+ un-expanded universals, which `first_seen` can't capture.
+`Mode::Partial` exists because the partial path can only ever prove
+UNSAT (deepening's row-UNSAT is sound regardless of partial), never
+SAT. Folding it into SlotDpll requires the SlotDpll free pass to
+become partial-aware (gate the SAT path on `partial=false`), which
+is a refactor of equivalent complexity, not a deletion. **Deferred;
+the unification doesn't reduce special cases, it moves them.**
+
+**Result: ±0**, gap analysis recorded. The actionable lead from this
+data: replace constant-arbiter fallback with a learned default
+(use a sibling's interpolant when one shares the dep set).
