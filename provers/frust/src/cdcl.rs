@@ -948,7 +948,17 @@ impl Cdcl {
                                 // ¬a is itself an earlier assumption.
                                 (vec![], vec![])
                             } else {
-                                self.extract_unsat_chain(r)
+                                // The violated assumption's var was
+                                // propagated by `r` *before* the
+                                // assumption was reached. Treat it as a
+                                // leaf (assumption literal), not a node
+                                // to trace through `reason` — that
+                                // would self-loop on `r`.
+                                let av = ivar(a);
+                                self.seen[av] = 1;
+                                let r0 = self.extract_unsat_chain(r);
+                                self.seen[av] = 0;
+                                r0
                             };
                             // The violated assumption appears positively
                             // in the derived clause iff r contained ¬a;

@@ -1532,3 +1532,30 @@ because the truth-table would have needed 95 × 2^24 entries).
 
 **Gotcha**: `Itp` lacked `#[derive(Clone)]`; the shared-Itp design
 needs cheap clones (Vec/HashMap). Added; benign elsewhere.
+
+## Refined-loop iteration 62: assumption-violated chain self-loop fix (2026-05-09)
+
+**Sample**: 145 `random_qbf` UNSAT-no-cert. All verify VALID standalone
+with `--proof` *only*; passing `--cert` too suppresses the `.frp`.
+**Constraint named: implementation roughness (latent bug)** — `--cert`
+sets `extract_cert=true`, which makes `expand` find the UNSAT row
+first; `reprove_row_unsat`'s chain extraction returns `None`. Without
+`--cert`, saturate proves it directly.
+
+**Root cause** (`cdcl.rs::extract_unsat_chain` via the
+assumption-violated path): when a clause `r` unit-propagates a
+universal `var(a)` *before* the universal's assumption is reached, the
+later assumption `a` conflicts and `extract_unsat_chain(r)` is called.
+`r`'s clause includes `var(a)`, which has `reason[var(a)] = r` — the
+chain self-loops `(r, 0), (r, var(a)), …` and `proof_emit` bails on
+the universal pivot.
+
+**Change**: pre-mark `seen[ivar(a)] = 1` so `extract_unsat_chain`
+treats the violated assumption's var as a *leaf* (assumption literal,
+correct) instead of tracing through `reason[var(a)]` (self-loop).
+The existing post-call push of `¬a` into `final_clause` already
+handles the polarity. ~5 LOC.
+
+**Result**: solved ±2 (noise), **valid certs 1672 → 1995 (+323),
+no-cert 737 → 415, 0 INVALID.** Recovered `random_qbf` (145),
+`random_bv` (~80), `pec_circuits` (~50), `cbmc/flat` (~30).
