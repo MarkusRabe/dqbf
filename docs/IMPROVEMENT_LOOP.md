@@ -90,12 +90,20 @@ results into a heuristic decision.
    misled you. Those notes save the next iteration from re-discovering
    them.
 
-6. **Regenerate the report.** After each batch (or any architectural
-   change), run the multi-solver benchmark and archive the HTML:
+6. **Tag the version.** Every iteration that lands gets a tag
+   `frust-vM.N` (M = architectural era, N = iteration count). Retag
+   in place: `git tag -f frust-vM.N HEAD && git push -f origin
+   frust-vM.N`. Bump `M` only at a genuine architecture break.
+
+7. **Regenerate the report.** After each batch (or any architectural
+   change), run the multi-solver benchmark **with all four domain
+   solvers** so the report's QBF/HWMC/SYNTCOMP tabs are populated,
+   then archive the HTML:
 
    ```sh
    python -m benchmarks.runner.cli multi --root benchmarks/train \
-     --solvers frust,dqbdd,pedant,hqs --timeout 10 -j 32 \
+     --solvers frust-vM.N,frust-vM.0,dqbdd,pedant,hqs,forkres,cadet,caqe,rareqs,abc-bmc,abc-pdr,strix \
+     --timeout 10 -j 32 \
      -o results/train.jsonl --report results/train.html \
      --certdir results/certs --verify-certs
    cp results/train.html "docs/dev_reports/$(date +%Y-%m-%d_%H%M)_<slug>.html"
@@ -103,11 +111,12 @@ results into a heuristic decision.
    git add docs/dev_reports && git commit -m "<slug> report"
    ```
 
-   The cactus shows whether the *shape* changed (shelves, phase
-   boundaries); the cert table catches anything the per-iter probe
-   missed; the disagreement section is the second soundness gate.
-   Don't edit the solver while this runs — contaminated reports have
-   bitten us three times.
+   The result cache makes the non-frust columns free, so the cost is
+   the same as a frust-only run. The cactus shows whether the *shape*
+   changed (shelves, phase boundaries); the cert table catches
+   anything the per-iter probe missed; the disagreement section is the
+   second soundness gate. Don't edit the solver while this runs —
+   contaminated reports have bitten us three times.
 
 ---
 
