@@ -2034,3 +2034,12 @@ cdcl-multi-learn finding (a propagation-equivalent representation is
 worth nothing) is the same shape: the prefix table propagates
 exactly as the constant does until the omitted bits matter, then it
 Bails. No new propagation power.
+
+## Refined-loop iteration 78: report milestone (2026-05-09)
+
+**frust-v2.77 = 2720/3571 (76%), 2136 valid certs, 0 INVALID — now
+ahead of every solver including dqbdd (2472, 69%).** The iter76
+interpolation-chain change moved frust from 3rd to 1st on the train
+set. Goal 1 from CLAUDE.md ("solve the most problems by a significant
+margin") is met on this set; the margin to pedant (2397) is ~13%.
+Report archived to `docs/dev_reports/2026-05-09_*_iter78-*.html`.

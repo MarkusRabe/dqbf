@@ -2,6 +2,7 @@
 
 | date | label | view |
 |---|---|---|
+| 2026-05-09_2216 | iter78-interpolation-chains | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-09_2216_iter78-interpolation-chains.html) · [source](2026-05-09_2216_iter78-interpolation-chains.html) |
 | 2026-05-09_2122 | iter75-verifier-fixed | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-09_2122_iter75-verifier-fixed.html) · [source](2026-05-09_2122_iter75-verifier-fixed.html) |
 | 2026-05-09_2048 | iter74-report | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-09_2048_iter74-report.html) · [source](2026-05-09_2048_iter74-report.html) |
 | 2026-05-09_1953 | iter70-relabelled | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-09_1953_iter70-relabelled.html) · [source](2026-05-09_1953_iter70-relabelled.html) |
