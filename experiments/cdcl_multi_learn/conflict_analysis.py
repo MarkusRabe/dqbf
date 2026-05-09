@@ -556,68 +556,99 @@ class MultiLearn:
 
 @dataclass
 class ExtLearn:
-    """Introduce extension variables to compress the conflict cone.
+    """Compress learned clauses with extension variables.
 
     *The general answer* to "what can we learn from a conflict richer
-    than one clause." The cone is a circuit; we Tseitin its intermediate
-    resolvents and learn one short clause over the new variables plus the
-    definitions. Extended Resolution p-simulates cutting planes,
+    than one clause." Extended Resolution p-simulates cutting planes,
     polynomial calculus, and Frege — so anything learnable in those
-    systems is learnable this way. The catch is choosing *which*
-    extensions are worth introducing.
+    proof systems is learnable this way. The open question is *which*
+    extension to introduce, and the conflict cone is the signal.
 
-    This implementation uses the cone's *internal structure* as the
-    signal:
+    The core mechanism (this is Audemard/Katsirelos/Simon 2010, but with
+    cone-guided pair selection instead of a frequency heuristic):
 
-    - For each cone-internal implied literal ``l`` whose reason clause is
-      *binary* (``(l ∨ ¬a)``), no extension is needed — the reason chain
-      is already propagation-friendly.
-    - For each cone-internal ``l`` whose reason has ≥2 literals besides
-      ``l``, define ``z_l ↔ ⋀_{m ∈ R(l), m≠l} ¬m`` (the "premise" gate)
-      and learn the binary clause ``(¬z_l ∨ l)``. If the cone is reused,
-      future propagation of the premises propagates ``z_l`` and then
-      ``l``, short-circuiting the resolution chain.
+    1. The 1-UIP clause is ``(¬a ∨ ¬b ∨ rest)``. Pick a pair ``(a, b)``.
+    2. Define ``z ↔ (a ∧ b)`` — three Tseitin clauses.
+    3. Learn ``(¬z ∨ rest)`` instead. Same propagation strength, fewer
+       literals in the clause and in any *future* clause that factors
+       the same pair.
 
-    We rate-limit to avoid variable explosion: only introduce extensions
-    when the cone is classified structured (XOR/eq/card), where the
-    gates are likely to recur.
+    The win materializes only if ``(a, b)`` recurs in future learned
+    clauses. The conflict cone provides a recurrence signal that a
+    blind frequency heuristic doesn't: if ``a`` and ``b`` co-occur in a
+    cone *reason clause*, they're a real gate of the encoded formula,
+    so future conflicts that touch the same gate produce them together
+    again. Pairs that co-occur in many cone reason clauses are the best
+    candidates.
 
-    Reuse is tracked by hashing the gate definition; if the same gate
-    appears in a later cone, ``hit`` is incremented. The reuse rate is
-    the predictor of whether ext-learn pays off.
+    Reuse is tracked by hashing the pair; ``reuse_rate = hits / total``
+    is the predictor of whether ext-learn pays off. The hypothesis: high
+    reuse on circuit-like (XOR/adder/multiplier) instances, near-zero on
+    random 3-SAT.
     """
 
-    next_var: int  # caller must seed this with n_vars + 1
-    only_structured: bool = True
+    next_var: int
+    only_structured: bool = False
+    min_pair_freq: int = 1  # require the pair to co-occur in ≥N cone clauses
     gates: dict[frozenset[Lit], Lit] = field(default_factory=dict)
+    pair_freq: dict[frozenset[Lit], int] = field(default_factory=dict)
     hits: int = 0
     misses: int = 0
+    skips: int = 0
 
     def __call__(self, cone: ConflictCone, uip_clause: Clause) -> Sequence[Clause]:
-        shape = classify_cone(cone)
-        if self.only_structured and shape.kind == "unstructured":
+        if self.only_structured:
+            shape = classify_cone(cone)
+            if shape.kind == "unstructured":
+                return [uip_clause]
+        if len(uip_clause) < 4:
+            return [uip_clause]  # too short to compress
+
+        # update co-occurrence counts from this cone's reason clauses
+        for rc in cone.cone_clauses:
+            for i in range(len(rc)):
+                for j in range(i + 1, len(rc)):
+                    p = frozenset({-rc[i], -rc[j]})  # the trail-literal pair
+                    self.pair_freq[p] = self.pair_freq.get(p, 0) + 1
+
+        # Find the highest-frequency pair among the 1-UIP clause's
+        # *frontier* literals (lower decision levels). The UIP literal
+        # itself must remain unfactored so the shortened clause is still
+        # asserting after backjump — z is over lower-level lits and is
+        # propagated before the assertion fires.
+        frontier_neg = {-l for l in cone.frontier}
+        candidates = [l for l in uip_clause if l in frontier_neg]
+        if len(candidates) < 2:
+            self.skips += 1
+            return [uip_clause]
+        best: frozenset[Lit] | None = None
+        best_f = self.min_pair_freq - 1
+        for i in range(len(candidates)):
+            for j in range(i + 1, len(candidates)):
+                p = frozenset({-candidates[i], -candidates[j]})
+                f = self.pair_freq.get(p, 0)
+                if f > best_f:
+                    best_f, best = f, p
+        if best is None:
+            self.skips += 1
             return [uip_clause]
 
-        out: list[Clause] = [uip_clause]
-        # introduce a gate for each cone-internal node with a wide reason
-        for lit, rc in cone.reasons.items():
-            premises = frozenset(-m for m in rc if m != lit)
-            if len(premises) < 2:
-                continue
-            if premises in self.gates:
-                self.hits += 1
-                z = self.gates[premises]
-            else:
-                self.misses += 1
-                z = self.next_var
-                self.next_var += 1
-                self.gates[premises] = z
-                # z ↔ ⋀ premises   (Tseitin AND)
-                for p in premises:
-                    out.append((-z, p))  # z → p
-                out.append((z, *(-p for p in premises)))  # ⋀p → z
-            out.append((-z, lit))  # z → l (the cone's would-be-forced edge)
-        return out
+        # define z = a ∧ b, learn (¬z ∨ rest)
+        a, b = sorted(best, key=abs)
+        out: list[Clause] = []
+        if best in self.gates:
+            self.hits += 1
+            z = self.gates[best]
+        else:
+            self.misses += 1
+            z = self.next_var
+            self.next_var += 1
+            self.gates[best] = z
+            out += [(-z, a), (-z, b), (z, -a, -b)]
+        rest = tuple(l for l in uip_clause if l not in (-a, -b))
+        new_uip = tuple(sorted({-z, *rest}, key=abs))
+        # the shortened clause goes first so it's the assertion clause
+        return [new_uip, *out]
 
 
 # ───────────────────────── parity-constraint learning ─────────────────────────
@@ -625,41 +656,187 @@ class ExtLearn:
 
 @dataclass
 class XorLearn:
-    """When the cone is classified XOR, learn the parity constraint over
-    the boundary instead of one clause from it.
+    """When a cone *provably* implies a parity constraint over the
+    boundary, learn it instead of one clause.
 
     A parity constraint over ``k`` variables is exactly the set of
     ``2^(k-1)`` clauses of the right parity — exponentially many. Encoded
     with extension variables (a chain of binary XOR gates), it costs
     ``4(k-1)`` clauses. That's the "extension variables compress
     exponentially many implicates" win in its purest form.
+
+    **The soundness pitfall this implementation guards against**: the
+    cone *looking like* XOR is not the same as the cone *entailing* a
+    parity constraint. The conflict only proves a single cut — that the
+    *one* observed boundary assignment is blocked. Learning that all
+    same-parity assignments are blocked is a generalization the cone may
+    or may not justify. (The first version of this hook made that leap
+    and was 47% unsound on random 3-SAT.) The fix: derive the parity
+    *constructively* by XORing the cone's gate constraints, and only
+    learn it when every cone clause is verifiably a parity-gate clause —
+    not by trail-pattern matching.
+
+    This is the deeper reason PB/XOR/cardinality solvers detect
+    structure in the *input formula* (offline, by clause-pattern
+    matching against the encoding) rather than at conflict time: the
+    structure has to be a *theorem* (the encoding's semantics), not a
+    *conjecture* (the cone's shape).
     """
 
     next_var: int
-    log: list[str] = field(default_factory=list)
+    n_vars: int = 0  # original variable count
+    xor_clauses: frozenset[Clause] | None = None  # input clauses tagged XOR
+    n_conjectured: int = 0
+    n_verified: int = 0
+    n_rejected: int = 0
 
     def __call__(self, cone: ConflictCone, uip_clause: Clause) -> Sequence[Clause]:
-        shape = classify_cone(cone)
-        if shape.kind != "xor":
+        parity = _cone_parity(cone, self.xor_clauses)
+        if parity is None:
             return [uip_clause]
-        # Extract the boundary parity. The conflict means the boundary
-        # assignment had the *wrong* parity. The constraint is over the
-        # boundary literals.
-        bvars = sorted({abs(l) for l in cone.frontier} | {abs(cone.decision)})
+        self.n_conjectured += 1
+        bvars, p = parity
         if len(bvars) < 2 or len(bvars) > 10:
             return [uip_clause]
-        # parity of the *blocked* assignment (the trail values)
-        # cone.frontier contains the trail literals (true), so a positive
-        # literal means the var is true.
-        a = {abs(l): (l > 0) for l in cone.frontier}
-        a[abs(cone.decision)] = cone.decision > 0
-        bad_parity = sum(a[v] for v in bvars) % 2
-        # constraint: ⊕_v v ≠ bad_parity, i.e. ⊕_v v = 1 - bad_parity
+        # Soundness check: the cone CNF must *entail* the parity
+        # constraint. With offline XOR detection this is guaranteed by
+        # construction; without, we verify by truth-table for small
+        # cones and reject otherwise. A learned constraint not entailed
+        # by the cone is just wrong — the conflict only proves one cut.
+        if self.xor_clauses is None:
+            ok = _cone_entails_parity(cone, bvars, p)
+            if not ok:
+                self.n_rejected += 1
+                return [uip_clause]
+        self.n_verified += 1
         out = [uip_clause]
-        out.extend(_encode_xor_chain(bvars, 1 - bad_parity, self.next_var))
+        out.extend(_encode_xor_chain(sorted(bvars), p, self.next_var))
         self.next_var += max(0, len(bvars) - 2)
-        self.log.append(f"learned parity over {bvars} = {1 - bad_parity}")
         return out
+
+
+def detect_input_xor_clauses(clauses: Sequence[Clause]) -> frozenset[Clause]:
+    """Offline (CryptoMiniSat-style) Tseitin XOR detection.
+
+    Scan the input CNF for variable triples that have all four
+    parity-gate clauses present. Those are *provably* parity constraints
+    by the encoding's construction; conflict analysis can XOR them
+    soundly.
+
+    This is the dual move to "learn structure from the cone": instead of
+    inferring at conflict time (unsound, because the cone only proves
+    one cut), detect at parse time (sound, because the formula is the
+    semantics).
+    """
+    by_vars: dict[frozenset[int], set[Clause]] = {}
+    for c in clauses:
+        if len(c) != 3:
+            continue
+        nc = tuple(sorted(c, key=abs))
+        by_vars.setdefault(frozenset(abs(l) for l in nc), set()).add(nc)
+    xor: set[Clause] = set()
+    for vs, grp in by_vars.items():
+        if len(vs) != 3 or len(grp) < 4:
+            continue
+        # all 4 same-parity clauses must be present
+        for parity in (0, 1):
+            want = set()
+            for c in grp:
+                if sum(1 for l in c if l < 0) % 2 == parity:
+                    want.add(c)
+            if len(want) == 4:
+                xor |= want
+    return frozenset(xor)
+
+
+def _cone_parity(
+    cone: ConflictCone, xor_clauses: frozenset[Clause] | None
+) -> tuple[set[int], int] | None:
+    """Derive the parity constraint the cone entails, *if* every cone
+    clause is a parity-gate clause (verified against ``xor_clauses`` if
+    given, else heuristic). The constraint is the XOR of the per-gate
+    constraints; variables in an even number of gates cancel.
+
+    Returns ``(boundary_vars, required_parity)``, where the trail's
+    boundary assignment violates the parity (else there's no conflict).
+    """
+    root_a = {abs(l): l > 0 for l in cone.roots}
+    var_count: dict[int, int] = {}
+    p_sum = 0  # ⊕ of (1 - forbid_parity) per gate
+    for c in cone.cone_clauses:
+        if xor_clauses is not None:
+            # exact: only clauses tagged at parse time are parity gates.
+            nc = tuple(sorted(c, key=abs))
+            if nc not in xor_clauses:
+                return None
+            forbid_parity = sum(1 for l in c if l < 0) % 2
+            for l in c:
+                var_count[abs(l)] = var_count.get(abs(l), 0) + 1
+            p_sum ^= 1 - forbid_parity
+            continue
+        # heuristic: substitute root lits, require ternary, derive
+        rest: list[Lit] = []
+        sat = False
+        for l in c:
+            v = abs(l)
+            if v in root_a:
+                if (root_a[v] and l > 0) or (not root_a[v] and l < 0):
+                    sat = True
+                    break
+                continue
+            rest.append(l)
+        if sat:
+            continue
+        if len(rest) != 3:
+            return None
+        forbid_parity = sum(1 for l in rest if l < 0) % 2
+        for l in rest:
+            var_count[abs(l)] = var_count.get(abs(l), 0) + 1
+        p_sum ^= 1 - forbid_parity
+
+    bvars = {v for v, c in var_count.items() if c % 2 == 1}
+    if not bvars:
+        return None
+    if xor_clauses is not None:
+        # substitute root lits out of bvars
+        bvars -= set(root_a)
+        for v in set(root_a) & {v for v, c in var_count.items() if c % 2 == 1}:
+            if root_a[v]:
+                p_sum ^= 1
+    return bvars, p_sum
+
+
+def _cone_entails_parity(cone: ConflictCone, bvars: set[int], p: int) -> bool:
+    """Verify K ⊨ (⊕ bvars = p) by truth-table for small cones.
+
+    Returns False if the cone is too big to verify — being right is more
+    important than being fast in this experiment.
+    """
+    root_a = {abs(l): l > 0 for l in cone.roots}
+    cls: list[frozenset[Lit]] = []
+    for c in cone.cone_clauses:
+        rc: list[Lit] = []
+        sat = False
+        for l in c:
+            v = abs(l)
+            if v in root_a:
+                if (root_a[v] and l > 0) or (not root_a[v] and l < 0):
+                    sat = True
+                    break
+                continue
+            rc.append(l)
+        if not sat:
+            cls.append(frozenset(rc))
+    cone_vars = sorted({abs(l) for c in cls for l in c})
+    if len(cone_vars) > 14:
+        return False
+    for ba in itertools.product([False, True], repeat=len(cone_vars)):
+        a = dict(zip(cone_vars, ba))
+        if all(_sat_clause(c, a) for c in cls):
+            # K is satisfiable here; does the parity hold?
+            if sum(a.get(v, False) for v in bvars) % 2 != p:
+                return False
+    return True
 
 
 def _encode_xor_chain(vars_: list[int], parity: int, fresh: int) -> list[Clause]:

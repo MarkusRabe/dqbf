@@ -42,6 +42,7 @@ from conflict_analysis import (
     MultiLearn,
     XorLearn,
     classify_cone,
+    detect_input_xor_clauses,
 )
 from generators import (
     adder_miter,
@@ -204,38 +205,37 @@ def _run_strategy(
     elif strat.startswith("multi"):
         k = int(strat[5:])
         hook = MultiLearn(k)
-    elif strat == "ext":
-        # ext-learn needs to allocate fresh variables; pre-allocate a
-        # generous pool so the CDCL's arrays are big enough.
-        pool = nv + 200
-        ext = ExtLearn(next_var=nv + 1, only_structured=False)
-        hook = ext
-    elif strat == "ext_struct":
-        pool = nv + 200
-        ext = ExtLearn(next_var=nv + 1, only_structured=True)
-        hook = ext
+    elif strat.startswith("ext"):
+        # ext1 = always introduce; ext4 = only for pairs seen in ≥4
+        # cone reason clauses (the rate-limiting Audemard et al. found
+        # they needed, but with a cone-derived signal not a frequency
+        # heuristic). Default = ext4.
+        thr = int(strat[3:]) if len(strat) > 3 else 4
+        hook = ExtLearn(next_var=nv + 1, min_pair_freq=thr)
     elif strat == "xor":
-        pool = nv + 200
-        xl = XorLearn(next_var=nv + 1)
-        hook = xl
+        # heuristic detection at conflict time, with truth-table soundness check
+        hook = XorLearn(next_var=nv + 1, n_vars=nv)
+    elif strat == "xor_off":
+        # offline (parse-time) Tseitin XOR detection: provably sound
+        xc = detect_input_xor_clauses(cls)
+        hook = XorLearn(next_var=nv + 1, n_vars=nv, xor_clauses=xc)
     else:
         raise ValueError(strat)
 
-    if strat in ("ext", "ext_struct", "xor"):
-        s = Cdcl(pool, conflict_hook=hook)
-    else:
-        s = Cdcl(nv, conflict_hook=hook)
+    s = Cdcl(nv, conflict_hook=hook)
     for c in cls:
         s.add_clause(c)
     t0 = time.time()
     r = s.solve(max_conflicts=max_conflicts)
     dt = time.time() - t0
-    if strat in ("ext", "ext_struct"):
+    if strat.startswith("ext"):
         extra_vars = hook.next_var - nv - 1  # type: ignore
         if hook.hits + hook.misses > 0:  # type: ignore
             reuse = hook.hits / (hook.hits + hook.misses)  # type: ignore
-    elif strat == "xor":
+    elif strat.startswith("xor"):
         extra_vars = hook.next_var - nv - 1  # type: ignore
+        if hook.n_conjectured > 0:  # type: ignore
+            reuse = hook.n_verified / hook.n_conjectured  # type: ignore
     return Run(
         strategy=strat,
         result={True: "SAT", False: "UNSAT", None: "?"}[r],
@@ -258,16 +258,23 @@ def phase6(
 ) -> list[dict]:
     """Compare learning strategies across instance classes."""
     classes = list(classes) if classes else list(SWEEPS)
-    strategies = strategies or ["1uip", "multi2", "multi4", "multi8", "ext", "ext_struct", "xor"]
+    strategies = strategies or ["1uip", "multi2", "multi4", "multi8", "ext1", "ext4", "ext8", "xor_off"]
     rows: list[dict] = []
+    unsound: list[str] = []
 
     for cls_name in classes:
         for inst_name, nv, cls in SWEEPS[cls_name]:
             base = None
+            inst_rows: list[dict] = []
             for strat in strategies:
                 run = _run_strategy(nv, cls, strat, max_conflicts=max_conflicts)
                 if strat == "1uip":
                     base = run
+                # SOUNDNESS GUARD: every strategy must agree on the result.
+                if base and base.result != "?" and run.result != "?" and run.result != base.result:
+                    unsound.append(
+                        f"{cls_name}/{inst_name}: {strat}={run.result} ≠ 1uip={base.result}"
+                    )
                 row = {
                     "class": cls_name,
                     "name": inst_name,
@@ -288,14 +295,16 @@ def phase6(
                     ),
                 }
                 rows.append(row)
+                inst_rows.append(row)
             print(
                 f"  {cls_name:>12} {inst_name:<10} "
-                + " ".join(
-                    f"{r['strategy']}={r['conflicts']:>5}"
-                    for r in rows
-                    if r["class"] == cls_name and r["name"] == inst_name
-                )
+                + " ".join(f"{r['strategy']}={r['conflicts']:>5}" for r in inst_rows)
             )
+
+    if unsound:
+        print(f"\n*** {len(unsound)} SOUNDNESS VIOLATIONS ***")
+        for u in unsound[:10]:
+            print(f"  {u}")
 
     if out_csv and rows:
         with open(out_csv, "w", newline="") as f:

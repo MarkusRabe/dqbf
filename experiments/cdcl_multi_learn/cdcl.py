@@ -96,7 +96,8 @@ class Cdcl:
     """A small CDCL solver. Add clauses, then call :meth:`solve`."""
 
     def __init__(self, n_vars: int, conflict_hook: ConflictHook | None = None) -> None:
-        self.n_vars = n_vars
+        self.n_vars = n_vars  # variables that participate in branching
+        self._cap = n_vars  # capacity of the per-var arrays (grows on demand)
         self.clauses: list[Clause] = []
         self.is_learned: list[bool] = []
         # watches[lit] = list of clause indices that currently watch -lit
@@ -125,6 +126,22 @@ class Cdcl:
 
         self.stats = Stats()
         self._hook = conflict_hook
+
+    def _grow_to(self, n: int) -> None:
+        """Grow the per-variable arrays to cover var ``n``. Used by
+        extension-learning hooks that introduce fresh variables on the
+        fly. New variables are *not* added to the branching pool —
+        ``n_vars`` is unchanged — so they're only ever assigned by
+        propagation, which is what extension definitions are for."""
+        if n <= self._cap:
+            return
+        extra = n - self._cap
+        self._val.extend([0] * extra)
+        self._level.extend([0] * extra)
+        self._reason.extend([None] * extra)
+        self._activity.extend([0.0] * extra)
+        self._phase.extend([-1] * extra)
+        self._cap = n
 
     # ── clause management ──────────────────────────────────────────
 
@@ -408,26 +425,46 @@ class Cdcl:
                 cone = self._extract_cone(confl)
                 learned, bj = self._analyze_1uip(cone)
                 if self._hook is not None:
-                    extra = self._hook(cone, learned)
+                    extra = list(self._hook(cone, learned))
                 else:
                     extra = [learned]
                 self._backtrack(bj)
-                # add the 1-UIP clause first so the assertion is right
-                for k, lc in enumerate(extra):
+                # grow var arrays for any extension vars the hook introduced
+                hi = max((abs(l) for c in extra for l in c), default=0)
+                if hi > self._cap:
+                    self._grow_to(hi)
+                # Add all learned clauses, then propagate any that are
+                # already unit under the post-backtrack assignment.
+                # This handles both the assertion clause (the 1-UIP
+                # clause is unit on the UIP after backjump) and any
+                # extension-definition clauses the hook introduced (a
+                # `z ↔ (a ∧ b)` definition is unit on `z` if `a` and
+                # `b` are already assigned at lower levels). Without
+                # this, an extension-shortened assertion clause stays
+                # blocked because `z` never propagates.
+                added: list[int] = []
+                for lc in extra:
                     if len(lc) == 1:
-                        if k == 0:
-                            self._enqueue(lc[0], None)
-                        # extra unit clauses are tricky to enqueue here; skip
+                        self._enqueue(lc[0], None)
                         continue
                     ci = self._add_to_db(lc, learned=True)
+                    added.append(ci)
                     self.stats.learned += 1
                     self.stats.learned_lits += len(lc)
-                    if k == 0:
-                        # the 1-UIP clause: assert its uip literal
-                        # (it's the only one unassigned after backtracking)
-                        unassigned = [l for l in lc if self._value(l) == 0]
-                        if len(unassigned) == 1:
-                            self._enqueue(unassigned[0], ci)
+                # iterate to a fixpoint over the just-added clauses;
+                # the main propagation loop will pick up any further
+                # consequences once these are enqueued
+                changed = True
+                while changed:
+                    changed = False
+                    for ci in added:
+                        c = self.clauses[ci]
+                        if any(self._value(l) > 0 for l in c):
+                            continue
+                        un = [l for l in c if self._value(l) == 0]
+                        if len(un) == 1:
+                            self._enqueue(un[0], ci)
+                            changed = True
                 self._decay()
                 if conflicts_since_restart >= restart_budget:
                     self._backtrack(0)
