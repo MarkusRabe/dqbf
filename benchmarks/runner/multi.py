@@ -28,6 +28,10 @@ EXIT = {10: "sat", 20: "unsat", 0: "unknown", 30: "unknown"}
 # harmless). v1: added on-the-fly .dqdimacs → .qdimacs conversion for
 # linear-prefix DQBF (2026-05-09).
 _INPUT_MAPPER_V = {"qdimacs": 1}
+# Bump when `tools/verify/` changes semantics (rows carry `cert_status`).
+# v1: `formats.Formula.with_existential` → `add_existential` rename — FEx/SFEx
+#     certs were recorded as `error` (verifier crashed), under-counting valid certs.
+_VERIFIER_V = 1
 
 # Note on HW model checkers: abc-bmc/-pdr answer the *unbounded* question
 # on the source .aag, while a .dqdimacs instance encodes a *bounded* k. So
@@ -434,7 +438,7 @@ def run_multi(
                            "n/a", 0.0, None, 0, "n/a", True, it.problem_key)
                 )
                 continue
-            k = key(shash[sv.name], ihash[it.path], timeout_s)
+            k = key(shash[sv.name], ihash[it.path], timeout_s, _VERIFIER_V)
             hit = load(k) if use_cache else None
             if hit is not None:
                 hit["cached"] = True

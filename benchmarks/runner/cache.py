@@ -81,7 +81,7 @@ def instance_hash(path: Path) -> str:
     return _sha(raw)
 
 
-def key(shash: str, ihash: str, timeout_s: float) -> str:
+def key(shash: str, ihash: str, timeout_s: float, verifier_v: int = 0) -> str:
     return _sha(f"{shash}|{ihash}|{timeout_s:.3f}".encode())
 
 
