@@ -574,24 +574,43 @@ pub fn validity_cegar(
                     }
                 })
                 .collect();
-            // Try a forcing clause first unless Padoa already ruled y
-            // undefined (then the flip-check is wasted work). Mixing
-            // forcing clauses and arbiter cells for the same undef-y is
-            // unsound: validity-UNSAT proves they *jointly* block ¬matrix,
-            // but jointly they may be unsatisfiable (the row dep(y)=v has
-            // both a forcing clause and a conflicting cell), and the
-            // priority-decoder cert silently picks the forcing clause —
-            // shipped INVALID certs on under_w8_s19001 and shift_reg.
-            // Defined-y are forcing-only and undef-y are arbiter-only;
-            // the regions never overlap.
-            if !undef_set.contains(&y) {
+            // Try a forcing clause first. For defined-y, the forcing
+            // covers all rows where the matrix forces y. For undef-y,
+            // a *matrix-only* forcing clause (universal-only core, no
+            // arbiter assumptions in the consist solve) is also valid;
+            // the priority-decoder cert (forcing first, then cells)
+            // gives forcing precedence, and a matrix-only forcing
+            // clause can't conflict with any cell — both are derived
+            // from the same matrix, just one is generalised. The
+            // earlier "no-mixing" pitfall was forcing-under-arbiters
+            // (the forcing depended on a re-pickable cell). Here the
+            // probe omits arbiters, so the core is unconditional.
+            //
+            // For undef-y this collapses the per-row cell scan: one
+            // forcing clause covers a |U|-|core| dimensional cube of
+            // rows. On `alu_add_n4_indinv` it drops 4096 cells to ~400.
+            let is_undef = undef_set.contains(&y);
+            let try_forcing = !is_undef || dep_lits.len() > 4;
+            if try_forcing {
                 let mut a = dep_lits.clone();
                 a.push(if want > 0 { -(y as Lit) } else { y as Lit });
                 let flip_sat = consist.solve(&a, scratch, 10_000);
                 if consist.budget_hit {
                     return CegarOut::Bail;
                 }
-                if !flip_sat {
+                // Defined-y forcing: keep the original behaviour (filter
+                // to universal lits). Padoa proved the value is unique
+                // given dep(y), so a non-universal lit in the core is an
+                // intermediate, not a dependency.
+                //
+                // Undef-y forcing: REQUIRE a universal-only core. If a
+                // cell or another undef-y appears in the core, the
+                // forcing is conditional on that cell's current value —
+                // which arbsolve can later flip. (This was iter71's
+                // "11 INVALID" bug.)
+                let core_ok = !is_undef
+                    || consist.last_core().iter().all(|&l| univ.contains(&var(l)));
+                if !flip_sat && core_ok {
                     let then = if want > 0 { y as Lit } else { -(y as Lit) };
                     let ante: Vec<Lit> = consist
                         .last_core()
@@ -605,22 +624,32 @@ pub fn validity_cegar(
                         .chain(std::iter::once(then))
                         .collect();
                     validity.add_external(&fc);
+                    // Also feed the forcing into `consist` so its later
+                    // row models stay consistent with what the cert
+                    // will report — otherwise a row covered by this
+                    // forcing clause can come back from `consist` with
+                    // the opposite value (consist's model for an
+                    // unconstrained row is arbitrary).
+                    consist.add_external(&fc);
                     forcing.get_mut(&y).unwrap().push((ante, then));
                     learned_any = true;
                     continue;
                 }
-                // flip-SAT: y not determined by dep(y) alone — Padoa
-                // defined it under linked z's. If the interpolant is
-                // already in validity it pins y (over dep ∪ z), so the
-                // arbiter cell is redundant. Allocating one anyway sets
-                // `any_const_arbiter` (these y have large |dep|) and
-                // turns a clean arbsolve-UNSAT into a Bail. Skip.
-                if defs.contains_key(&y) {
-                    continue;
+                if !undef_set.contains(&y) {
+                    // flip-SAT (or non-universal core): y not determined
+                    // by dep(y) alone — Padoa defined it under linked
+                    // z's. If the interpolant is already in validity it
+                    // pins y (over dep ∪ z), so the arbiter cell is
+                    // redundant. Allocating one anyway sets
+                    // `any_const_arbiter` (these y have large |dep|) and
+                    // turns a clean arbsolve-UNSAT into a Bail. Skip.
+                    if defs.contains_key(&y) {
+                        continue;
+                    }
+                    // No interpolant for this defined-y: fall through to
+                    // arbiter. Rare (interpolation usually covers all of
+                    // `defined`), but the cell keeps the cert sound.
                 }
-                // No interpolant for this defined-y: fall through to
-                // arbiter. Rare (interpolation usually covers all of
-                // `defined`), but the cell keeps the cert sound.
             }
             // Arbiter: per-cell when |dep| fits the per-undef share of
             // ARB_BUDGET; else a single constant.

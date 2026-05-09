@@ -1834,3 +1834,45 @@ half the validity solves). OR: encode the cell space directly in the
 validity solver as Pedant does (the arbiter cell vars become decision
 vars in `validity` with default-function clauses, no separate
 arbsolve loop). The third is the architectural unification (goal 3).
+
+## Refined-loop iteration 72: matrix-only forcing for undef-y (+12) (2026-05-09)
+
+**Hypothesis** (from the iter71-named conditional-cell lead, but
+sidestepped): allow forcing clauses for *undef-y* when the consist
+core is universal-only (no arbiter or other-existential lits). The
+forcing then comes from the matrix alone — unconditionally valid,
+and can't conflict with any cell. The priority decoder (forcing first,
+then cells) handles the overlap correctly. iter71's attempt 2 had a
+subtle bug: it didn't gate the *consist* solve to omit arbiter
+assumptions, so the model `cmodel` was found under cell constraints
+and the universal core didn't guarantee validity at all rows in the
+antecedent cube. The fix: probe `consist.solve(dep_lits ∪ {¬want})`
+with no arbiter lits, and require `last_core() ⊆ universals`.
+
+Also: feed the new forcing into `consist` itself (`consist.add_external`)
+so its later row models stay consistent with the cert — without this,
+`consist` could return the opposite value at a row covered by the
+forcing clause (undef-y rows are unconstrained in `consist`).
+
+**Result: +22/-10 = +12 net**, 2407/3571. **0 INVALID**, 2055 valid
+certs. Gains in `bmc_circuits/succinct` (5 of the +22). Pedant
+cross-check 3/3 agree (1 UNKNOWN where frust has a verified `.frp`).
+The −10 are the j=32 noise band (gray/parity_pipe/prio_enc/traffic
+bug variants — same family, different seeds).
+
+**No effect on `alu_add_n4_indinv` (the iter70 bottleneck)**: the
+undef-y `inv`, `inv'` are *truly free* — the matrix never forces them
+(only the consistency clause links them to each other). 4359 rounds /
+4096 cells unchanged. Forcing fires when the matrix has *some*
+constraint on the undef-y at *some* rows — common in the
+counter/fifo1/bcd_ctr step functions but not for the inductive
+invariant itself.
+
+**Constraint named (round-count, refined)**: the linear scan is
+inherent to per-row cells over a *truly free* function. Two paths:
+(a) eager full enumeration in round 1 (cuts validity solves to ~1,
+keeps 2^|dep| consist solves — a 2× constant); (b) a *non-constant
+default function* so most rows are right by default and CEGAR only
+allocates exception cells. (b) is the architectural win — the cert's
+priority decoder already supports a default expression (currently
+implicit `false`); the change is to parameterize it. ~80 LOC.
