@@ -24,6 +24,17 @@ def _exists(p: str) -> bool:
     return Path(p).exists() or shutil.which(p) is not None
 
 
+def _discover_frust_versions() -> list[str]:
+    """Versioned frust snapshot binaries at `/tmp/frust-v*`. Their report
+    column is named after the binary, so the loop must `cp` to the
+    *correct* tag name, not a stale alias."""
+    return sorted(
+        p.name.removeprefix("frust-")
+        for p in Path("/tmp").glob("frust-v*")
+        if p.is_file()
+    )
+
+
 def registry() -> dict[str, Solver]:
     cadet = str(ROOT / "third_party/cadet/cadet")
     caqe = str(ROOT / "third_party/caqe/target/release/caqe")
@@ -67,6 +78,13 @@ def registry() -> dict[str, Solver]:
             certs={"sat": "{certdir}/{stem}.aag", "unsat": "{certdir}/{stem}.frp"},
             available=_exists(str(ROOT / "provers/frust/target/release/frust")),
         ),
+        # Versioned frust binaries. Each is a snapshot at a tag; the
+        # report label MUST match the binary actually run. The binaries
+        # are built by the improvement loop's tag step and copied to
+        # /tmp/frust-<tag>. To compare two versions, build both:
+        #   git checkout <tag1> -- provers/frust/src && cargo build --release
+        #   cp provers/frust/target/release/frust /tmp/frust-<tag1>
+        # Then pass `--solvers frust-<tag1>,frust-<tag2>,...`.
         **{
             f"frust-{v}": Solver(
                 name=f"frust-{v}",
@@ -83,7 +101,7 @@ def registry() -> dict[str, Solver]:
                 certs={"sat": "{certdir}/{stem}.aag", "unsat": "{certdir}/{stem}.frp"},
                 available=_exists(f"/tmp/frust-{v}"),
             )
-            for v in ("v1.20", "v2.0")
+            for v in _discover_frust_versions()
         },
         "cadet": Solver(
             name="cadet",
