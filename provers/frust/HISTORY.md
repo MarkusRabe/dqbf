@@ -2171,3 +2171,41 @@ one (the cert produces that constant), (b) a false lit only adds a
 trivially-true aux→¬lit constraint. The OR can't become empty (that
 would require K[Skolem] to be a tautology under the constants, which
 is exactly cert-correctness — sound to declare SAT then).
+
+## Refined-loop iteration 84: cell_dep_cap over roots, not undef (+3) (2026-05-09)
+
+**Sample**: `cbmc/inductive` (54/72 unsolved), `conjunction/instances`
+(19/50). e.g. `clz_bug_n4_indinv` (150 vars, |U|=30): 118/120 e-vars
+interpolated by iter76's chains, 2 roots with `|dep|`={13,30}, 1
+partner pair → 1 effective cell key. The CEGAR const-arbiter Bails
+because `|dep|=13 > cell_dep_cap=12` even though the budget could
+trivially afford 8192 cells for this single key.
+
+**Constraint named: implementation roughness** — `cell_dep_cap` was
+computed over `undefined.len()` (all 58 Padoa-undefined for
+`conj_k2_*`) when iter76's chained interpolation promotes most of
+them. Only the *roots* (undef ∖ defs) need arbiter cells. The cap
+of `log₂(8192/58)=7` was off by 4 bits from the right answer
+`log₂(8192/6)=10`.
+
+**Change**: compute `cell_dep_cap` over `n_roots = |undef ∖ defs|`
+(and `n_root_pairs` similarly). Bump the `.min(12)` cap to `.min(13)`
+so a single 13-bit-dep root fits the budget exactly.
+
+**Result**: +3, 0 INVALID. Solved: 3 `cbmc/inductive` UNSAT (no-cert,
+CEGAR-exhaustion path) + 1 `circuit_synth/gates` SAT (10.1 s, cert
+valid). Lost: 1 `circuit_synth/depth` (`csd_thresh2of4_d06_w04` —
+borderline, the bigger arbsolve cost ~0.4 s).
+
+**Also tried, reverted** (`sat_slice` extension): bumping the cert-
+recovery saturation slice from 0.5 s → 2 s for fast-decided UNSAT.
+0/30 of the unsat-no-cert sample gained a proof — saturate's
+Q-resolution is structurally unable to close CEGAR-exhaustion
+certificates regardless of budget. The 540 unsat-no-cert need an
+FRP-from-arbsolve derivation (research wall); not chasing it.
+
+**Gotcha**: the `--cert` flag is still required for *expand* to run.
+Without it, `traffic_n4_k008_bug` takes 11 s to UNKNOWN via
+saturate-only. The probe always passes both `--cert` and `--proof`,
+masking this; debugging without `--cert` showed wrong behaviour for
+20 minutes before re-reading `extract_cert`.

@@ -331,16 +331,24 @@ impl CegarState {
             arb_meta: vec![vec![]],
             arb_assump: vec![-mc_sel],
             any_const_arbiter: false,
-            // Effective cell-key count after partnering: each (y, y')
-            // pair shares one cell, so the per-y cell quota is roughly
-            // ARB_BUDGET / (undef − n_pairs). For consistency-shape
-            // formulas (succinct/inductive) ~half the undef are paired.
+            // Effective cell-key count after partnering and chained
+            // interpolation. iter76 promotes most undef-y to interpolants
+            // (chained over roots); only the *roots* (undef ∖ defs) need
+            // arbiter cells. iter84: the cap was computed over all
+            // `undefined.len()` (e.g. `conj_k2_*`: 58), giving cap=7 even
+            // though only 6 roots needed cells (8192/6 ≈ 1365 → cap=10).
+            // Compute over roots so |dep|≤10 roots get full cells.
             cell_dep_cap: {
-                let n_pairs = partner.len() / 2;
-                (ARB_BUDGET / undefined.len().saturating_sub(n_pairs).max(1))
+                let n_roots = undefined.iter().filter(|y| !defs.contains_key(y)).count();
+                let n_root_pairs = partner
+                    .keys()
+                    .filter(|y| undefined.contains(y) && !defs.contains_key(y))
+                    .count()
+                    / 2;
+                (ARB_BUDGET / n_roots.saturating_sub(n_root_pairs).max(1))
                     .next_power_of_two()
                     .trailing_zeros()
-                    .min(12) as usize
+                    .min(13) as usize
             },
             partner,
             mc_sel,

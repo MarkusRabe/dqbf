@@ -339,7 +339,12 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
         let sat_slice = if known_unsat {
             // Verdict known; saturate is best-effort cert recovery.
             // 0.5 s is enough for the easy cases; 2 s here cost ~170
-            // borderline solves under j=48 for ~17 extra certs.
+            // borderline solves under j=48 for ~17 extra certs. iter84
+            // tested 2 s for fast-decided instances: 0/30 of the nocert
+            // sample gained a proof — saturate's Q-resolution can't
+            // close CEGAR-UNSAT certificates regardless of budget; the
+            // real fix is to derive FRP from the arbsolve refutation
+            // (research wall).
             (cfg.timeout_s - now).min(now * 1.5).clamp(0.05, 0.5)
         } else {
             slice.min(cfg.timeout_s - now)
