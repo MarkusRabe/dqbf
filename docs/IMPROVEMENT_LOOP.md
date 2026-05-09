@@ -226,29 +226,67 @@ blocker was architectural. A "Next" section in CLAUDE.md naming the
 you find yourself adjusting a number for the third time, the number is
 not the problem.
 
-### Don't enumerate; generalize conflicts
+### Don't enumerate; generalize
 
 When a loop visits one row/cell/slot/assignment per round and the
-round count scales linearly with the search-space size, that's
+round count scales linearly with a search-space size, that's
 enumeration and it is the wrong shape — bigger budgets don't fix it.
-The fix is **conflict generalization**: after each conflict, find the
-smallest subcube of the conditioning assignment that still conflicts
-(drop literals one at a time, re-check) and learn that cube. One round
-then teaches the search about exponentially many points. This is
-PDR's `generalize` (Bradley FMCAD'11), CDCL's 1-UIP, and CEGAR's
-counterexample-guided refinement — the same idea at three levels.
+**Each round must learn something that constrains exponentially many
+points, not one.** That's the whole insight; everything else is a
+choice of what to learn and from what.
+
+What to learn — pick the richest representation that's cheap to check:
+- a **cube** (a conjunction of literals): the simplest; PDR's
+  `generalize`, CDCL's 1-UIP clause. Drop one literal at a time and
+  re-check; whatever survives covers the whole subcube.
+- a **clause set / CNF over-approximation**: CEGAR's abstraction
+  refinement learns a stronger abstraction, not a single cube.
+- an **interpolant / circuit**: McMillan interpolation extracts a
+  *function* from a single proof — strictly more expressive than any
+  cube. frust's iter35 added this; it generalizes from one Padoa
+  proof to a definition over the whole dep space.
+- a **symmetry / isomorphism**: if a counterexample is invariant
+  under a permutation, learn the orbit, not the point.
+- a **dependency / implication**: "y is forced to v whenever z=w" —
+  forcing clauses, not cell tables.
+
+What to learn from — not only conflicts:
+- **conflicts** (UNSAT under assumptions): the classic source. Drop
+  irrelevant assumptions, learn the residue.
+- **models** (SAT under assumptions): a model that *satisfies* a row
+  often satisfies all rows agreeing on a subcube. CEGIS's per-row
+  matrix copies; arbsolve's cell defaults. "What did this model not
+  depend on?"
+- **proofs**: an UNSAT proof has more information than its conclusion.
+  Interpolants and unsat cores are extraction from proof structure.
+- **failed generalizations**: if a cube *almost* works (fails on one
+  corner), learn the exception as a side constraint and keep the rest.
+- **the formula's structure**: definability (Padoa), gate detection,
+  partner detection — these are learning before any solve at all.
+
+The same idea recurs at every level of the solver: CDCL learns
+clauses from conflicts; CEGAR learns abstractions from
+counterexamples; interpolation learns functions from proofs;
+definability learns Skolem definitions from the matrix. They're all
+"replace point-by-point enumeration with a structure that covers many
+points at once." When a probe shows a linear loop, ask: *what is the
+loop discovering one point at a time that could be a structure
+discovered all at once?*
 
 Two pitfalls (both hit at iters 70-71):
-- **The learned cube must be unconditionally valid.** If the conflict
-  depended on mutable state (a tentative arbiter assignment, a cached
-  model), the cube is only valid while that state holds — committing
-  it permanently is unsound (iter71's 11-INVALID lesson).
+- **The learned thing must be unconditionally valid where it's used.**
+  If the conflict (or model, or proof) depended on mutable state (a
+  tentative arbiter assignment, a cached model), the learned cube/
+  clause/interpolant is only valid while that state holds —
+  committing it permanently is unsound (iter71's 11-INVALID lesson).
+  Either make it conditional, or make the state immutable.
 - **Generalization that doesn't fold into a CDCL is fragile.** When
-  the search loop is hand-rolled (arbsolve, slot-DPLL), invalidating
-  a learned cube on state change is bookkeeping that the CDCL would
-  do for free via watched literals and backjump. Prefer encoding the
-  search space as decision variables in an existing CDCL over a
-  separate enumeration loop.
+  the search loop is hand-rolled (arbsolve, slot-DPLL), tracking
+  validity of learned structures on state change is bookkeeping that
+  a CDCL does for free via watched literals and backjump. Prefer
+  encoding the search space as decision variables in an existing CDCL
+  over a separate enumeration loop. The CDCL *is* the generalization
+  engine.
 
 ## Gate
 
