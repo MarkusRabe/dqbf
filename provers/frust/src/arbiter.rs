@@ -365,9 +365,30 @@ pub fn validity_cegar(
     // validity and generate spurious counterexamples; the matrix-copy
     // block pins them. Without interpolants, defer to round 256 so easy
     // instances pay no overhead.
-    let mc_at = if st.defs.is_empty() { 256 } else { 0 };
-    if st.rounds >= mc_at && !st.mc_added && st.undef_set.len() <= 16 {
-        st.add_matrix_copy(f);
+    //
+    // iter80: the matrix-copy is *redundant* when every non-undef y has
+    // an interpolant — they're already pinned by `y ↔ I(...)`. For
+    // `pec_fifo1_n20_k8_bb1` the matrix-copy added 6036 clauses (a
+    // second copy of the matrix) on top of 994 itp gates, and the
+    // validity solve at round 1 never returned in 10s. Skipping it
+    // when there's nothing to pin is the same soundness with a
+    // 6000-clause-smaller validity solver.
+    if !st.mc_added && st.undef_set.len() <= 16 {
+        let n_non_itp_defined = f
+            .deps
+            .keys()
+            .filter(|y| !st.undef_set.contains(y) && !st.defs.contains_key(y))
+            .count();
+        let mc_at = if st.defs.is_empty() {
+            256
+        } else if n_non_itp_defined == 0 {
+            usize::MAX // never — interpolants already pin everything
+        } else {
+            0
+        };
+        if st.rounds >= mc_at {
+            st.add_matrix_copy(f);
+        }
     }
     let CegarState {
         n,

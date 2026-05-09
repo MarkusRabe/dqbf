@@ -85,6 +85,26 @@ pub fn padoa_split(
         .filter(|v| f.deps.contains_key(v))
         .collect();
     let deps: HashMap<Var, BTreeSet<Var>> = f.deps.iter().map(|(&y, d)| (y, d.clone())).collect();
+    // Bitset dep representation (same as `extract_interpolants`): the
+    // defined-z subset filter is `O(|todo| × |defined| × |U|)` per
+    // pass — quadratic in |E| with the BTreeSet walk. (iter80 perf:
+    // ~4.5% wall on `pec_fifo1_n20`.)
+    let nu_words = f.universals.len().div_ceil(64);
+    let u_idx: HashMap<Var, usize> =
+        f.universals.iter().enumerate().map(|(i, &u)| (u, i)).collect();
+    let dep_bits: HashMap<Var, Vec<u64>> = f
+        .deps
+        .iter()
+        .map(|(&y, d)| {
+            let mut b = vec![0u64; nu_words];
+            for &u in d {
+                let i = u_idx[&u];
+                b[i / 64] |= 1u64 << (i % 64);
+            }
+            (y, b)
+        })
+        .collect();
+    let is_sub = |z: &[u64], y: &[u64]| z.iter().zip(y).all(|(&a, &b)| a & !b == 0);
 
     let mut defined: Vec<Var> = f
         .deps
@@ -128,6 +148,7 @@ pub fn padoa_split(
                 });
             }
             let dy = &deps[&y];
+            let dyb = &dep_bits[&y];
             let mut assump: Vec<Lit> = Vec::with_capacity(2 + dy.len());
             assump.push(y as Lit);
             assump.push(-shift(y as Lit));
@@ -135,7 +156,7 @@ pub fn padoa_split(
                 assump.push(sel[&u]);
             }
             for &z in &defined {
-                if z != y && deps.get(&z).map_or(true, |dz| dz.is_subset(dy)) {
+                if z != y && dep_bits.get(&z).map_or(true, |dz| is_sub(dz, dyb)) {
                     assump.push(sel[&z]);
                 }
             }
@@ -222,6 +243,28 @@ pub fn extract_interpolants(
     // chain `y_0 → y_1 → …` bootstraps from one root, not k of them.
     order.sort_by_key(|&y| (f.deps[&y].len(), y));
 
+    // Bitset dep representation: the linkable-z subset check is
+    // `O(|order|^2 × |U|)` over the fixpoint. With `BTreeSet::is_subset`
+    // it walks both trees per check — 9.5% of the wall on
+    // `pec_fifo1_n20` (2552 e-vars × 2552 candidate z's per pass).
+    // Universal IDs index a bitset; the subset check is `(z & !y) == 0`.
+    let nu_words = f.universals.len().div_ceil(64);
+    let u_idx: HashMap<Var, usize> =
+        f.universals.iter().enumerate().map(|(i, &u)| (u, i)).collect();
+    let dep_bits: HashMap<Var, Vec<u64>> = f
+        .deps
+        .iter()
+        .map(|(&y, d)| {
+            let mut b = vec![0u64; nu_words];
+            for &u in d {
+                let i = u_idx[&u];
+                b[i / 64] |= 1u64 << (i % 64);
+            }
+            (y, b)
+        })
+        .collect();
+    let is_sub = |z: &[u64], y: &[u64]| z.iter().zip(y).all(|(&a, &b)| a & !b == 0);
+
     // Build a base CDCL once (copy-A | copy-B, no links) with
     // proof-logging enabled; per y, clone it and add only this y's link
     // clauses. Clone copies the already-built watch lists, which is
@@ -265,10 +308,11 @@ pub fn extract_interpolants(
                 break 'passes;
             }
             let dy: BTreeSet<Var> = f.deps[&y].clone();
+            let dyb = &dep_bits[&y];
             let linked_z: Vec<Var> = linkable
                 .iter()
                 .copied()
-                .filter(|&z| z != y && f.deps[&z].is_subset(&dy))
+                .filter(|&z| z != y && is_sub(&dep_bits[&z], dyb))
                 .collect();
             let mut cdcl = base.clone();
             for &u in dy.iter().chain(linked_z.iter()) {

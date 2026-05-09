@@ -2081,3 +2081,37 @@ recurrence solver, not a cell table. Recorded as a research wall.
   burns budget before Bailing. Lazy-Bail would be cheaper. Not fixed
   this iter — the gate change is risky (it gates out instances where
   est_cells is wrong in the *other* direction).
+
+## Refined-loop iteration 80: bitset deps + matrix-copy skip (+2) (2026-05-09)
+
+**Sample**: `pec_circuits/miter` (64 unsolved). `pec_fifo1_n20_k8_bb1`:
+2552 e-vars; the cegar got to round 1 in 10s. Profile: 9.5% in
+`BTreeSet::is_subset` (the linkable-z filter in `extract_interpolants`
+and the defined-z filter in `padoa_split` are both `O(|E|^2 × |U|)`),
+~70% in `Cdcl::solve`.
+
+**Changes** (kept):
+- (a) Bitset dep representation: precompute `Vec<u64>` per dep set;
+  the subset check is `(z & !y) == 0`. Cuts the quadratic loop
+  ~10×.
+- (b) Skip the matrix-copy block when every non-undef y has an
+  interpolant — the matrix-copy ties `y ↔ y_copy` for all non-undef
+  y's, but interpolated y's are already pinned by `y ↔ I(...)`. For
+  `pec_fifo1` it added 6036 redundant clauses (a second matrix copy)
+  to a validity solver that already had 994 itp gates — round time
+  went 10s→3s.
+
+**Result: 2691→2693/3571 (+2), 0 INVALID.** `pec_fifo1_n16/n20_k8_bb1`
+gained.
+
+**Wall named: cegar-validity scaling for large |E|.** With 2500+
+interpolants, the validity solver has ~9000 vars (formula + Tseitin
+aux + arb + itp gates). Each round is one validity solve at ~3s, and
+the cegar needs ~30-100 rounds. Doesn't fit in 10s. The cegar
+architecture validates the cert by SAT-checking it against the
+matrix; an alternative (Pedant's choice) is to validate only
+incrementally — the interpolants are *proven* correct (the Padoa
+proof is the validity argument); only the cells need a SAT check.
+That would shrink the validity solver to `Tseitin(¬K) ∧ cells`
+without the itp gates. Bigger architectural change — recorded for
+the next agent.
