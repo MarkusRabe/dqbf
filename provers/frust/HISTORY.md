@@ -2142,3 +2142,10 @@ slow ones have `eff_undef ≤ 100` and no better fall-through.
 Lead for the next agent: pre-substitute constant interpolants into
 the matrix (and into `validity`'s aux clauses) — many interpolants
 are constants (`root ∈ {0,1}`) and removing them shrinks every CDCL.
+
+## Refined-loop iteration 82: report milestone (2026-05-09)
+
+frust-v2.81 = 2729/3571 (76%), 2144 valid certs, 0 INVALID. The
+margin to dqbdd (2472, 69%) is +257 = +10%. iter80's bitset deps and
+matrix-copy skip are micro-optimizations that picked up the j=32
+noise margin. Report archived to `docs/dev_reports/2026-05-09_*`.
