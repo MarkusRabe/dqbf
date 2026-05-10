@@ -66,3 +66,6 @@ benchmarks/test/hwmcc/instances/
 benchmarks/test/hwmcc/unrolled/**/*.dqdimacs.gz
 benchmarks/test/hwmcc/succinct/**/*.dqdimacs.gz
 benchmarks/test/hwmcc/inductive/**/*.dqdimacs.gz
+# test/syntcomp: instances/ is the SYNTCOMP/benchmarks sparse clone.
+benchmarks/test/syntcomp/instances/
+benchmarks/test/syntcomp/bounded/**/*.dqdimacs.gz
