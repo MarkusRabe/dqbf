@@ -547,6 +547,12 @@ pub fn extract_interpolants(
     let mut conflict_act: HashMap<Var, f64> = candidates.iter().map(|&y| (y, 0.0)).collect();
     let mut conflict_inc: f64 = 1.0;
     const CONFLICT_DECAY: f64 = 1.05;
+    // Blocker set per y: the candidate z's whose 2-copy model differed
+    // when `y` last failed. `y` becomes "ready" when all its blockers
+    // are linkable (the symmetry is broken). Process highest-readiness
+    // first — this is the chain order for layered encodings without
+    // depending on var-id.
+    let mut blocker_set: HashMap<Var, HashSet<Var>> = HashMap::new();
     let mut n_rounds = 0usize;
     let mut n_bumps = 0usize;
     'rounds: loop {
@@ -558,13 +564,39 @@ pub fn extract_interpolants(
         if pending.is_empty() {
             break;
         }
-        // Sort: conflict activity (desc), then |dep| (asc), dep hash,
-        // var-id (deterministic last resort).
+        // Sort: blocker readiness (desc), conflict activity (desc),
+        // |dep| (asc), dep hash, var-id (last resort). Readiness =
+        // fraction of blockers that are now linkable; y's with no
+        // recorded blockers (round 1) get readiness 0 so they're
+        // processed in (|dep|, dep hash, var-id) order.
+        let lset: HashSet<Var> = linkable.iter().copied().collect();
         let act_q: HashMap<Var, u64> = pending
             .iter()
             .map(|&y| (y, (conflict_act[&y] * 1024.0) as u64))
             .collect();
-        pending.sort_by_key(|&y| (u64::MAX - act_q[&y], f.deps[&y].len(), dep_key[&y], y));
+        let ready_q: HashMap<Var, u64> = pending
+            .iter()
+            .map(|&y| {
+                let r = match blocker_set.get(&y) {
+                    None => 0u64,
+                    Some(bs) if bs.is_empty() => 0u64,
+                    Some(bs) => {
+                        let n_done = bs.iter().filter(|z| lset.contains(z)).count();
+                        ((n_done as f64 / bs.len() as f64) * 1024.0) as u64
+                    }
+                };
+                (y, r)
+            })
+            .collect();
+        pending.sort_by_key(|&y| {
+            (
+                u64::MAX - ready_q[&y],
+                u64::MAX - act_q[&y],
+                f.deps[&y].len(),
+                dep_key[&y],
+                y,
+            )
+        });
         let mut progress = false;
         for &y in &pending.clone() {
             if out.contains_key(&y) || decided.contains(&y) {
@@ -596,7 +628,8 @@ pub fn extract_interpolants(
             }
             let sh_sat = shared.solve(&sh_assump, &mut shared_model, 50_000);
             if !shared.budget_hit && sh_sat {
-                // SAT — not interpolatable. Bump the blockers.
+                // SAT — not interpolatable. Record blocker set + bump.
+                let mut bs: HashSet<Var> = HashSet::new();
                 for &z in neighbors.get(&y).map(|v| v.as_slice()).unwrap_or(&[]) {
                     if out.contains_key(&z) || decided.contains(&z) {
                         continue;
@@ -604,10 +637,12 @@ pub fn extract_interpolants(
                     let za = shared_model[z as usize];
                     let zb = shared_model[shift(z as Lit).unsigned_abs() as usize];
                     if za != 0 && zb != 0 && za != zb {
+                        bs.insert(z);
                         *conflict_act.get_mut(&z).unwrap() += conflict_inc;
                         n_bumps += 1;
                     }
                 }
+                blocker_set.insert(y, bs);
                 conflict_inc *= CONFLICT_DECAY;
                 if conflict_inc > 1e30 {
                     for v in conflict_act.values_mut() {
