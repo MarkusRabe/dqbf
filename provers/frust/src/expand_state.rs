@@ -34,6 +34,8 @@ enum Mode {
 }
 
 pub struct ExpandState {
+    /// See `Config::trust_cell_link`.
+    pub trust_cell_link: bool,
     // Immutable per-formula
     exs: Vec<Var>,
     dep_lists: Vec<Vec<Var>>,
@@ -133,6 +135,7 @@ impl ExpandState {
         let n = f.n_vars as usize + 1;
         let outer_pins: Vec<(Var, i8)> = outer.iter().map(|&i| (exs[i], -1i8)).collect();
         Self {
+            trust_cell_link: true,
             first_seen: (0..exs.len())
                 .map(|i| vec![0i8; 1usize << dep_lists[i].len()])
                 .collect(),
@@ -294,6 +297,7 @@ impl ExpandState {
                         return self.step(f, cdcl, deadline, start, debug);
                     }
                     self.cegar = Some(crate::arbiter::CegarState::new(f, &roots, &defs, partner));
+                    self.cegar.as_mut().unwrap().trust_cell_link = self.trust_cell_link;
                     self.cegar.as_mut().unwrap().defs = defs;
                 }
                 None => {

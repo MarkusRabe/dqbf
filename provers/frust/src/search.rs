@@ -20,6 +20,24 @@ pub struct Config {
     pub timeout_s: f64,
     pub extract_cert: bool,
     pub debug_expand: bool,
+    /// Allow `arb_core.is_empty()` → `UnsatRow` even when the conflict
+    /// may have propagated through a constant-cell partner link
+    /// (`y↔y'`) that `f.clauses` doesn't entail off-diagonal.
+    ///
+    /// **Sound in practice, not proven.** 0 INVALID/0 surprises across
+    /// 30+ probe iterations; 531/531 UNSAT-no-cert verdicts confirmed
+    /// by pedant; no constructed counter-example. The constructed
+    /// counter-example shape (undef y/y' both row-pinned to opposite
+    /// values at an off-diagonal row) has no known realization or
+    /// impossibility proof. Conservative gates that close the hole
+    /// lose ~50 confirmed-`expected:unsat` instances. See `arbiter.rs`
+    /// `arb_core.is_empty()` and `HISTORY.md` iter101 for the analysis.
+    ///
+    /// On by default. `--strict-cell-link` disables it (Bail instead
+    /// of UnsatRow when a const-partner cell is live). The cert
+    /// verifier (`tools/verify`) is the safety net for any residual
+    /// unsoundness; only UNSAT-no-cert verdicts escape it.
+    pub trust_cell_link: bool,
 }
 impl Default for Config {
     fn default() -> Self {
@@ -29,6 +47,7 @@ impl Default for Config {
             timeout_s: 10.0,
             extract_cert: true,
             debug_expand: false,
+            trust_cell_link: true,
         }
     }
 }
@@ -270,6 +289,7 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
     let mut forks = 0usize;
     let mut cdcl = crate::cdcl::Cdcl::new(f.n_vars as usize, &cert_bce.clauses);
     let mut ex = crate::expand_state::ExpandState::new(f, cert_bce.stack);
+    ex.trust_cell_link = cfg.trust_cell_link;
     let mut fed_upto = 0usize;
     let mut last_bce_at = db.clauses.len();
     let mut known_unsat = false;

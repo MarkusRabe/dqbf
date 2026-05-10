@@ -91,6 +91,8 @@ pub struct CegarState {
     arb_assump: Vec<Lit>,
     any_const_arbiter: bool,
     cell_dep_cap: usize,
+    /// See `Config::trust_cell_link` for the soundness analysis.
+    pub trust_cell_link: bool,
     /// Consistency-shape pairs: y → (y', dep_bijection) where the
     /// formula encodes `(⋀ d_i↔d'_i) → (y↔y')`. One arbiter cell
     /// then links both — halves the cell count and lets arbsolve see
@@ -379,6 +381,7 @@ impl CegarState {
                     .min(13) as usize
             },
             partner,
+            trust_cell_link: true,
             mc_sel,
             mc_added: false,
             defs: HashMap::new(),
@@ -476,6 +479,7 @@ pub fn validity_cegar(
         arb_meta,
         arb_assump,
         any_const_arbiter,
+        trust_cell_link,
         cell_dep_cap,
         partner,
         mc_sel,
@@ -633,6 +637,16 @@ pub fn validity_cegar(
                         "c [def] cegar UNSAT row at round {} ({} forcings live)",
                         rounds, nf
                     );
+                }
+                // Soundness gate (`--strict-cell-link`): when a const-
+                // partner cell is live, the conflict could rest on a
+                // `y↔y'` link not entailed off-diagonal. Bail rather
+                // than risk a false UNSAT. See `Config::trust_cell_link`.
+                if !*trust_cell_link && *any_const_arbiter && !partner.is_empty() {
+                    if debug {
+                        eprintln!("c [def] strict-cell-link: bailing (const+partner cell live)");
+                    }
+                    return CegarOut::Bail;
                 }
                 let mut derived: Vec<Vec<Lit>> = forcing_order
                     .iter()
@@ -910,11 +924,8 @@ pub fn validity_cegar(
                         for j in (i + 1)..links.len() {
                             let (yi, cdi) = &links[i];
                             let (yj, cdj) = &links[j];
-                            let neg_cube: Vec<Lit> = cdi
-                                .iter()
-                                .chain(cdj.iter())
-                                .map(|&l| -l)
-                                .collect();
+                            let neg_cube: Vec<Lit> =
+                                cdi.iter().chain(cdj.iter()).map(|&l| -l).collect();
                             let mut e1 = neg_cube.clone();
                             e1.push(-(*yi as Lit));
                             e1.push(*yj as Lit);

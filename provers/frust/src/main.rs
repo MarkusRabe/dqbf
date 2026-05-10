@@ -46,6 +46,8 @@ fn main() -> ExitCode {
             }
             "--trace" => trace = true,
             "--debug-expand" => cfg.debug_expand = true,
+            // See Config::trust_cell_link for the soundness analysis.
+            "--strict-cell-link" => cfg.trust_cell_link = false,
             s if !s.starts_with('-') => path = Some(s.to_string()),
             _ => {}
         }
