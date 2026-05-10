@@ -70,10 +70,25 @@ def gen_manifests(dry_run: bool = False) -> int:
         # family dir with sub-collections shouldn't get its own manifest.
         if any(d.is_dir() and not d.name.startswith(("_", ".")) for d in variant_dir.iterdir()):
             continue
+        # Skip dirs covered by a parent manifest (e.g. `hwmcc/<variant>/`
+        # has a merged manifest; the per-circuit dirs underneath are
+        # asset directories, not variant directories).
+        if any(
+            (p / "manifest.json").exists()
+            for p in variant_dir.parents
+            if p != ROOT and p.is_relative_to(ROOT)
+        ):
+            continue
+        # Skip raw-asset dirs without `.dqdimacs`/`.qdimacs` (e.g.
+        # `hwmcc/instances/` holds source .aag, not encodable instances).
+        if variant_dir.name in ("instances",) and not any(
+            ".dqdimacs" in p.name or ".qdimacs" in p.name for p in variant_dir.iterdir()
+        ):
+            continue
         instances = sorted(
             p
             for p in variant_dir.iterdir()
-            if p.suffix in (".gz",) and ".dqdimacs" in p.name
+            if p.suffix in (".gz",) and (".dqdimacs" in p.name or ".qdimacs" in p.name)
         ) + sorted(
             p
             for p in variant_dir.iterdir()
