@@ -17,3 +17,4 @@ frust changes that produced it.
 | 2026-05-10 18:16 | `712abc3` | test-set-v2-146 | cadet, caqe, dqbdd, frust-v2.146, hqs, pedant |
 | 2026-05-10 18:21 | `1428bbd` | test-set-v2-146-hqs | cadet, caqe, dqbdd, frust-v2.146, hqs, pedant |
 | 2026-05-10 19:17 | `908d2a4` | test-set-hwmcc-syntcomp | abc-bmc, abc-pdr, cadet, caqe, dqbdd, frust-v2.146, hqs, pedant, strix |
+| 2026-05-10 19:37 | `3294281` | test-set-qbf-restructure | abc-bmc, abc-pdr, cadet, caqe, dqbdd, frust-v2.146, hqs, pedant, strix |
