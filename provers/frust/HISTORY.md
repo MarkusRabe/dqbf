@@ -2668,3 +2668,32 @@ subtracts it. `pec_mutex_n24_*` (4 instances) clear the gate post-fix.
 
 Result: 2700→2704 (+4), 2171 valid (+2), 0 INVALID. 1477-instance
 fuzz clean.
+
+## iter109: Lead 1 (Padoa scaling) triage — exhausted
+
+The directive's premise (~250 instances Padoa-blocked) was off. After
+iter106-108 (BCP pre-filter, find-then-prove, n_const gate), Padoa
+finishes in 1-2 rounds at <1.5 s on every sampled timeout. The actual
+wall categorization (30-instance sample of pec/cbmc/bmc-succinct/
+collatz/circuit_synth timeouts):
+- 12 OTHER (deepening k=8→20 — fall-through after definability fails
+  for various reasons)
+- 10 CONST_BAIL (`arbiter space exhausted (const=true)` — roots have
+  |dep| > cell_dep_cap, restricted to a constant Skolem the function
+  isn't)
+- 7 CEGAR_TIMEOUT (CEGAR rounds hit deadline)
+- 1 DEFINABILITY_SKIP (>3000 e-vars even after n_const subtraction)
+
+`pec_alu_add_n12` is illustrative: padoa 1.45 s (1795 defined, 11
+undef), interpolation 1796/1806, **CEGAR const-bails because the 10
+roots are black-box gates with |dep|=24 ≫ cap=10**. Same shape for
+`hwmc_indinv` (the inductive invariant `inv(s)` has |dep|=16, cap is
+≤13 → constant). This is the iter77/85/101 finding restated — a
+constant Skolem can't represent the black-box / invariant function,
+and the prefix-tree (iter77, −34) and cap-raise (iter85, −5)
+alternatives fail because the search space is exponential in |dep|.
+
+**The right target for iter110+ is Lead 2 (OuterCegar picker
+encoding) for `circuit_synth` (165 unsolved, biggest cluster), and a
+representation upgrade for the const-arbiter roots (decision-tree
+default function or a learned hyperplane — see iter77's lesson).**
