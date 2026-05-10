@@ -916,6 +916,7 @@ def _shell(
     families_override: list[str] | None = None,
     solvers_override: list[str] | None = None,
     domains_override: dict[str, str] | None = None,
+    default_solvers: list[str] | None = None,
     solver_panel: str = "",
 ) -> str:
     """The HTML around `data_block`. `data_block` defines (or arranges
@@ -923,11 +924,10 @@ def _shell(
 
     The `*_override` args let `render_consolidated` pass the *full*
     solver/family/domain lists from the manifest (not just `rows`),
-    so the controls cover lazily-loadable solvers."""
+    so the controls cover lazily-loadable solvers. `default_solvers`
+    is the set initially loaded/checked; if omitted, all solvers."""
     solvers = solvers_override or sorted({r["solver"] for r in rows})
-    default_on = (
-        sorted({r["solver"] for r in rows}) if solvers_override else solvers
-    )
+    default_on = default_solvers if default_solvers is not None else solvers
     families = families_override or sorted({r["family"] for r in rows})
     if domains_override is None:
         reg = registry()
@@ -1172,10 +1172,9 @@ def render_consolidated(rows: list[dict], out_dir: Path, timeout_s: float) -> No
     families = mf["families"]
     domains = mf["domains"]
 
-    # The shell needs `rows` for `_warnings`; pass only the default solvers'
-    # rows so the warning matches the default view. The family tree and
-    # selects use the full `families`/`all_solvers` lists.
-    default_rows = [r for r in rows if r["solver"] in defaults]
+    # `rows` may be a partial backfill (e.g. just abc-bmc/abc-pdr). The
+    # `_warnings` div is best-effort over what's in `rows`; the rest of
+    # the controls use the full manifest lists + `defaults`.
     data_block = (
         "<script>let DATA=[];"
         f"const MANIFEST_NAME={_js_json(CONSOLIDATED_MANIFEST)};"
@@ -1183,13 +1182,14 @@ def render_consolidated(rows: list[dict], out_dir: Path, timeout_s: float) -> No
     )
     out.write_text(
         _shell(
-            default_rows,
+            rows,
             timeout_s,
             data_block,
             _JS_BOOT_CONSOLIDATED,
             families_override=families,
             solvers_override=all_solvers,
             domains_override=domains,
+            default_solvers=sorted(defaults),
             solver_panel=_solver_panel(all_solvers, defaults),
         )
     )
