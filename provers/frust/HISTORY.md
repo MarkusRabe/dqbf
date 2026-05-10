@@ -2427,3 +2427,14 @@ clamped to `[1.5, 6.0]`.
 the `chain emit failed` cases I sampled were all hitting the 500 k
 step cap, not the deadline. The cap is a separate (and probably
 correct) gate against pathological proofs.
+
+## Refined-loop iteration 94: processed_this_pass 256→512 (no change, reverted) (2026-05-10)
+
+**Hypothesis**: iter90's 256-clause cap might be too low for `pec`
+saturate (it lost `pec_alu_add_n4_k8_bb2`). 512 should give more
+saturate progress per slice while still letting SFEx fire.
+
+**Result**: 2698/3571 (no change), 2168 certs (no change). Reverted.
+The cap value isn't the bottleneck; the 256→512 difference is within
+noise. The fork attempt overhead (sort 12 k clauses) is amortized
+over either pass length.
