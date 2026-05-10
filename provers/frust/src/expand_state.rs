@@ -15,8 +15,10 @@ macro_rules! dbg_ex {
 pub enum Step {
     Sat(Option<Skolem>),
     /// One CDCL-refuted row of 2^|U|; carries the universal-polarity
-    /// assumptions so the caller can re-prove for a `.frp`.
-    UnsatRow(Vec<Lit>),
+    /// assumptions plus derived clauses (forcings ∪ partner cell-link
+    /// constraints, each Q-resolution-derivable from `f.clauses`) so
+    /// the caller can re-prove a `.frp` with forcing-chain stitching.
+    UnsatRow(Vec<Lit>, Vec<Vec<Lit>>),
     /// Exhausted slot/arbiter space; no Skolem exists; no row-level cert.
     Unsat,
     Pending,
@@ -315,9 +317,9 @@ impl ExpandState {
                 let sk = crate::arbiter::forcing_to_skolem(f, cert, 20).unwrap();
                 Step::Sat(Some(sk))
             }
-            CegarOut::UnsatRow(row) => {
+            CegarOut::UnsatRow(row, forcings) => {
                 self.mode = Mode::Exhausted;
-                Step::UnsatRow(row)
+                Step::UnsatRow(row, forcings)
             }
             CegarOut::Unsat => {
                 self.mode = Mode::Exhausted;
@@ -346,7 +348,7 @@ impl ExpandState {
         if let Some(row) = deepening_partial_scan(f, cdcl, &mut self.model, deadline, start, debug)
         {
             self.mode = Mode::Exhausted;
-            return Step::UnsatRow(row);
+            return Step::UnsatRow(row, Vec::new());
         }
         // Deepening reached its level cap or deadline; not resumable in
         // its current form (each call restarts at k=8, but CDCL learned
@@ -377,7 +379,7 @@ impl ExpandState {
             if !cdcl.solve(&assumps, &mut self.model, self.row_budget) {
                 if !cdcl.budget_hit {
                     self.mode = Mode::Exhausted;
-                    return Step::UnsatRow(assumps);
+                    return Step::UnsatRow(assumps, Vec::new());
                 }
                 self.mode = Mode::Exhausted;
                 return Step::Done;

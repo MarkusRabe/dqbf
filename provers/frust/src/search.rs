@@ -305,7 +305,7 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                     known_unsat = true;
                     expand_done = true;
                 }
-                crate::expand_state::Step::UnsatRow(row) => {
+                crate::expand_state::Step::UnsatRow(row, forcings) => {
                     let now = start.elapsed().as_secs_f64();
                     // The verdict is known; reprove is best-effort cert
                     // recovery. Give it up to 60% of the *remaining*
@@ -319,6 +319,7 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                         crate::proof_emit::reprove_row_unsat(
                             f,
                             &row,
+                            &forcings,
                             500_000,
                             dl,
                             &start,

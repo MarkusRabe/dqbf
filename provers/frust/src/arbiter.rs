@@ -43,8 +43,13 @@ pub struct ForcingCert {
 
 pub enum CegarOut {
     Sat(ForcingCert),
-    /// matrix[U*,·] propositionally UNSAT — carries the universal row.
-    UnsatRow(Vec<Lit>),
+    /// matrix[U*,·] propositionally UNSAT under the live forcings and
+    /// partner cell-link constraints. Carries the universal row *and*
+    /// the derived clauses (forcings ∪ partner links, in learn order),
+    /// so the proof emitter can re-derive each as a `.frp` sub-chain
+    /// and stitch a forcing-chain refutation (iter101). Each entry is
+    /// a clause derivable from `f.clauses` by Q-resolution.
+    UnsatRow(Vec<Lit>, Vec<Vec<Lit>>),
     /// arbsolve exhausted — every Skolem fails some row.
     Unsat,
     Bail,
@@ -69,6 +74,18 @@ pub struct CegarState {
     univ: BTreeSet<Var>,
     undef_set: BTreeSet<Var>,
     forcing: HashMap<Var, Vec<(Vec<Lit>, Lit)>>,
+    /// Same forcing clauses, in *learn* order. Re-deriving them for the
+    /// `.frp` cert must respect this order: a later forcing may have
+    /// been proved using earlier ones (they're `add_external`'d into
+    /// `consist`), so a fresh CDCL needs the earlier ones as axioms.
+    forcing_order: Vec<(Vec<Lit>, Lit)>,
+    /// Partner cell-link constraints over *formula variables only*.
+    /// Each shared arbiter cell with links `(y, cd)` and `(yp, cd_p)`
+    /// implies `(¬cd ∨ ¬cd_p ∨ ¬y ∨ yp)` and `(¬cd ∨ ¬cd_p ∨ y ∨ ¬yp)`
+    /// — the consistency-shape detector proved both derivable from
+    /// `f.clauses`. The proof emitter re-derives them as `.frp`
+    /// sub-chains so a partner-induced row refutation can be cert'd.
+    cell_constraints: Vec<Vec<Lit>>,
     arb_of: HashMap<(Var, Vec<Lit>), usize>,
     arb_meta: Vec<Vec<(Var, Vec<Lit>)>>,
     arb_assump: Vec<Lit>,
@@ -335,6 +352,8 @@ impl CegarState {
             univ: f.universals.iter().copied().collect(),
             undef_set: undefined.iter().copied().collect(),
             forcing: exs.iter().map(|&y| (y, Vec::new())).collect(),
+            forcing_order: Vec::new(),
+            cell_constraints: Vec::new(),
             exs,
             arb_of: HashMap::new(),
             arb_meta: vec![vec![]],
@@ -451,6 +470,8 @@ pub fn validity_cegar(
         univ,
         undef_set,
         forcing,
+        forcing_order,
+        cell_constraints,
         arb_of,
         arb_meta,
         arb_assump,
@@ -581,12 +602,27 @@ pub fn validity_cegar(
                 // Core ⊆ universals. `analyze_final` returns a subset of
                 // the *assumptions* (`ca`), so an empty `arb_core` only
                 // means the cell *assumptions* weren't needed — the
-                // forcing *clauses* (added via `add_external`) can still
-                // participate in propagation. So this is *not* a
-                // propositional refutation of `f.clauses[U*]` in
-                // general; it's a refutation of `f.clauses ∧ forcings
-                // ∧ U*`. Propagate the forcing clauses to the proof
-                // emitter so it can re-derive them.
+                // forcing *clauses* AND cell-link clauses (added via
+                // `add_external`) can still participate in propagation.
+                // So this is *not* a propositional refutation of
+                // `f.clauses[U*]` in general; it's a refutation of
+                // `f.clauses ∧ forcings ∧ cell_links ∧ U*`.
+                //
+                // Soundness gate (iter101): forcings and *non-constant*
+                // partner cell-links are derivable from `f.clauses`. A
+                // *constant*-cell partner link (`cd = ∅`, see line 802)
+                // forces `y ↔ y'` unconditionally, which `f.clauses`
+                // does NOT entail. If such a cell exists, the conflict
+                // could be a false positive — bail and let arbsolve
+                // re-pick instead of returning a possibly-wrong UNSAT.
+                if *any_const_arbiter && !partner.is_empty() {
+                    if debug {
+                        eprintln!(
+                            "c [def] cegar arb_core empty under const partner cells — Bail (soundness)"
+                        );
+                    }
+                    return CegarOut::Bail;
+                }
                 if debug {
                     let nf: usize = forcing.values().map(|v| v.len()).sum();
                     eprintln!(
@@ -594,7 +630,17 @@ pub fn validity_cegar(
                         rounds, nf
                     );
                 }
-                return CegarOut::UnsatRow(u_assump);
+                let mut derived: Vec<Vec<Lit>> = forcing_order
+                    .iter()
+                    .map(|(ante, then)| {
+                        ante.iter()
+                            .map(|&l| -l)
+                            .chain(std::iter::once(*then))
+                            .collect()
+                    })
+                    .collect();
+                derived.extend(cell_constraints.iter().cloned());
+                return CegarOut::UnsatRow(u_assump, derived);
             }
             // Learn ¬arb_core in arbsolve; re-pick arbiters.
             let conflict: Vec<Lit> = arb_core.iter().map(|&l| -l).collect();
@@ -731,6 +777,7 @@ pub fn validity_cegar(
                     // the opposite value (consist's model for an
                     // unconstrained row is arbitrary).
                     consist.add_external(&fc);
+                    forcing_order.push((ante.clone(), then));
                     forcing.get_mut(&y).unwrap().push((ante, then));
                     learned_any = true;
                     continue;
@@ -844,6 +891,36 @@ pub fn validity_cegar(
                     d2.push(-(*yl as Lit));
                     consist.add_external(&d1);
                     consist.add_external(&d2);
+                }
+                // Partner-shared cell ⇒ cross-link constraints over
+                // formula vars only (resolve out the cell var). The
+                // consistency-shape detector proved `(⋀ d↔d') → (y↔y')`
+                // is derivable from f.clauses, and a non-constant cell's
+                // `cd, cd_p` cubes encode `d↔d'` positionally (cd_p =
+                // bij(cd)), so the constraint at this cell's keys is a
+                // Q-resolution lemma. Skip constant cells (cd = ∅): the
+                // constraint then forces `y↔y'` *unconditionally*, which
+                // f.clauses doesn't entail — re-derivation would SAT.
+                if links.len() >= 2 && links.iter().all(|(_, cd)| !cd.is_empty()) {
+                    for i in 0..links.len() {
+                        for j in (i + 1)..links.len() {
+                            let (yi, cdi) = &links[i];
+                            let (yj, cdj) = &links[j];
+                            let neg_cube: Vec<Lit> = cdi
+                                .iter()
+                                .chain(cdj.iter())
+                                .map(|&l| -l)
+                                .collect();
+                            let mut e1 = neg_cube.clone();
+                            e1.push(-(*yi as Lit));
+                            e1.push(*yj as Lit);
+                            let mut e2 = neg_cube;
+                            e2.push(*yi as Lit);
+                            e2.push(-(*yj as Lit));
+                            cell_constraints.push(e1);
+                            cell_constraints.push(e2);
+                        }
+                    }
                 }
                 arbsolve.set_decision(idx as u32, true);
                 arbsolve.set_phase(idx as u32, want);
