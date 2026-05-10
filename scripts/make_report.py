@@ -204,41 +204,65 @@ PREVIEW = "https://htmlpreview.github.io/?" + RAW
 
 
 def write_index() -> None:
-    items = sorted(REPORTS.glob("20*.html"), reverse=True)
     lines = ["# dqbf — dev reports", ""]
-    lines.append(
-        "Reports from `2026-05-10` onward use the **split-data format**: "
-        "the HTML fetches per-(solver, family) `.json.gz` shards from "
-        "`data/`. Open them over HTTP — `python3 -m http.server` in this "
-        "directory — `fetch()` is blocked over `file://`. Older reports "
-        "are self-contained.\n"
-    )
-    lines.append("| date | label | size | view |")
-    lines.append("|---|---|---|---|")
-    for p in items:
-        parts = p.stem.split("_", 2)
-        d = "_".join(parts[:2])
-        lab = parts[2] if len(parts) > 2 else ""
-        kb = p.stat().st_size // 1024
-        sz = f"{kb//1024}.{kb%1024//100}M" if kb > 1024 else f"{kb}K"
-        lines.append(f"| {d} | {lab} | {sz} | [rendered]({PREVIEW}{p.name}) · [source]({p.name}) |")
+    if (REPORTS / "report.html").exists():
+        lines.append(
+            f"**[Multi-solver report]({PREVIEW}report.html)** — one HTML, "
+            "all solver versions. Toggle versions in the *solver versions* "
+            "panel; only the latest of each is loaded by default. See "
+            "[CHANGELOG.md](CHANGELOG.md) for the history of when each "
+            "version was archived.\n"
+        )
+        lines.append(
+            "Loads per-(solver, family) `.json.gz` shards from `data/`. "
+            "Needs HTTP — `python3 -m http.server` in this directory, or "
+            "use the GitHub-preview link above (CDN-backed).\n"
+        )
+    items = sorted(REPORTS.glob("20*.html"), reverse=True)
+    if items:
+        lines.append("## Archived per-iteration reports (legacy)\n")
+        lines.append("| date | label | size | view |")
+        lines.append("|---|---|---|---|")
+        for p in items:
+            parts = p.stem.split("_", 2)
+            d = "_".join(parts[:2])
+            lab = parts[2] if len(parts) > 2 else ""
+            kb = p.stat().st_size // 1024
+            sz = f"{kb//1024}.{kb%1024//100}M" if kb > 1024 else f"{kb}K"
+            lines.append(f"| {d} | {lab} | {sz} | [rendered]({PREVIEW}{p.name}) · [source]({p.name}) |")
     (REPORTS / "README.md").write_text("\n".join(lines) + "\n")
 
 
 def archive(jsonl_path: str | Path, label: str, timeout_s: float = 10.0) -> Path:
-    """Render `jsonl_path` to `docs/dev_reports/<stamp>_<label>.html` in the
-    split-data format and refresh the index. This is the convention for
-    all reports from frust-v2.82 onward — call instead of
-    `cp results/train.html docs/dev_reports/...`."""
-    from benchmarks.runner.multi_report import render_split
+    """Update the consolidated report (`docs/dev_reports/report.html`) and
+    log the update to a CHANGELOG. This is the convention from iter101
+    onward — replaces the per-iteration HTML files: the manifest grows,
+    the HTML is rewritten in place (small git delta), shards accumulate.
+
+    `label` goes in the changelog so the history is browsable from the
+    repo even though there's only one HTML."""
+    from benchmarks.runner.multi_report import render_consolidated
 
     rows = [json.loads(ln) for ln in Path(jsonl_path).read_text().splitlines() if ln.strip()]
     REPORTS.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M")
-    out = REPORTS / f"{stamp}_{_slug(label)}.html"
-    render_split(rows, out, timeout_s)
+    render_consolidated(rows, REPORTS, timeout_s)
+    # Append to the changelog.
+    stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    head = _git_head()
+    solvers = sorted({r["solver"] for r in rows})
+    log_line = f"| {stamp} | `{head}` | {_slug(label)} | {', '.join(solvers)} |\n"
+    cl = REPORTS / "CHANGELOG.md"
+    if not cl.exists():
+        cl.write_text(
+            "# Report changelog\n\n"
+            "One consolidated report at [`report.html`](report.html). Each\n"
+            "row is one archive call — see the named git commit for the\n"
+            "frust changes that produced it.\n\n"
+            "| date | commit | label | solvers |\n|---|---|---|---|\n"
+        )
+    cl.write_text(cl.read_text() + log_line)
     write_index()
-    return out
+    return REPORTS / "report.html"
 
 
 def migrate_inline(html_paths: list[Path], timeout_s: float = 10.0) -> None:
@@ -250,6 +274,31 @@ def migrate_inline(html_paths: list[Path], timeout_s: float = 10.0) -> None:
     for p in html_paths:
         rows = extract_inline_data(p)
         render_split(rows, p, timeout_s)
+    write_index()
+
+
+def seed_consolidated(timeout_s: float = 10.0) -> None:
+    """Build the initial consolidated report from the existing per-report
+    manifests, so the consolidated manifest starts with all archived
+    solver versions. One-time migration."""
+    import gzip
+
+    from benchmarks.runner.multi_report import render_consolidated
+
+    data_dir = REPORTS / "data"
+    rows: list[dict] = []
+    seen_files: set[str] = set()
+    # Most recent manifest wins for each solver+family shard.
+    for mf in sorted(data_dir.glob("20*.manifest.json")):
+        files = json.loads(mf.read_text()).get("files", [])
+        for f in files:
+            if f in seen_files:
+                continue
+            seen_files.add(f)
+            p = data_dir / f
+            if p.exists():
+                rows.extend(json.loads(gzip.decompress(p.read_bytes())))
+    render_consolidated(rows, REPORTS, timeout_s)
     write_index()
 
 

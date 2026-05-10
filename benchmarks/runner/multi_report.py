@@ -734,6 +734,91 @@ _JS_BOOT_INLINE = (
     '<script>document.addEventListener("DOMContentLoaded",appInit);</script>'
 )
 
+# Consolidated mode: one HTML, one manifest grouping shards by solver
+# version. Loads only the default-selected solvers' shards on first
+# render; toggling a solver version on lazily fetches its shards.
+_JS_BOOT_CONSOLIDATED = """\
+<script>
+async function _gunzipJson(url){
+  const r = await fetch(url);
+  if(!r.ok) throw new Error(`${url}: ${r.status}`);
+  const ds = new DecompressionStream("gzip");
+  const blob = await new Response(r.body.pipeThrough(ds)).blob();
+  return JSON.parse(await blob.text());
+}
+let _loadedSolvers = new Set();
+let _dataBase = null;
+let _manifest = null;
+async function _loadSolvers(names, status){
+  const want = names.filter(s => !_loadedSolvers.has(s) && _manifest.solvers[s]);
+  if(!want.length) return;
+  const files = want.flatMap(s => _manifest.solvers[s]);
+  let n = 0;
+  const parts = await Promise.all(files.map(async f => {
+    const r = await _gunzipJson(_dataBase + f);
+    if(status) status.textContent = `Loading ${++n}/${files.length}…`;
+    return r;
+  }));
+  DATA = DATA.concat(parts.flat());
+  for(const s of want) _loadedSolvers.add(s);
+}
+(async()=>{
+  const status = document.createElement("div");
+  status.style.cssText = "position:fixed;top:.5em;right:.5em;background:#fff;border:1px solid #ccc;border-radius:6px;padding:.4em .8em;font-size:.85em;color:#666;z-index:99";
+  status.textContent = "Loading…";
+  document.body.appendChild(status);
+  let lastErr=null;
+  for(const b of DATA_BASES){
+    try{
+      const r = await fetch(b + MANIFEST_NAME);
+      if(!r.ok){ lastErr = `${b}${MANIFEST_NAME}: ${r.status}`; continue; }
+      _manifest = await r.json(); _dataBase = b; break;
+    }catch(e){ lastErr = e; }
+  }
+  if(!_manifest){
+    status.remove();
+    const d = document.createElement("div");
+    d.className = "warn";
+    d.append("Failed to load report data (" + lastErr + "). ");
+    const c = document.createElement("code");
+    c.textContent = "python3 -m http.server";
+    d.append("Serve over HTTP — e.g. ", c, " in docs/dev_reports/ — or wait for the GitHub CDN cache.");
+    document.body.prepend(d);
+    return;
+  }
+  try{
+    const want = $$("#sv-panel input:checked").map(c => c.value);
+    await _loadSolvers(want, status);
+    status.remove();
+    if(document.readyState === "loading")
+      document.addEventListener("DOMContentLoaded", appInit);
+    else appInit();
+    // wire the solver-version panel for lazy loading + re-render
+    for(const cb of $$("#sv-panel input")){
+      cb.addEventListener("change", async()=>{
+        if(cb.checked && !_loadedSolvers.has(cb.value)){
+          const s2 = document.createElement("div");
+          s2.style.cssText = status.style.cssText; s2.textContent = "Loading…";
+          document.body.appendChild(s2);
+          await _loadSolvers([cb.value], s2);
+          s2.remove();
+        }
+        SOLVERS = $$("#sv-panel input:checked").map(c => c.value).sort();
+        computeDomainSets(); applyDomain();
+        for(const tree of $$("ul.famtree")) updateFamStats(tree.dataset.scope);
+        renderOverview(); renderSingle(); renderPair();
+      });
+    }
+  }catch(e){
+    status.remove();
+    const d = document.createElement("div");
+    d.className = "warn"; d.textContent = "Failed to load report shards: " + e;
+    document.body.prepend(d);
+  }
+})();
+</script>
+"""
+
 # Split mode: DATA is empty until the manifest's shards are fetched and
 # decompressed. Tries a list of base URLs — relative path for local
 # `python3 -m http.server`, then absolute GitHub raw / CDN for proxied
@@ -822,17 +907,40 @@ def _domain_selector(domains: dict[str, str]) -> str:
     return f'<div id="domain"><b>Domain:</b>{"".join(pills)}</div>'
 
 
-def _shell(rows: list[dict], timeout_s: float, data_block: str, boot: str) -> str:
+def _shell(
+    rows: list[dict],
+    timeout_s: float,
+    data_block: str,
+    boot: str,
+    *,
+    families_override: list[str] | None = None,
+    solvers_override: list[str] | None = None,
+    domains_override: dict[str, str] | None = None,
+    solver_panel: str = "",
+) -> str:
     """The HTML around `data_block`. `data_block` defines (or arranges
-    to define) `DATA`; everything else is static and rendered here."""
-    solvers = sorted({r["solver"] for r in rows})
-    families = sorted({r["family"] for r in rows})
-    reg = registry()
-    domains = {s: (reg[s].domain if s in reg else "dqbf") for s in solvers}
+    to define) `DATA`; everything else is static and rendered here.
 
+    The `*_override` args let `render_consolidated` pass the *full*
+    solver/family/domain lists from the manifest (not just `rows`),
+    so the controls cover lazily-loadable solvers."""
+    solvers = solvers_override or sorted({r["solver"] for r in rows})
+    default_on = (
+        sorted({r["solver"] for r in rows}) if solvers_override else solvers
+    )
+    families = families_override or sorted({r["family"] for r in rows})
+    if domains_override is None:
+        reg = registry()
+        domains = {s: (reg[s].domain if s in reg else "dqbf") for s in solvers}
+    else:
+        domains = domains_override
+
+    # SOLVERS is `let` so the consolidated mode's solver-version panel
+    # can reassign it. Initialised to the default-on set; the panel
+    # adds/removes versions and re-renders.
     meta_block = (
         "<script>"
-        f"const SOLVERS={_js_json(solvers)};"
+        f"let SOLVERS={_js_json(default_on)};"
         f"const FAMILIES={_js_json(families)};"
         f"const DOMAINS={_js_json(domains)};"
         f"const DOMAIN_NAMES={_js_json(DOMAIN_ORDER)};"
@@ -847,7 +955,7 @@ def _shell(rows: list[dict], timeout_s: float, data_block: str, boot: str) -> st
         '<button data-tab="tab-compare">Compare</button>'
         "</nav>"
     )
-    overview_ctl = _local_controls("overview", families, "")
+    overview_ctl = _local_controls("overview", families, solver_panel)
     b_default = solvers[1] if len(solvers) > 1 else (solvers[0] if solvers else "")
     single_ctl = _local_controls(
         "single",
@@ -925,6 +1033,62 @@ def _write_shards(rows: list[dict], data_dir: Path) -> list[str]:
     return files
 
 
+def _split_versioned(name: str) -> tuple[str, tuple[int, ...]] | None:
+    """`frust-v2.95` -> ('frust', (2, 95)). None if not versioned."""
+    import re
+
+    m = re.match(r"^(.+)-v(\d+(?:\.\d+)*)$", name)
+    if not m:
+        return None
+    return m.group(1), tuple(int(x) for x in m.group(2).split("."))
+
+
+def _default_solvers(solvers: list[str], exclude: tuple[str, ...] = ("forkres",)) -> list[str]:
+    """Most-recent version of each base solver; exclude `forkres` by
+    default (slow Python reference, not interesting in the headline)."""
+    by_base: dict[str, list[tuple[tuple[int, ...], str]]] = defaultdict(list)
+    plain: list[str] = []
+    for s in solvers:
+        if s in exclude:
+            continue
+        v = _split_versioned(s)
+        if v:
+            by_base[v[0]].append((v[1], s))
+        else:
+            plain.append(s)
+    latest = [max(vs)[1] for vs in by_base.values()]
+    return sorted(plain + latest)
+
+
+def _solver_panel(solvers: list[str], default_on: set[str]) -> str:
+    """Checkbox list grouped by base solver. Versioned solvers are
+    sorted newest-first; only the latest is checked by default."""
+    groups: dict[str, list[str]] = defaultdict(list)
+    plain: list[str] = []
+    for s in sorted(solvers):
+        v = _split_versioned(s)
+        if v:
+            groups[v[0]].append(s)
+        else:
+            plain.append(s)
+    items: list[str] = []
+    for s in plain:
+        chk = " checked" if s in default_on else ""
+        items.append(f'<label><input type="checkbox" value="{_esc(s)}"{chk}> {_esc(s)}</label>')
+    for _, vers in sorted(groups.items()):
+        # Newest first so the default-checked one is at the top.
+        vers.sort(key=lambda s: _split_versioned(s)[1], reverse=True)  # type: ignore[index]
+        for s in vers:
+            chk = " checked" if s in default_on else ""
+            items.append(f'<label><input type="checkbox" value="{_esc(s)}"{chk}> {_esc(s)}</label>')
+    return (
+        '<details id="sv-panel"><summary>solver versions '
+        f"({len(default_on)}/{len(solvers)} on)</summary>"
+        f'<div style="display:flex;flex-wrap:wrap;gap:.3em 1.2em;padding:.4em 0">'
+        f"{''.join(items)}</div></details>"
+    )
+
+
 def render_split(rows: list[dict], out: Path, timeout_s: float) -> None:
     """Shell HTML + content-addressed shards in `<out.parent>/data/`.
     Backfill a new family later: append rows to that family's jsonl,
@@ -943,6 +1107,97 @@ def render_split(rows: list[dict], out: Path, timeout_s: float) -> None:
     out.write_text(_shell(rows, timeout_s, data_block, _JS_BOOT_SPLIT))
     n_new = sum(1 for f in files if f not in before)
     print(f"wrote {out} ({len(files)} shards, {n_new} new)")
+
+
+CONSOLIDATED_NAME = "report.html"
+CONSOLIDATED_MANIFEST = "report.manifest.json"
+
+
+def render_consolidated(rows: list[dict], out_dir: Path, timeout_s: float) -> None:
+    """Update the **single** consolidated report at `<out_dir>/report.html`.
+
+    The manifest at `<out_dir>/data/report.manifest.json` accumulates
+    shard lists per solver across runs: a solver in the current `rows`
+    has its shard list **replaced**; solvers not in `rows` keep their
+    old entries. The HTML's solver-version filter defaults to the most
+    recent version of each base solver and excludes `forkres`. Other
+    versions are listed but unchecked; toggling one on lazily fetches
+    its shards.
+
+    This replaces `archive()`'s one-HTML-per-iteration convention. Each
+    iteration's archive step rewrites `report.html` (small diff: family
+    list + git head/stamp) and the manifest, plus only the new shards.
+    """
+    data_dir = out_dir / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / CONSOLIDATED_NAME
+    mf_path = data_dir / CONSOLIDATED_MANIFEST
+
+    # Group this run's shards by solver.
+    by_solver: dict[str, list[dict]] = defaultdict(list)
+    for r in rows:
+        by_solver[r["solver"]].append(r)
+    new_shards: dict[str, list[str]] = {}
+    before = {p.name for p in data_dir.glob("*.json.gz")}
+    for sv, sv_rows in by_solver.items():
+        new_shards[sv] = _write_shards(sv_rows, data_dir)
+
+    # Merge into the persistent manifest: this run's solvers replace
+    # their entries; absent solvers keep their old shard lists.
+    mf: dict = {"solvers": {}, "families": [], "domains": {}, "timeout": timeout_s}
+    if mf_path.exists():
+        try:
+            mf = json.loads(mf_path.read_text())
+        except (json.JSONDecodeError, OSError):
+            pass
+    mf.setdefault("solvers", {}).update(new_shards)
+    # Families/domains: union across all known shards (read filenames; a
+    # shard's family is encoded in its name `<solver>--<family-slug>--<hash>`).
+    fams_from_shards: set[str] = set()
+    for shard_list in mf["solvers"].values():
+        for f in shard_list:
+            parts = f.rsplit("--", 2)
+            if len(parts) == 3:
+                fams_from_shards.add(parts[1].replace("~", "/"))
+    mf["families"] = sorted(fams_from_shards | {r["family"] for r in rows})
+    reg = registry()
+    mf["domains"] = {
+        s: (reg[s].domain if s in reg else "dqbf") for s in sorted(mf["solvers"])
+    }
+    mf["timeout"] = timeout_s
+    mf_path.write_text(json.dumps(mf, indent=1))
+
+    all_solvers = sorted(mf["solvers"])
+    defaults = set(_default_solvers(all_solvers))
+    families = mf["families"]
+    domains = mf["domains"]
+
+    # The shell needs `rows` for `_warnings`; pass only the default solvers'
+    # rows so the warning matches the default view. The family tree and
+    # selects use the full `families`/`all_solvers` lists.
+    default_rows = [r for r in rows if r["solver"] in defaults]
+    data_block = (
+        "<script>let DATA=[];"
+        f"const MANIFEST_NAME={_js_json(CONSOLIDATED_MANIFEST)};"
+        f"const DATA_BASES={_js_json(_DATA_BASES)};</script>"
+    )
+    out.write_text(
+        _shell(
+            default_rows,
+            timeout_s,
+            data_block,
+            _JS_BOOT_CONSOLIDATED,
+            families_override=families,
+            solvers_override=all_solvers,
+            domains_override=domains,
+            solver_panel=_solver_panel(all_solvers, defaults),
+        )
+    )
+    n_new = sum(1 for ss in new_shards.values() for f in ss if f not in before)
+    print(
+        f"updated {out} ({len(all_solvers)} solver versions, "
+        f"{len(defaults)} default-on, {n_new} new shards)"
+    )
 
 
 def extract_inline_data(html_path: Path) -> list[dict]:

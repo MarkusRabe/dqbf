@@ -1,13 +1,17 @@
 # dqbf — dev reports
 
-Reports from `2026-05-10` onward use the **split-data format**: the HTML fetches per-(solver, family) `.json.gz` shards from `data/`. Open them over HTTP — `python3 -m http.server` in this directory — `fetch()` is blocked over `file://`. Older reports are self-contained.
+**[Multi-solver report](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/report.html)** — one HTML, all solver versions. Toggle versions in the *solver versions* panel; only the latest of each is loaded by default. See [CHANGELOG.md](CHANGELOG.md) for the history of when each version was archived.
+
+Loads per-(solver, family) `.json.gz` shards from `data/`. Needs HTTP — `python3 -m http.server` in this directory, or use the GitHub-preview link above (CDN-backed).
+
+## Archived per-iteration reports (legacy)
 
 | date | label | size | view |
 |---|---|---|---|
-| 2026-05-10_0200 | iter96-noisefloor | 156K | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-10_0200_iter96-noisefloor.html) · [source](2026-05-10_0200_iter96-noisefloor.html) |
-| 2026-05-10_0136 | iter92-prooflog-fixes | 156K | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-10_0136_iter92-prooflog-fixes.html) · [source](2026-05-10_0136_iter92-prooflog-fixes.html) |
-| 2026-05-10_0026 | iter88-univ-subst | 156K | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-10_0026_iter88-univ-subst.html) · [source](2026-05-10_0026_iter88-univ-subst.html) |
-| 2026-05-09_2257 | iter82-bitset-mc-skip | 156K | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-09_2257_iter82-bitset-mc-skip.html) · [source](2026-05-09_2257_iter82-bitset-mc-skip.html) |
+| 2026-05-10_0200 | iter96-noisefloor | 157K | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-10_0200_iter96-noisefloor.html) · [source](2026-05-10_0200_iter96-noisefloor.html) |
+| 2026-05-10_0136 | iter92-prooflog-fixes | 157K | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-10_0136_iter92-prooflog-fixes.html) · [source](2026-05-10_0136_iter92-prooflog-fixes.html) |
+| 2026-05-10_0026 | iter88-univ-subst | 157K | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-10_0026_iter88-univ-subst.html) · [source](2026-05-10_0026_iter88-univ-subst.html) |
+| 2026-05-09_2257 | iter82-bitset-mc-skip | 157K | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-09_2257_iter82-bitset-mc-skip.html) · [source](2026-05-09_2257_iter82-bitset-mc-skip.html) |
 | 2026-05-09_2216 | iter78-interpolation-chains | 8.1M | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-09_2216_iter78-interpolation-chains.html) · [source](2026-05-09_2216_iter78-interpolation-chains.html) |
 | 2026-05-09_2122 | iter75-verifier-fixed | 8.1M | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-09_2122_iter75-verifier-fixed.html) · [source](2026-05-09_2122_iter75-verifier-fixed.html) |
 | 2026-05-09_2048 | iter74-report | 10.1M | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-09_2048_iter74-report.html) · [source](2026-05-09_2048_iter74-report.html) |
