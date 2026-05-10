@@ -2710,3 +2710,25 @@ process before step-0, the chain doesn't bootstrap, and `bmc_circuits/
 succinct/*` (155 instances) fall through to deepening. **Reverted.**
 The var-id tiebreak is load-bearing — encode any new tiebreak *after*
 it, not between |dep| and it.
+
+## iter112-114: triage — Lead 1 conclusion
+
+Lead 1 (Padoa O(|E|²)) is closed: BCP pre-filter (iter106), find-then-
+prove shared CDCL (iter107), n_const-aware gate (iter108). Padoa is no
+longer the wall on any sampled timeout. The remaining unsolved (866)
+clusters:
+1. `circuit_synth/{gates,depth}` (163) — `OuterCegar`, needs Lead 2.
+2. `pec_circuits/miter` (60), `cbmc/inductive` (51), `cbmc/succinct`
+   (37) — const-arbiter wall, roots have |dep| 16-24 ≫ cap. Needs a
+   non-truth-table representation (decision-tree default function or a
+   learned hyperplane). The HISTORY iter77/85/101 lessons apply: a
+   bigger truth-table that still can't represent is worse than a
+   constant that fails fast.
+3. `collatz/succinct` (45), `collatz/tonly` (27), `collatz/inductive`
+   (15) — same const-arbiter / consistency-shape walls.
+4. `hwmcc_legacy` (45), `peano` (34), `polybench_equiv` (24) — mixed.
+
+**Lead 2 (OuterCegar) is the highest-instance-count target for iter116+.**
+The 163 circuit_synth instances all enter `OuterCegar` and stall at
+the full-expand picker (256 rows × ~100 outer-∃). The picker SAT
+encoding is fresh per problem — sharing the gate templates would help.
