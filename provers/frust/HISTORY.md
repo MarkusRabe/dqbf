@@ -2697,3 +2697,16 @@ alternatives fail because the search space is exponential in |dep|.
 encoding) for `circuit_synth` (165 unsolved, biggest cluster), and a
 representation upgrade for the const-arbiter roots (decision-tree
 default function or a learned hyperplane — see iter77's lesson).**
+
+## iter111: occurrence-count ordering (reverted, −155)
+
+Lead 1 sub-item 3 ("order by occurrence count, fewer occurrences =
+more likely defined") was a major regression. Adding occ-count as a
+tiebreak between |dep| and var-id broke the BMC-unrolling order
+invariant (the existing comment: "Var-id is the BMC unrolling order
+for succinct/inductive encodings... so the chain `y_0 → y_1 → …`
+bootstraps from one root"). With occ-count between them, step-1 vars
+process before step-0, the chain doesn't bootstrap, and `bmc_circuits/
+succinct/*` (155 instances) fall through to deepening. **Reverted.**
+The var-id tiebreak is load-bearing — encode any new tiebreak *after*
+it, not between |dep| and it.
