@@ -2923,3 +2923,65 @@ order-independence benefit. The regression test
 (`tests/integration/tiny/revid_chain_sat.dqdimacs`) and the
 `scripts/revid.py` tool stay either way to detect future encoders
 that violate the var-id-as-unroll-order assumption.
+
+## iter146: hybrid first-pass-static + conflict-directed-retry
+
+**Approach (Markus-directed: option 3 from iter145 wrap-up).** Combine
+the cf51d81 fast path with the iter120 robust fallback:
+
+1. **Pass 1 (static, fast)**: `(|dep|, dep_key, var-id)` order with
+   eager root promotion — the cf51d81 fixpoint loop. With a conforming
+   encoder (var-id = dependency order) the chain bootstraps in 1-3
+   passes. Pass 1 gets the full deadline.
+2. **Plausibility check**: `roots / |candidates| > 1/3` means the
+   chain probably didn't bootstrap (most chain links became roots).
+   The first cut also gated on `est_cells > ARB_BUDGET` but that
+   false-positives on large-`|dep|` instances (`random_bv/over`,
+   `collatz/succinct`) where the chain bootstrapped fine — those go
+   to the caller's `Partial` mode regardless.
+3. **Pass 2 (conflict-directed worklist, iter120)**: only when pass 1
+   is implausible. Reset `out/roots/linkable/decided` to the
+   unit-prop constants — pass-1 interpolants may reference pass-1
+   roots, and demoting a root to an interpolant could create a cert
+   reference cycle if pass-1 interpolants survive. Rebuilding from a
+   clean slate keeps the graph acyclic by construction.
+
+**Result**: probe **2704/3572** (vs cf51d81 2705, vs v2.120 2633 —
+recovered 71 of the 72 lost). 2171 valid certs, 0 INVALID, fuzz
+clean. Pass 2 fires on 0/30 sampled `bmc_circuits/succinct` and
+`cbmc/succinct` instances — the train set always takes the fast path.
+
+**Order-independence** (`scripts/revid.py`, `barrel/updown` `*safe*`):
+
+| | fwd | rev | shf | delta |
+|---|---:|---:|---:|---|
+| barrel_n8_k024 | 54 | 70 | 62 | 15-30% |
+| barrel_n12_k008 | 76 | 107 | 102 | 35-40% |
+| barrel_n16_k008 | 96 | 139 | 125 | 30-45% |
+| barrel_n32_k008 | 179 | 789 | 787 | 340% — pass 2 doesn't converge |
+
+vs the var-id baseline (60-160%) and the iter120-only worklist
+(5-30% on small, but fails to *solve* the large ones at all under
+forward IDs because of the round overhead).
+
+**Sub-iterations** (all in this commit):
+- 146a: fixed 60% pass-1 deadline fraction → −24 (instances near the
+  10s timeout that cf51d81 just barely solved had pass 1 cut at 6s).
+  Changed to: pass 1 gets the full deadline; pass 2 gets whatever's
+  left. For conforming encoders pass 1 finishes early.
+- 146b: `est_cells > 8192` plausibility trigger → −20 (false
+  positives on large-`|dep|` instances). Dropped; root-fraction only.
+
+**The fundamental trade-off (unchanged from iter145)**: a chain that
+didn't bootstrap can only be recovered by the slow worklist. The
+hybrid spends pass 1's time first, so on adversarial inputs the
+recovery is partial (less budget). Deep chains (`barrel_n32`,
+`updown_n24`) reversed remain hard. The next architectural step
+would need a topo-sort precomputation or a "try a few orders, pick
+the best" strategy; `feedback_no_var_id_dep` and HISTORY iter116
+document why the cheap signals (BFS depth, occurrence count) are too
+weak (spearman 0.48).
+
+**Files**: `provers/frust/src/definability.rs` only (the iter120
+worklist code is unchanged; pass 1 + plausibility check inserted
+before it; the worklist loop is gated on `run_pass2`).

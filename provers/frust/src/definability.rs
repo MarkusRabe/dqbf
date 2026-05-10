@@ -486,6 +486,21 @@ pub fn extract_interpolants(
     if debug && n_const > 0 {
         eprintln!("c [def] {} constant interpolants from unit-prop", n_const);
     }
+    // Snapshot the constants so pass 2 can reset to a clean slate.
+    // Constants reference nothing, so they never participate in a
+    // cert-graph cycle.
+    let const_out: HashMap<Var, Def> = out
+        .iter()
+        .map(|(&y, d)| {
+            (
+                y,
+                Def {
+                    itp: d.itp.clone(),
+                    root: d.root,
+                },
+            )
+        })
+        .collect();
     // Linkable z's: interpolated y's *and* free roots. Both are decided
     // — their Skolem function is known (an interpolant or the cell
     // table) — so subsequent y's can be unique-given-them. Roots come
@@ -500,7 +515,160 @@ pub fn extract_interpolants(
     // - any y the budget hit — re-trying every pass burns the deadline.
     let mut decided: HashSet<Var> = HashSet::new();
     let mut roots: Vec<Var> = Vec::new();
-    // ---- VSIDS-style adaptive worklist (iter116) -----------------------
+
+    // ---- iter146: hybrid ordering --------------------------------------
+    //
+    // **Pass 1 (static, fast)**: `(|dep|, dep_key, var-id)` order with
+    // **eager** root promotion (the cf51d81 behaviour). When `y` fails
+    // (SAT), it becomes a root immediately, so the next chain link can
+    // reference it. With a conforming encoder (var-id = dependency
+    // order) the chain bootstraps in 1-3 passes — this is the +72-
+    // instance fast path. With a non-conforming encoder (`scripts/
+    // revid.py`), pass 1 still terminates fast but produces a worse
+    // root set (the wrong y's were promoted).
+    //
+    // **Plausibility check**: same `2^min(|dep|,8)`-sum proxy the
+    // arbiter caller uses (`expand_state.rs`), plus a root-fraction
+    // gate. A chain that didn't bootstrap turns most candidates into
+    // roots, even when their dep-sets are small enough that `est_cells`
+    // doesn't blow up. If pass 1's result is plausible — and it is for
+    // every conforming encoder we have — return it.
+    //
+    // **Pass 2 (conflict-directed worklist, iter116-120)**: only when
+    // pass 1's result is implausible. Reset `out/roots/linkable/decided`
+    // to the unit-prop constants (pass-1 interpolants are discarded —
+    // some referenced now-demoted roots, and rebuilding from a clean
+    // slate is the only way to keep the cert reference graph acyclic).
+    // The worklist defers root promotion (one root per deadlock round)
+    // and bumps blockers, so it converges to a good root set
+    // regardless of var-id assignment. Costs O(roots) deadlock rounds.
+    //
+    // Cost analysis: train set never fires pass 2 (conforming
+    // encoders) → matches cf51d81 (2705). `scripts/revid.py`-style
+    // adversarial inputs fire pass 2 → recover most of the chain.
+    // Pass 1 gets the full deadline — for conforming encoders that's
+    // exactly cf51d81; if pass 1 converges with budget left and the
+    // result is implausible, pass 2 gets whatever remains. (A fixed
+    // 60% fraction was tried first and cost −24: instances near the
+    // 10s timeout that cf51d81 just barely solved had pass 1 cut at
+    // 6s.) See `feedback_no_var_id_dep` and HISTORY iters 111, 116-145.
+
+    // ---- Pass 1: static eager fixpoint --------------------------------
+    let pass1_deadline = deadline;
+    let mut order: Vec<Var> = candidates
+        .iter()
+        .copied()
+        .filter(|y| !out.contains_key(y))
+        .collect();
+    order.sort_by_key(|&y| (f.deps[&y].len(), dep_key[&y], y));
+    let mut n_pass1_passes = 0usize;
+    'pass1: loop {
+        n_pass1_passes += 1;
+        let before = out.len() + roots.len();
+        for &y in &order {
+            if out.contains_key(&y) || decided.contains(&y) {
+                continue;
+            }
+            if start.elapsed().as_secs_f64() >= pass1_deadline {
+                break 'pass1;
+            }
+            let dy: BTreeSet<Var> = f.deps[&y].clone();
+            let dyb = &dep_bits[&y];
+            let linked_z: Vec<Var> = linkable
+                .iter()
+                .copied()
+                .filter(|&z| z != y && is_sub(&dep_bits[&z], dyb))
+                .collect();
+            // Test on the shared CDCL (no proof log, no clone).
+            let mut sh_assump: Vec<Lit> = vec![y as Lit, -shift(y as Lit)];
+            for &u in dy.iter().chain(linked_z.iter()) {
+                sh_assump.push(sel2[&u]);
+            }
+            let sh_sat = shared.solve(&sh_assump, &mut shared_model, 50_000);
+            if !shared.budget_hit && sh_sat {
+                // SAT — eager-promote to root so the chain bootstraps.
+                if undef_set.contains(&y) {
+                    decided.insert(y);
+                    roots.push(y);
+                    linkable.push(y);
+                }
+                continue;
+            }
+            // UNSAT (or shared budget-hit): re-solve with proof log.
+            let mut cdcl = base.clone();
+            for &u in dy.iter().chain(linked_z.iter()) {
+                let (a, b) = (u as Lit, shift(u as Lit));
+                cdcl.add_external(&[-a, b]);
+                cdcl.add_external(&[a, -b]);
+            }
+            let unsat = !cdcl.solve(&[y as Lit, -shift(y as Lit)], &mut model, 50_000);
+            if cdcl.budget_hit {
+                continue;
+            }
+            if !unsat {
+                if undef_set.contains(&y) {
+                    decided.insert(y);
+                    roots.push(y);
+                    linkable.push(y);
+                }
+                continue;
+            }
+            let sharedv: HashSet<Var> = dy.iter().chain(linked_z.iter()).copied().collect();
+            let side = |cr: u32| -> Side {
+                if cdcl.clause_lits(cr).iter().all(|&l| var(l) <= nu) {
+                    Side::A
+                } else {
+                    Side::B
+                }
+            };
+            let a_local = |v: Var| v <= nu && !sharedv.contains(&v);
+            if let Some((itp, root)) = mcmillan(&cdcl, side, &sharedv, a_local) {
+                out.insert(y, Def { itp, root });
+                linkable.push(y);
+            } else if undef_set.contains(&y) {
+                decided.insert(y);
+                roots.push(y);
+                linkable.push(y);
+            }
+        }
+        if out.len() + roots.len() == before {
+            break;
+        }
+    }
+    // ---- Plausibility check --------------------------------------------
+    // Fire pass 2 only on the *chain-failure* signal: more than 1/3 of
+    // candidates ended up as roots. A bootstrapped chain has K roots
+    // for K chain heads — well under 1/3. A failed bootstrap (wrong
+    // var-id order) turns most chain links into roots. The `est_cells`
+    // proxy (used by the arbiter caller) is *not* a good trigger: large-
+    // dep instances (`random_bv/over`, `collatz/succinct/*`) have high
+    // `est_cells` from |dep|≥8 roots even when the chain bootstrapped
+    // fine — pass 2 wouldn't help and would just burn budget. Those
+    // fall through to the caller's `Partial` mode regardless.
+    let est_cells_p1: usize = roots.iter().map(|y| 1usize << f.deps[y].len().min(8)).sum();
+    let root_frac_bad = roots.len() * 3 > candidates.len();
+    let pass1_ok = !root_frac_bad;
+    if debug {
+        eprintln!(
+            "c [def] pass 1: {} passes, {} interp, {} roots ({} cells) — {}",
+            n_pass1_passes,
+            out.len(),
+            roots.len(),
+            est_cells_p1,
+            if pass1_ok { "ok" } else { "→ pass 2" },
+        );
+    }
+    let run_pass2 = !pass1_ok && start.elapsed().as_secs_f64() < deadline;
+    if run_pass2 {
+        // Reset to constants so the cert reference graph is rebuilt
+        // acyclic (pass-1 interpolants may reference pass-1 roots that
+        // pass 2 will demote).
+        out = const_out;
+        linkable = out.keys().copied().collect();
+        decided.clear();
+        roots.clear();
+    }
+    // ---- Pass 2: VSIDS-style adaptive worklist (iter116) ---------------
     // Replaces the static `(|dep|, var-id)` sort: var-id encoded the
     // BMC-unrolling step order for our generators, an unstated contract
     // that breaks on a non-conforming encoder (`scripts/revid.py` →
@@ -555,7 +723,7 @@ pub fn extract_interpolants(
     let mut blocker_set: HashMap<Var, HashSet<Var>> = HashMap::new();
     let mut n_rounds = 0usize;
     let mut n_bumps = 0usize;
-    'rounds: loop {
+    'rounds: while run_pass2 {
         n_rounds += 1;
         if start.elapsed().as_secs_f64() >= deadline {
             break;
@@ -620,7 +788,10 @@ pub fn extract_interpolants(
             // for y but its rooting may have shrunk y's search space).
             let blocker_satisfied = blocker_set
                 .get(&y)
-                .map(|bs| bs.iter().any(|z| out.contains_key(z) || decided.contains(z)))
+                .map(|bs| {
+                    bs.iter()
+                        .any(|z| out.contains_key(z) || decided.contains(z))
+                })
                 .unwrap_or(false);
             if last_failed_at.get(&y).is_some_and(|&l| l >= linked_z.len()) && !blocker_satisfied {
                 continue;
@@ -741,9 +912,9 @@ pub fn extract_interpolants(
             }
         }
     }
-    if debug {
+    if debug && run_pass2 {
         eprintln!(
-            "c [def] worklist: {} rounds, {} blocker bumps, {} interp, {} roots",
+            "c [def] pass 2 worklist: {} rounds, {} blocker bumps, {} interp, {} roots",
             n_rounds,
             n_bumps,
             out.len(),
