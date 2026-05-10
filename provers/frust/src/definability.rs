@@ -21,6 +21,12 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 pub struct DefSplit {
     pub defined: Vec<Var>,
     pub undefined: Vec<Var>,
+    /// Of `defined`, how many are unit-propagation constants. They
+    /// don't need an interpolation pass (constant `Itp`) so the |E|
+    /// gate in `step_definability` should subtract them — the
+    /// interpolation cost is `O(|defined ∖ constants| + |undefined|)`,
+    /// not `O(|E|)`.
+    pub n_const: usize,
 }
 
 pub struct Def {
@@ -237,6 +243,7 @@ pub fn padoa_split(
                 return Some(DefSplit {
                     defined,
                     undefined: still,
+                    n_const: n_prop_const,
                 });
             }
             let dy = &deps[&y];
@@ -281,6 +288,7 @@ pub fn padoa_split(
     Some(DefSplit {
         defined,
         undefined: todo,
+        n_const: n_prop_const,
     })
 }
 
@@ -376,6 +384,43 @@ pub fn extract_interpolants(
     let mut base = Cdcl::new(2 * n as usize, &base_clauses);
     base.enable_proof_log();
     let mut model = vec![0i8; 2 * n as usize + 1];
+    // iter107: a shared selector-gated CDCL for the SAT/UNSAT *test*.
+    // Cloning `base` per-y was ~50KB arena + ~100KB watches × 2134 y's
+    // × multiple passes — the memory traffic dominated the wall on
+    // pec_alu_add_n8. The shared CDCL has one selector per linkable var
+    // (universal or existential): `s_v → (v ↔ v')`. Per-y, assume the
+    // selectors for `dep(y) ∪ linked_z` and `[y, ¬y']`. No proof log on
+    // the shared instance — when the shared solve is UNSAT, clone `base`
+    // (proof-logged, no selectors → minimal proof) and re-solve with the
+    // *winning* link set to extract the interpolant. The retry cost is
+    // O(|defined|) clones instead of O(|order| × passes).
+    //
+    // Sound: the shared CDCL's clauses are `f.clauses ∪ shifted ∪ {s_v →
+    // v↔v'}`; assuming a subset of selectors makes the *active* link set
+    // a subset, and a SAT model under fewer constraints is also a model
+    // under no constraints — so SAT/UNSAT decisions are exact.
+    let link_vars2: Vec<Var> = {
+        let mut v: Vec<Var> = f.universals.iter().copied().collect();
+        v.extend(f.deps.keys().copied());
+        v.sort_unstable();
+        v
+    };
+    let sel_base = 2 * n as Lit;
+    let sel2: HashMap<Var, Lit> = link_vars2
+        .iter()
+        .enumerate()
+        .map(|(i, &v)| (v, sel_base + 1 + i as Lit))
+        .collect();
+    let total2 = 2 * n as usize + link_vars2.len();
+    let mut shared_clauses = base_clauses.clone();
+    for &v in &link_vars2 {
+        let s = sel2[&v];
+        let (a, b) = (v as Lit, shift(v as Lit));
+        shared_clauses.push(vec![-s, -a, b]);
+        shared_clauses.push(vec![-s, a, -b]);
+    }
+    let mut shared = Cdcl::new(total2, &shared_clauses);
+    let mut shared_model = vec![0i8; total2 + 1];
 
     let mut out: HashMap<Var, Def> = HashMap::new();
     // iter106: unit-propagated existentials get a constant interpolant
@@ -434,6 +479,35 @@ pub fn extract_interpolants(
                 .copied()
                 .filter(|&z| z != y && is_sub(&dep_bits[&z], dyb))
                 .collect();
+            // Test on the shared CDCL (no proof log, no clone).
+            let mut sh_assump: Vec<Lit> = vec![y as Lit, -shift(y as Lit)];
+            for &u in dy.iter().chain(linked_z.iter()) {
+                sh_assump.push(sel2[&u]);
+            }
+            let sh_sat = shared.solve(&sh_assump, &mut shared_model, 50_000);
+            let unsat = if shared.budget_hit {
+                // Fall through to the clone path which has its own
+                // budget; on a second budget-hit, treat as not-defined
+                // and retry next pass (the original behaviour).
+                false
+            } else if sh_sat {
+                false
+            } else {
+                true
+            };
+            if !unsat && !shared.budget_hit {
+                // SAT — y not interpolatable with this link set. No
+                // clone needed.
+                if undef_set.contains(&y) {
+                    decided.insert(y);
+                    roots.push(y);
+                    linkable.push(y);
+                }
+                continue;
+            }
+            // UNSAT (or shared budget-hit): re-solve with proof log to
+            // extract the interpolant. Clone `base` (no selectors →
+            // minimal proof) and add link clauses directly.
             let mut cdcl = base.clone();
             for &u in dy.iter().chain(linked_z.iter()) {
                 let (a, b) = (u as Lit, shift(u as Lit));

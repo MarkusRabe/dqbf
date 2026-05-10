@@ -2644,3 +2644,27 @@ Result: 2700→2699 (timing noise; +2 −3). 0 INVALID; 1472-instance
 fuzz clean. Sound: `unit_prop_constants` only marks vars BCP'd from
 *unit clauses*, which the matrix entails directly; their constant
 interpolant trivially satisfies the dep restriction (no inputs).
+
+## iter107: shared-CDCL find-then-prove for interpolation
+
+`extract_interpolants` cloned `base` (proof-logged 2-copy CDCL,
+~50KB arena + ~100KB watches) per `y`. For `pec_alu_add_n8` (2134
+e-vars × passes) the clone traffic dominated. Fix: a *shared*
+selector-gated CDCL (no proof log) tests SAT/UNSAT for each y; only
+when UNSAT does the clone-with-proof path run. The clone count drops
+from O(|order| × passes) to O(|defined|).
+
+Sound: the shared CDCL's clauses are `f.clauses ∪ shifted ∪ {s_v →
+v↔v'}`; assuming a subset of selectors makes the active link set a
+subset, and SAT under fewer constraints implies SAT under none — so
+the SAT/UNSAT decision is exact.
+
+## iter108: subtract unit-prop constants from the interpolation gate
+
+The `>3000 e-vars → fall to Partial` gate was hit by `pec_alu_add_n16`
+(4366 e-vars) even though 803 are unit-prop constants that get a free
+`Itp`. `DefSplit::n_const` now reports the constant count and the gate
+subtracts it. `pec_mutex_n24_*` (4 instances) clear the gate post-fix.
+
+Result: 2700→2704 (+4), 2171 valid (+2), 0 INVALID. 1477-instance
+fuzz clean.

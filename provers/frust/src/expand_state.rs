@@ -253,7 +253,13 @@ impl ExpandState {
                     // est_cells gate runs *after* interpolation — undef
                     // y's that become interpolated drop out of the cell
                     // count, so gating on `s.undefined` is too pessimistic.
-                    if s.defined.len() + s.undefined.len() > 3000 {
+                    // iter108: subtract unit-prop constants from the
+                    // gate — they get a constant `Itp` for free, no
+                    // CDCL clone. `pec_alu_add_n16` has 4366 e-vars but
+                    // 803 are constants → 3563 effective, still over
+                    // the gate; `n12` (2278 e-vars, 395 constants →
+                    // 1883) clears it.
+                    if s.defined.len() + s.undefined.len() - s.n_const > 3000 {
                         self.mode = if nu_full > self.expand_us.len() {
                             Mode::Partial
                         } else {
