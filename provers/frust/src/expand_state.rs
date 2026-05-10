@@ -586,34 +586,53 @@ impl ExpandState {
             // decides: SAT ⇒ the model is a valid topology for all rows;
             // UNSAT ⇒ DQBF UNSAT.
             if full {
+                let univ_set: HashSet<Var> = self.expand_us.iter().copied().collect();
                 for ub in 0..self.rows {
                     let slot = ub as usize;
                     let base = no + slot * n_per_row;
+                    // iter87: substitute the row's universal assignment
+                    // in place of unit clauses + universal vars. The
+                    // CEGIS-incremental path (line ~755) already does
+                    // this; the full-expand path was added later
+                    // (iter30) and missed it. For `csg_and8_k006`
+                    // (256 rows × 870 clauses): drops ~50% of clauses
+                    // (the satisfied ones) and removes universal vars
+                    // from the picker's working set entirely. Same
+                    // soundness — universal substitution is exactly
+                    // what unit propagation would do.
+                    let ubit: HashMap<Var, bool> = self
+                        .expand_us
+                        .iter()
+                        .enumerate()
+                        .map(|(i, &u)| (u, (ub >> i) & 1 == 1))
+                        .collect();
                     for c in &f.clauses {
-                        let rc: Vec<Lit> = c
-                            .iter()
-                            .map(|&l| {
-                                let v = crate::formula::var(l);
-                                let pv = if let Some(&j) = outer_idx.get(&v) {
-                                    j as Lit
-                                } else {
-                                    (base + 1 + nonouter_idx[&v]) as Lit
-                                };
-                                if l > 0 {
-                                    pv
-                                } else {
-                                    -pv
+                        let mut sat = false;
+                        let mut rc: Vec<Lit> = Vec::with_capacity(c.len());
+                        for &l in c {
+                            let v = crate::formula::var(l);
+                            if let Some(&b) = ubit.get(&v) {
+                                if (l > 0) == b {
+                                    sat = true;
+                                    break;
                                 }
-                            })
-                            .collect();
-                        p.add_external(&rc);
-                    }
-                    for (i, &u) in self.expand_us.iter().enumerate() {
-                        let pv = (base + 1 + nonouter_idx[&u]) as Lit;
-                        p.add_external(&[if (ub >> i) & 1 == 1 { pv } else { -pv }]);
+                                continue; // falsified universal lit
+                            }
+                            let pv = if let Some(&j) = outer_idx.get(&v) {
+                                j as Lit
+                            } else {
+                                (base + 1 + nonouter_idx[&v]) as Lit
+                            };
+                            rc.push(if l > 0 { pv } else { -pv });
+                        }
+                        if !sat {
+                            p.add_external(&rc);
+                        }
                     }
                     for &v in &nonouter {
-                        p.set_decision((base + 1 + nonouter_idx[&v]) as u32, true);
+                        if !univ_set.contains(&v) {
+                            p.set_decision((base + 1 + nonouter_idx[&v]) as u32, true);
+                        }
                     }
                 }
                 self.cegis_rows = cegis_rows;

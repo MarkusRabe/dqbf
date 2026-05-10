@@ -2265,3 +2265,35 @@ loses the generalisation and the picker takes more rounds to
 converge. Forcing complements cells, not duplicates them. For
 `clz_ok_n4_indinv` (SAT), removing 1 generalised forcing clause was
 worth more rounds than the per-round speedup saved.
+
+## Refined-loop iteration 87: universal substitution in full-expand picker (+5) (2026-05-10)
+
+**Sample**: `circuit_synth/{gates,depth}` (167 unsolved). e.g.
+`csd_maj4_d02_w04` (236 vars, |U|=4): outer-CEGAR full-expand
+loads 16 rows × 487 clauses = 7800 picker clauses. The CEGIS-
+incremental path (line ~755) substitutes the row's universal
+assignment when adding clauses — drops satisfied clauses entirely
+and removes universal vars from the picker working set. The full-
+expand path (added iter30) missed it: it added all clauses raw
+plus per-row universal unit clauses.
+
+**Constraint named: implementation roughness** — the optimization
+existed for the lazy CEGIS path but not the full-expand path.
+
+**Change**: substitute universals in full-expand row construction.
+Drops ~40-50% of clauses per row (the satisfied ones) and removes
+`|U|` vars per row from the picker.
+
+**Result**: +5 net (`circuit_synth/gates` +3, `circuit_synth/depth`
++2 SAT cert-valid; −2 borderline `csd_exact2of4` at 10.x s).
+0 INVALID. The big UNSAT instances (`csd_maj4`: 24 s) only marginally
+faster — the picker SAT problem is still ~250k conflicts. The +5 are
+SAT instances near the boundary that found a topology faster with
+fewer clauses.
+
+**Gotcha**: universal vars are still in the picker var space (the
+`np` calculation includes them in `n_per_row`); they're just never
+referenced. The dead vars cost ~|U| × rows × 5 bytes of CDCL state
+but are `decide=false` so propagation never touches them. A proper
+fix would shrink `np` but the savings are small (~512 vars for
+`csd_maj4` of 671 total).
