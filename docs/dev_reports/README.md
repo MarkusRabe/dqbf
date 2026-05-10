@@ -2,6 +2,7 @@
 
 | date | label | view |
 |---|---|---|
+| 2026-05-10_0026 | iter88-univ-subst | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-10_0026_iter88-univ-subst.html) · [source](2026-05-10_0026_iter88-univ-subst.html) |
 | 2026-05-09_2257 | iter82-bitset-mc-skip | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-09_2257_iter82-bitset-mc-skip.html) · [source](2026-05-09_2257_iter82-bitset-mc-skip.html) |
 | 2026-05-09_2216 | iter78-interpolation-chains | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-09_2216_iter78-interpolation-chains.html) · [source](2026-05-09_2216_iter78-interpolation-chains.html) |
 | 2026-05-09_2122 | iter75-verifier-fixed | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-09_2122_iter75-verifier-fixed.html) · [source](2026-05-09_2122_iter75-verifier-fixed.html) |
