@@ -2438,3 +2438,14 @@ saturate progress per slice while still letting SFEx fire.
 The cap value isn't the bottleneck; the 256→512 difference is within
 noise. The fork attempt overhead (sort 12 k clauses) is amortized
 over either pass length.
+
+## Refined-loop iteration 95: try_forcing threshold 4→2 for undef-y (reverted, −3) (2026-05-10)
+
+**Hypothesis**: more forcing for small-dep undef-y would reduce
+arbiter cell count and speed convergence.
+
+**Result**: 2695/3571 (−3), 2164 certs (−4). Reverted. The forcing
+flip-solve costs ~10 ms/round; for small-dep undef-y the cell is
+cheaper and exact. iter88's lesson holds: forcing complements cells,
+but only when it *generalizes* (long-dep undef-y need a forcing to
+cover a cube; short-dep undef-y are already point-precise with cells).
