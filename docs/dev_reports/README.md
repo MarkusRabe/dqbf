@@ -4,8 +4,9 @@ Reports from `2026-05-10` onward use the **split-data format**: the HTML fetches
 
 | date | label | size | view |
 |---|---|---|---|
-| 2026-05-10_0026 | iter88-univ-subst | 155K | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-10_0026_iter88-univ-subst.html) · [source](2026-05-10_0026_iter88-univ-subst.html) |
-| 2026-05-09_2257 | iter82-bitset-mc-skip | 155K | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-09_2257_iter82-bitset-mc-skip.html) · [source](2026-05-09_2257_iter82-bitset-mc-skip.html) |
+| 2026-05-10_0136 | iter92-prooflog-fixes | 156K | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-10_0136_iter92-prooflog-fixes.html) · [source](2026-05-10_0136_iter92-prooflog-fixes.html) |
+| 2026-05-10_0026 | iter88-univ-subst | 156K | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-10_0026_iter88-univ-subst.html) · [source](2026-05-10_0026_iter88-univ-subst.html) |
+| 2026-05-09_2257 | iter82-bitset-mc-skip | 156K | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-09_2257_iter82-bitset-mc-skip.html) · [source](2026-05-09_2257_iter82-bitset-mc-skip.html) |
 | 2026-05-09_2216 | iter78-interpolation-chains | 8.1M | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-09_2216_iter78-interpolation-chains.html) · [source](2026-05-09_2216_iter78-interpolation-chains.html) |
 | 2026-05-09_2122 | iter75-verifier-fixed | 8.1M | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-09_2122_iter75-verifier-fixed.html) · [source](2026-05-09_2122_iter75-verifier-fixed.html) |
 | 2026-05-09_2048 | iter74-report | 10.1M | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-09_2048_iter74-report.html) · [source](2026-05-09_2048_iter74-report.html) |
