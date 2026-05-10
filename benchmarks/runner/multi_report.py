@@ -729,7 +729,11 @@ _JS_BOOT_INLINE = (
 )
 
 # Split mode: DATA is empty until the manifest's shards are fetched and
-# decompressed (DecompressionStream — needs HTTP, not file://).
+# decompressed. Tries a list of base URLs — relative path for local
+# `python3 -m http.server`, then absolute GitHub raw / CDN for proxied
+# viewers (htmlpreview.github.io renders the page on its own origin, so
+# relative paths 404). All candidates have CORS `*` and serve `.gz`
+# without auto-decompression (verified 2026-05-10).
 _JS_BOOT_SPLIT = """\
 <script>
 async function _gunzipJson(url){
@@ -740,26 +744,49 @@ async function _gunzipJson(url){
   return JSON.parse(await blob.text());
 }
 (async()=>{
+  let mf=null, base=null, lastErr=null;
+  for(const b of DATA_BASES){
+    try{
+      const r = await fetch(b + MANIFEST_NAME);
+      if(!r.ok){ lastErr = `${b}${MANIFEST_NAME}: ${r.status}`; continue; }
+      mf = await r.json(); base = b; break;
+    }catch(e){ lastErr = e; }
+  }
+  if(!mf){
+    const d = document.createElement("div");
+    d.className = "warn";
+    d.append("Failed to load report data (" + lastErr + "). ");
+    const c = document.createElement("code");
+    c.textContent = "python3 -m http.server";
+    d.append("Serve over HTTP — e.g. ", c, " in docs/dev_reports/ — or wait for the GitHub CDN cache.");
+    document.body.prepend(d);
+    return;
+  }
   try{
-    const mf = await (await fetch(MANIFEST_URL)).json();
-    const parts = await Promise.all(
-      mf.files.map(f => _gunzipJson(MANIFEST_URL.replace(/[^/]*$/, "") + f)));
+    const parts = await Promise.all(mf.files.map(f => _gunzipJson(base + f)));
     DATA = parts.flat();
     if(document.readyState === "loading")
       document.addEventListener("DOMContentLoaded", appInit);
     else appInit();
   }catch(e){
     const d = document.createElement("div");
-    d.className = "warn";
-    d.append("Failed to load report data: " + e + ". ");
-    const c = document.createElement("code");
-    c.textContent = "python3 -m http.server";
-    d.append("Serve over HTTP — e.g. ", c, " in docs/dev_reports/.");
+    d.className = "warn"; d.textContent = "Failed to load report shards: " + e;
     document.body.prepend(d);
   }
 })();
 </script>
 """
+
+# Base URLs the JS tries in order to find `data/<manifest>` and the
+# shards it lists. First match wins (a base "matches" if its manifest
+# fetch returns 200 with parseable JSON). Order: local-relative first
+# (works offline / `python3 -m http.server`), then absolute CDN URLs
+# (works via htmlpreview.github.io, file:// with internet, etc.).
+_DATA_BASES = [
+    "data/",
+    "https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/data/",
+    "https://cdn.jsdelivr.net/gh/MarkusRabe/dqbf@main/docs/dev_reports/data/",
+]
 
 
 def _domain_selector(domains: dict[str, str]) -> str:
@@ -886,7 +913,11 @@ def render_split(rows: list[dict], out: Path, timeout_s: float) -> None:
     files = _write_shards(rows, data_dir)
     manifest_name = f"{out.stem}.manifest.json"
     (data_dir / manifest_name).write_text(json.dumps({"files": files}, indent=1))
-    data_block = f'<script>let DATA=[];const MANIFEST_URL="data/{manifest_name}";</script>'
+    data_block = (
+        "<script>let DATA=[];"
+        f"const MANIFEST_NAME={_js_json(manifest_name)};"
+        f"const DATA_BASES={_js_json(_DATA_BASES)};</script>"
+    )
     out.write_text(_shell(rows, timeout_s, data_block, _JS_BOOT_SPLIT))
     n_new = sum(1 for f in files if f not in before)
     print(f"wrote {out} ({len(files)} shards, {n_new} new)")
