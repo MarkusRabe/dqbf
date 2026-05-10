@@ -13,3 +13,4 @@ frust changes that produced it.
 | 2026-05-10 07:30 | `2e30d71` | iter115-padoa-lead1-done | abc-bmc, abc-pdr, cadet, caqe, dqbdd, frust-v1.20, frust-v2.110, frust-v2.115, hqs, pedant, strix |
 | 2026-05-10 09:10 | `e0123cb` | iter120-order-independence-vsids | abc-bmc, abc-pdr, cadet, caqe, dqbdd, frust-v1.20, frust-v2.110, frust-v2.115, hqs, pedant, strix |
 | 2026-05-10 09:19 | `f0bb970` | iter120-order-independence-vsids | abc-bmc, abc-pdr, cadet, caqe, dqbdd, frust-v1.20, frust-v2.115, frust-v2.120, hqs, pedant, strix |
+| 2026-05-10 17:56 | `0102d19` | iter146-hybrid-ordering | abc-bmc, abc-pdr, cadet, caqe, dqbdd, frust-v1.20, frust-v2.120, frust-v2.146, hqs, pedant, strix |
