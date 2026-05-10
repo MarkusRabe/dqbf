@@ -2334,3 +2334,40 @@ restrict the pivot to existential — by design (QU-resolution). But
 tautological *premise* (long-distance) is unsound; the verifier's
 `is_tautology` check at the resolvent only is permissive. Worth a
 dedicated test in `tools/verify/`.
+
+## Refined-loop iteration 90: per-slice clause cap so SFEx can fire mid-saturation (+1) (2026-05-10)
+
+**Sample**: smallest unsolved is `dep_cycle/instances/dep_cycle_n4`
+(47 vars, expected unsat). |U|=12, 35 e-vars with overlapping deps
+forming the journal §6 cycle. CEGAR Bails (16 const-arbiter roots).
+Saturate runs but generates 12277 clauses without ⊥.
+
+**Constraint named: implementation roughness.** SFEx (`choose_sfork`)
+only fires when the saturate `while` queue empties — but for cyclic-
+dep formulas the queue *never* empties (every resolvent spawns more).
+Two earlier gates compounded: `db.clauses.len() < 200` shut off SFEx
+the moment one slice bloated the db, and the post-`while` fork
+attempt was unreachable until the queue drained.
+
+**Change**: cap clauses-processed-per-`while`-pass at 256, so the
+fork attempt fires every 256 resolutions. The cap also limits the
+SFEx scan to `order.iter().take(200)` (input axioms first, so
+`dep_cycle`'s strong forks are still found). The post-fork SAT
+verdict is now gated on `db.queue.is_empty()` so an early break
+from the cap doesn't falsely conclude saturated → SAT.
+
+**Result**: 2700/3571 (+1), 2168 valid certs (+2), 0 INVALID.
+`dep_cycle_n4` and `n8` still UNKNOWN — `choose_sfork` fires but the
+fork explosion doesn't converge in 10 s. The cycle isn't broken by
+one SFEx; the journal Lemma `lem:elimstrongforks` needs a sequence
+of SFEx with complementary `c3`. Frust applies them lazily (later
+saturate passes), but the resolution between forks is Q⁰-resolution
+which doesn't profit from the new fresh vars without a propagation
+strategy. Park; the SFEx heuristic needs a *counterexample-guided*
+partition (which `c3` to try) — a moderate research project.
+
+**Gotcha**: the post-fork `Verdict::Sat` was reached even when the
+queue was non-empty after my first change. Without the
+`!db.queue.is_empty()` guard, `dep_cycle_n1` returned (correct)
+UNSAT but a hypothetical SAT formula with a 256-clause-busy queue
+would have falsely concluded SAT. The guard makes the cap sound.

@@ -432,15 +432,27 @@ fn saturate(
     let mut tick = 0u64;
     loop {
         let mut found_empty = false;
+        // Cap clauses-processed-per-slice. The fork attempt only fires
+        // when this `while` exits, but for cyclic-dependency instances
+        // (`dep_cycle`) the resolution queue never empties — every
+        // resolvent spawns more. The cap forces a periodic fork attempt
+        // so SFEx can break the cycle. 256 is enough to drain the input
+        // axioms once; the next slice picks up where this one left off.
+        let mut processed_this_pass = 0usize;
         while let Some(item @ Reverse((_, cursor))) = db.queue.pop() {
             if start.elapsed().as_secs_f64() > sat_deadline || db.clauses.len() > cfg.max_clauses {
                 db.queue.push(item);
                 return None;
             }
+            if processed_this_pass >= 256 {
+                db.queue.push(item);
+                break;
+            }
             if db.dead[cursor] || db.processed[cursor] {
                 continue;
             }
             db.processed[cursor] = true;
+            processed_this_pass += 1;
             if cursor & 0x7ff == 0x7ff {
                 db.compact_occ();
             }
@@ -523,10 +535,14 @@ fn saturate(
         }
         // SFEx (journal §6 cycle-breaking) when FEx found nothing. The
         // O(|db|·|exs|²) scan would eat the interleaved CEGAR slice on
-        // large matrices, so gate on known_unsat there; small formulas
-        // (dep_cycle has |C|=82) can always afford it.
-        if !forked && (known_unsat || db.clauses.len() < 200) {
-            for &i in &order {
+        // large matrices, so cap the scan at 200 clauses (in priority
+        // order — the input axioms are first, so `dep_cycle`'s strong
+        // forks are still found even after the db grows past 200 from
+        // resolution). The earlier gate `db.clauses.len() < 200` shut
+        // SFEx off the moment a single saturate pass bloated the db,
+        // which was within a slice or two on `dep_cycle_n4`.
+        if !forked {
+            for &i in order.iter().take(200) {
                 let c = db.clauses[i].clone();
                 if let Some((part, c3, fr)) = crate::rules::choose_sfork(g, &c) {
                     let src = db.idx[&c];
@@ -545,6 +561,14 @@ fn saturate(
             }
         }
         if !forked {
+            // The queue may be non-empty (`processed_this_pass` cap
+            // forced an early break to give SFEx a chance). Only the
+            // *empty-queue, no-forks* combination means the formula is
+            // truly saturated → SAT. With a non-empty queue, just keep
+            // going.
+            if !db.queue.is_empty() {
+                continue;
+            }
             if known_unsat {
                 // Expand says UNSAT, saturation says SAT — contradiction.
                 // Don't trust either; bail UNKNOWN.
