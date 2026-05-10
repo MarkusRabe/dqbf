@@ -207,11 +207,18 @@ def write_index() -> None:
     lines = ["# dqbf — dev reports", ""]
     if (REPORTS / "report.html").exists():
         lines.append(
-            f"**[Multi-solver report]({PREVIEW}report.html)** — one HTML, "
+            f"**[Train-set report]({PREVIEW}report.html)** — one HTML, "
             "all solver versions. Toggle versions in the *solver versions* "
             "panel; only the latest of each is loaded by default. See "
             "[CHANGELOG.md](CHANGELOG.md) for the history of when each "
             "version was archived.\n"
+        )
+    if (REPORTS / "test_report.html").exists():
+        lines.append(
+            f"**[Test-set report]({PREVIEW}test_report.html)** — same "
+            "format, over `benchmarks/test/` (competition / external "
+            "sets). Milestone evaluation only; **never optimize the "
+            "loop against these results**.\n"
         )
         lines.append(
             "Loads per-(solver, family) `.json.gz` shards from `data/`. "
@@ -233,19 +240,31 @@ def write_index() -> None:
     (REPORTS / "README.md").write_text("\n".join(lines) + "\n")
 
 
-def archive(jsonl_path: str | Path, label: str, timeout_s: float = 10.0) -> Path:
-    """Update the consolidated report (`docs/dev_reports/report.html`) and
-    log the update to a CHANGELOG. This is the convention from iter101
-    onward — replaces the per-iteration HTML files: the manifest grows,
-    the HTML is rewritten in place (small git delta), shards accumulate.
+def archive(
+    jsonl_path: str | Path,
+    label: str,
+    timeout_s: float = 10.0,
+    *,
+    report_name: str = "report.html",
+) -> Path:
+    """Update the consolidated report (`docs/dev_reports/<report_name>`)
+    and log the update to a CHANGELOG. This is the convention from
+    iter101 onward — replaces the per-iteration HTML files: the manifest
+    grows, the HTML is rewritten in place (small git delta), shards
+    accumulate.
 
     `label` goes in the changelog so the history is browsable from the
-    repo even though there's only one HTML."""
+    repo even though there's only one HTML. Pass
+    `report_name="test_report.html"` for the test-set report (separate
+    HTML and manifest, shared shard pool)."""
     from benchmarks.runner.multi_report import render_consolidated
 
     rows = [json.loads(ln) for ln in Path(jsonl_path).read_text().splitlines() if ln.strip()]
     REPORTS.mkdir(parents=True, exist_ok=True)
-    render_consolidated(rows, REPORTS, timeout_s)
+    manifest_name = report_name.removesuffix(".html") + ".manifest.json"
+    render_consolidated(
+        rows, REPORTS, timeout_s, report_name=report_name, manifest_name=manifest_name
+    )
     # Append to the changelog.
     stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     head = _git_head()
@@ -262,7 +281,7 @@ def archive(jsonl_path: str | Path, label: str, timeout_s: float = 10.0) -> Path
         )
     cl.write_text(cl.read_text() + log_line)
     write_index()
-    return REPORTS / "report.html"
+    return REPORTS / report_name
 
 
 def migrate_inline(html_paths: list[Path], timeout_s: float = 10.0) -> None:

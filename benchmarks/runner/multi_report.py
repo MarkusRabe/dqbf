@@ -1113,25 +1113,35 @@ CONSOLIDATED_NAME = "report.html"
 CONSOLIDATED_MANIFEST = "report.manifest.json"
 
 
-def render_consolidated(rows: list[dict], out_dir: Path, timeout_s: float) -> None:
-    """Update the **single** consolidated report at `<out_dir>/report.html`.
+def render_consolidated(
+    rows: list[dict],
+    out_dir: Path,
+    timeout_s: float,
+    *,
+    report_name: str = CONSOLIDATED_NAME,
+    manifest_name: str = CONSOLIDATED_MANIFEST,
+) -> None:
+    """Update a consolidated report at `<out_dir>/<report_name>`.
 
-    The manifest at `<out_dir>/data/report.manifest.json` accumulates
-    shard lists per solver across runs: a solver in the current `rows`
-    has its shard list **replaced**; solvers not in `rows` keep their
-    old entries. The HTML's solver-version filter defaults to the most
+    The manifest at `<out_dir>/data/<manifest_name>` accumulates shard
+    lists per solver across runs: a solver in the current `rows` has
+    its shard list **replaced**; solvers not in `rows` keep their old
+    entries. The HTML's solver-version filter defaults to the most
     recent version of each base solver and excludes `forkres`. Other
     versions are listed but unchecked; toggling one on lazily fetches
     its shards.
 
-    This replaces `archive()`'s one-HTML-per-iteration convention. Each
-    iteration's archive step rewrites `report.html` (small diff: family
-    list + git head/stamp) and the manifest, plus only the new shards.
+    `report_name`/`manifest_name` default to the train-set report; pass
+    e.g. `"test_report.html"` / `"test_report.manifest.json"` for
+    a separate report over `benchmarks/test/`. The shards (`data/*.json.gz`)
+    are content-addressed and shared across reports — the same solver
+    on the same instance produces the same shard regardless of which
+    report references it.
     """
     data_dir = out_dir / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
-    out = out_dir / CONSOLIDATED_NAME
-    mf_path = data_dir / CONSOLIDATED_MANIFEST
+    out = out_dir / report_name
+    mf_path = data_dir / manifest_name
 
     # Group this run's shards by solver.
     by_solver: dict[str, list[dict]] = defaultdict(list)
@@ -1177,7 +1187,7 @@ def render_consolidated(rows: list[dict], out_dir: Path, timeout_s: float) -> No
     # the controls use the full manifest lists + `defaults`.
     data_block = (
         "<script>let DATA=[];"
-        f"const MANIFEST_NAME={_js_json(CONSOLIDATED_MANIFEST)};"
+        f"const MANIFEST_NAME={_js_json(manifest_name)};"
         f"const DATA_BASES={_js_json(_DATA_BASES)};</script>"
     )
     out.write_text(
