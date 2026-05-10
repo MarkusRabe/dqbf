@@ -665,15 +665,20 @@ const HANDLES = {
   hwmc:     new Set(["hwmc"]),
   syntcomp: new Set(["syntcomp"]),
 };
+// Computed in appInit(), not at module scope: in split-data reports
+// `DATA` is empty until the manifest+shards finish loading. Module-scope
+// reads of `DATA` would silently bake in an empty result.
 const FAMS_FOR = {}, SOLVERS_FOR = {};
-for(const d of DOMAIN_NAMES){
-  const native = new Set(SOLVERS.filter(s=>DOMAINS[s]===d));
-  const fams = new Set(
-    DATA.filter(r=>native.has(r.solver) && RAN.has(r.got)).map(r=>r.family));
-  FAMS_FOR[d] = fams;
-  SOLVERS_FOR[d] = SOLVERS.filter(s=>
-    (HANDLES[DOMAINS[s]]||new Set()).has(d) &&
-    DATA.some(r=>r.solver===s && fams.has(r.family) && RAN.has(r.got)));
+function computeDomainSets(){
+  for(const d of DOMAIN_NAMES){
+    const native = new Set(SOLVERS.filter(s=>DOMAINS[s]===d));
+    const fams = new Set(
+      DATA.filter(r=>native.has(r.solver) && RAN.has(r.got)).map(r=>r.family));
+    FAMS_FOR[d] = fams;
+    SOLVERS_FOR[d] = SOLVERS.filter(s=>
+      (HANDLES[DOMAINS[s]]||new Set()).has(d) &&
+      DATA.some(r=>r.solver===s && fams.has(r.family) && RAN.has(r.got)));
+  }
 }
 
 function applyDomain(){
@@ -703,6 +708,7 @@ function applyDomain(){
 }
 
 function appInit(){
+  computeDomainSets();
   const SCOPES = [
     ["overview","tab-overview",renderOverview],
     ["single","tab-single",renderSingle],
@@ -744,6 +750,10 @@ async function _gunzipJson(url){
   return JSON.parse(await blob.text());
 }
 (async()=>{
+  const status = document.createElement("div");
+  status.style.cssText = "position:fixed;top:.5em;right:.5em;background:#fff;border:1px solid #ccc;border-radius:6px;padding:.4em .8em;font-size:.85em;color:#666;z-index:99";
+  status.textContent = "Loading data…";
+  document.body.appendChild(status);
   let mf=null, base=null, lastErr=null;
   for(const b of DATA_BASES){
     try{
@@ -753,6 +763,7 @@ async function _gunzipJson(url){
     }catch(e){ lastErr = e; }
   }
   if(!mf){
+    status.remove();
     const d = document.createElement("div");
     d.className = "warn";
     d.append("Failed to load report data (" + lastErr + "). ");
@@ -763,12 +774,19 @@ async function _gunzipJson(url){
     return;
   }
   try{
-    const parts = await Promise.all(mf.files.map(f => _gunzipJson(base + f)));
+    let n = 0;
+    const parts = await Promise.all(mf.files.map(async f => {
+      const r = await _gunzipJson(base + f);
+      status.textContent = `Loading data… ${++n}/${mf.files.length}`;
+      return r;
+    }));
     DATA = parts.flat();
+    status.remove();
     if(document.readyState === "loading")
       document.addEventListener("DOMContentLoaded", appInit);
     else appInit();
   }catch(e){
+    status.remove();
     const d = document.createElement("div");
     d.className = "warn"; d.textContent = "Failed to load report shards: " + e;
     document.body.prepend(d);
@@ -851,8 +869,11 @@ def _shell(rows: list[dict], timeout_s: float, data_block: str, boot: str) -> st
         ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True
     ).stdout.strip()
     stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-    return f"""<!doctype html><meta charset=utf-8><title>multi-solver report</title>
-<style>{CSS}</style>
+    # Explicit <head> so htmlpreview.github.io's `<base href>` injection
+    # works (its regex matches `<head[^>]*>`). With <base> set, the
+    # relative `data/` path resolves against the raw GitHub URL.
+    return f"""<!doctype html><html><head><meta charset=utf-8><title>multi-solver report</title>
+<style>{CSS}</style></head><body>
 <h1>Multi-solver report <small style="color:#888;font-size:.55em">@ {_esc(head)} · {_esc(stamp)}</small></h1>
 {_warnings(rows, solvers)}
 {data_block}
@@ -864,6 +885,7 @@ def _shell(rows: list[dict], timeout_s: float, data_block: str, boot: str) -> st
 <section id="tab-compare" class="tab panel">{pair_ctl}<div id="pair"></div></section>
 <script>{_JS}</script>
 {boot}
+</body></html>
 """
 
 

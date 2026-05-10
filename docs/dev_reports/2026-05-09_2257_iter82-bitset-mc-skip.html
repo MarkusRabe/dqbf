@@ -1,6 +1,6 @@
-<!doctype html><meta charset=utf-8><title>multi-solver report</title>
-<style>:root{--bd:#e1e4e8;--bg:#fafbfc;--fg:#24292f;--mut:#6a737d;--r:8px}body{font-family:system-ui,sans-serif;max-width:1100px;margin:2em auto;padding:0 1em;color:var(--fg);background:#fff}table{border-collapse:separate;border-spacing:0;margin:.6em 0;border:1px solid var(--bd);border-radius:var(--r);overflow:hidden}th,td{border-bottom:1px solid var(--bd);padding:.4em .7em;font-size:.9em}th{background:var(--bg);font-weight:600}tr:last-child td{border-bottom:none}.warn{background:#fde7e7;font-weight:600;padding:.6em .9em;border-radius:var(--r);border:1px solid #f5c2c7}svg{border:1px solid var(--bd);border-radius:var(--r);margin:.5em;background:#fff}h2{border-bottom:1px solid var(--bd);padding-bottom:.3em}h3{margin:.9em 0 .3em;color:var(--fg)}.ctl{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:.8em;margin:0 0 1em;display:flex;flex-wrap:wrap;gap:1.2em;align-items:flex-start;font-size:.9em}.ctl fieldset{border:1px solid var(--bd);border-radius:6px;padding:.4em .6em;background:#fff}.ctl legend{padding:0 .3em;color:var(--mut);font-size:.85em}.ctl label{margin-right:.6em}.ctl select{border:1px solid var(--bd);border-radius:5px;padding:.2em .4em}#domain{position:sticky;top:0;background:#fff;padding:.6em 0 .4em;z-index:2;font-size:.9em}#domain label{margin-right:.3em;cursor:pointer;padding:.35em .8em;border:1px solid var(--bd);border-radius:999px;background:var(--bg)}#domain input{margin-right:.35em}#domain label:has(input:checked){background:#0969da;color:#fff;border-color:#0969da}#domain label:has(input:disabled){opacity:.4;cursor:not-allowed}#domain b{margin-right:.6em}#tabs{position:sticky;top:2.6em;background:#fff;padding:.4em 0;z-index:1}.panel{border:1px solid var(--bd);border-radius:var(--r);padding:.9em;margin-bottom:1em;box-shadow:0 1px 2px rgba(0,0,0,.04)}.scroll{max-height:14em;overflow:auto;border:1px solid var(--bd);border-radius:6px;padding:.4em;background:var(--bg);font-family:ui-monospace,monospace;font-size:.85em}.scroll div{white-space:nowrap}nav#tabs{margin:.3em 0 .6em}nav#tabs button{border:1px solid var(--bd);background:var(--bg);padding:.45em 1.1em;margin-right:.35em;cursor:pointer;font-size:.95em;border-radius:var(--r) var(--r) 0 0}nav#tabs button.active{background:#fff;font-weight:600;box-shadow:0 -2px 0 #0969da inset}section.tab{display:none}section.tab.active{display:block}ul.famtree,ul.famtree ul{list-style:none;margin:0;padding:0}ul.famtree li{line-height:1.7}.famtree ul.folded{display:none}.famrow{display:flex;align-items:center;gap:.3em;border-bottom:1px solid #f0f1f3;padding:.05em 0}.famrow:hover{background:#f6f8fa}.famname{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.famstats{display:grid;grid-auto-flow:column;gap:0;font-family:ui-monospace,monospace;font-size:.8em}.famstats span{width:7.2em;text-align:right;padding:.1em .4em;border-left:1px solid #f0f1f3}.famhead{display:flex;align-items:center;gap:.3em;font-weight:600;border-bottom:1px solid var(--bd);padding:.3em 0;background:var(--bg);position:sticky;top:0;z-index:1}.famhead .famname{padding-left:1.4em}.famhead .famstats span{border-left:none}.famfold{display:inline-block;width:1em;text-align:center;cursor:pointer;font-family:ui-monospace,monospace;user-select:none;color:var(--mut)}.famfold-none{cursor:default;color:transparent}a.famonly{font-size:.75em;color:var(--mut);margin-left:.3em;cursor:pointer;text-decoration:none}a.famonly:hover{text-decoration:underline;color:var(--fg)}.famtree-panel{border:1px solid var(--bd);border-radius:var(--r);max-height:28em;overflow:auto;margin:.6em 0;font-size:.9em}</style>
-<h1>Multi-solver report <small style="color:#888;font-size:.55em">@ 2a3b1a0 · 2026-05-10 01:22</small></h1>
+<!doctype html><html><head><meta charset=utf-8><title>multi-solver report</title>
+<style>:root{--bd:#e1e4e8;--bg:#fafbfc;--fg:#24292f;--mut:#6a737d;--r:8px}body{font-family:system-ui,sans-serif;max-width:1100px;margin:2em auto;padding:0 1em;color:var(--fg);background:#fff}table{border-collapse:separate;border-spacing:0;margin:.6em 0;border:1px solid var(--bd);border-radius:var(--r);overflow:hidden}th,td{border-bottom:1px solid var(--bd);padding:.4em .7em;font-size:.9em}th{background:var(--bg);font-weight:600}tr:last-child td{border-bottom:none}.warn{background:#fde7e7;font-weight:600;padding:.6em .9em;border-radius:var(--r);border:1px solid #f5c2c7}svg{border:1px solid var(--bd);border-radius:var(--r);margin:.5em;background:#fff}h2{border-bottom:1px solid var(--bd);padding-bottom:.3em}h3{margin:.9em 0 .3em;color:var(--fg)}.ctl{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:.8em;margin:0 0 1em;display:flex;flex-wrap:wrap;gap:1.2em;align-items:flex-start;font-size:.9em}.ctl fieldset{border:1px solid var(--bd);border-radius:6px;padding:.4em .6em;background:#fff}.ctl legend{padding:0 .3em;color:var(--mut);font-size:.85em}.ctl label{margin-right:.6em}.ctl select{border:1px solid var(--bd);border-radius:5px;padding:.2em .4em}#domain{position:sticky;top:0;background:#fff;padding:.6em 0 .4em;z-index:2;font-size:.9em}#domain label{margin-right:.3em;cursor:pointer;padding:.35em .8em;border:1px solid var(--bd);border-radius:999px;background:var(--bg)}#domain input{margin-right:.35em}#domain label:has(input:checked){background:#0969da;color:#fff;border-color:#0969da}#domain label:has(input:disabled){opacity:.4;cursor:not-allowed}#domain b{margin-right:.6em}#tabs{position:sticky;top:2.6em;background:#fff;padding:.4em 0;z-index:1}.panel{border:1px solid var(--bd);border-radius:var(--r);padding:.9em;margin-bottom:1em;box-shadow:0 1px 2px rgba(0,0,0,.04)}.scroll{max-height:14em;overflow:auto;border:1px solid var(--bd);border-radius:6px;padding:.4em;background:var(--bg);font-family:ui-monospace,monospace;font-size:.85em}.scroll div{white-space:nowrap}nav#tabs{margin:.3em 0 .6em}nav#tabs button{border:1px solid var(--bd);background:var(--bg);padding:.45em 1.1em;margin-right:.35em;cursor:pointer;font-size:.95em;border-radius:var(--r) var(--r) 0 0}nav#tabs button.active{background:#fff;font-weight:600;box-shadow:0 -2px 0 #0969da inset}section.tab{display:none}section.tab.active{display:block}ul.famtree,ul.famtree ul{list-style:none;margin:0;padding:0}ul.famtree li{line-height:1.7}.famtree ul.folded{display:none}.famrow{display:flex;align-items:center;gap:.3em;border-bottom:1px solid #f0f1f3;padding:.05em 0}.famrow:hover{background:#f6f8fa}.famname{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.famstats{display:grid;grid-auto-flow:column;gap:0;font-family:ui-monospace,monospace;font-size:.8em}.famstats span{width:7.2em;text-align:right;padding:.1em .4em;border-left:1px solid #f0f1f3}.famhead{display:flex;align-items:center;gap:.3em;font-weight:600;border-bottom:1px solid var(--bd);padding:.3em 0;background:var(--bg);position:sticky;top:0;z-index:1}.famhead .famname{padding-left:1.4em}.famhead .famstats span{border-left:none}.famfold{display:inline-block;width:1em;text-align:center;cursor:pointer;font-family:ui-monospace,monospace;user-select:none;color:var(--mut)}.famfold-none{cursor:default;color:transparent}a.famonly{font-size:.75em;color:var(--mut);margin-left:.3em;cursor:pointer;text-decoration:none}a.famonly:hover{text-decoration:underline;color:var(--fg)}.famtree-panel{border:1px solid var(--bd);border-radius:var(--r);max-height:28em;overflow:auto;margin:.6em 0;font-size:.9em}</style></head><body>
+<h1>Multi-solver report <small style="color:#888;font-size:.55em">@ 35a0566 · 2026-05-10 02:23</small></h1>
 <p class="warn">⚠ Solvers with non-verifiable outputs: cadet/sat</p><p class="warn">⚠ 9 instance(s) with solver DISAGREEMENT — see Overview tab.</p>
 <script>let DATA=[];const MANIFEST_NAME="2026-05-09_2257_iter82-bitset-mc-skip.manifest.json";const DATA_BASES=["data/", "https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/data/", "https://cdn.jsdelivr.net/gh/MarkusRabe/dqbf@main/docs/dev_reports/data/"];</script>
 <script>const SOLVERS=["cadet", "caqe", "dqbdd", "frust-v2.81", "hqs", "pedant", "rareqs", "strix"];const FAMILIES=["bitwidth_scaling/build", "bmc_circuits/inductive/alu4op", "bmc_circuits/inductive/alu_add", "bmc_circuits/inductive/barrel", "bmc_circuits/inductive/bcd_ctr", "bmc_circuits/inductive/cmp_pipe", "bmc_circuits/inductive/counter", "bmc_circuits/inductive/crc", "bmc_circuits/inductive/debounce", "bmc_circuits/inductive/fifo1", "bmc_circuits/inductive/gray", "bmc_circuits/inductive/hamming", "bmc_circuits/inductive/lfsr", "bmc_circuits/inductive/lzc", "bmc_circuits/inductive/minmax", "bmc_circuits/inductive/modmul", "bmc_circuits/inductive/mutex", "bmc_circuits/inductive/onehot_fsm", "bmc_circuits/inductive/parity_pipe", "bmc_circuits/inductive/prio_enc", "bmc_circuits/inductive/ringbuf", "bmc_circuits/inductive/rr_arbiter", "bmc_circuits/inductive/sat_accum", "bmc_circuits/inductive/shift_reg", "bmc_circuits/inductive/spi_ctrl", "bmc_circuits/inductive/traffic", "bmc_circuits/inductive/uart_tx", "bmc_circuits/inductive/updown", "bmc_circuits/succinct/alu4op", "bmc_circuits/succinct/alu_add", "bmc_circuits/succinct/barrel", "bmc_circuits/succinct/bcd_ctr", "bmc_circuits/succinct/cmp_pipe", "bmc_circuits/succinct/counter", "bmc_circuits/succinct/crc", "bmc_circuits/succinct/debounce", "bmc_circuits/succinct/fifo1", "bmc_circuits/succinct/gray", "bmc_circuits/succinct/hamming", "bmc_circuits/succinct/lfsr", "bmc_circuits/succinct/lzc", "bmc_circuits/succinct/minmax", "bmc_circuits/succinct/modmul", "bmc_circuits/succinct/mutex", "bmc_circuits/succinct/onehot_fsm", "bmc_circuits/succinct/parity_pipe", "bmc_circuits/succinct/prio_enc", "bmc_circuits/succinct/ringbuf", "bmc_circuits/succinct/rr_arbiter", "bmc_circuits/succinct/sat_accum", "bmc_circuits/succinct/shift_reg", "bmc_circuits/succinct/spi_ctrl", "bmc_circuits/succinct/traffic", "bmc_circuits/succinct/uart_tx", "bmc_circuits/succinct/updown", "bmc_circuits/unrolled/alu4op", "bmc_circuits/unrolled/alu_add", "bmc_circuits/unrolled/barrel", "bmc_circuits/unrolled/bcd_ctr", "bmc_circuits/unrolled/cmp_pipe", "bmc_circuits/unrolled/counter", "bmc_circuits/unrolled/crc", "bmc_circuits/unrolled/debounce", "bmc_circuits/unrolled/fifo1", "bmc_circuits/unrolled/gray", "bmc_circuits/unrolled/hamming", "bmc_circuits/unrolled/lfsr", "bmc_circuits/unrolled/lzc", "bmc_circuits/unrolled/minmax", "bmc_circuits/unrolled/modmul", "bmc_circuits/unrolled/mutex", "bmc_circuits/unrolled/onehot_fsm", "bmc_circuits/unrolled/parity_pipe", "bmc_circuits/unrolled/prio_enc", "bmc_circuits/unrolled/ringbuf", "bmc_circuits/unrolled/rr_arbiter", "bmc_circuits/unrolled/sat_accum", "bmc_circuits/unrolled/shift_reg", "bmc_circuits/unrolled/spi_ctrl", "bmc_circuits/unrolled/traffic", "bmc_circuits/unrolled/uart_tx", "bmc_circuits/unrolled/updown", "bmc_mutex/instances", "cbmc/flat", "cbmc/handwritten", "cbmc/inductive", "cbmc/succinct", "circuit_synth/depth", "circuit_synth/gates", "collatz/inductive", "collatz/succinct", "collatz/tonly", "collatz/unrolled", "conjunction/instances", "dep_cycle/instances", "hwmc_indinv/inductive", "hwmcc_legacy/instances", "peano/instances", "pec_circuits/miter", "pec_counter/instances", "polybench_equiv/mem_trace", "prog_equiv/mem_trace", "random_bv/mixed", "random_bv/over", "random_bv/under", "random_qbf/2qbf", "random_qbf/3qbf", "syntcomp_legacy/instances", "synthesis_invertibility/instances"];const DOMAINS={"cadet": "qbf", "caqe": "qbf", "dqbdd": "dqbf", "frust-v2.81": "dqbf", "hqs": "dqbf", "pedant": "dqbf", "rareqs": "qbf", "strix": "syntcomp"};const DOMAIN_NAMES=["dqbf", "qbf", "hwmc", "syntcomp"];const TIMEOUT=10.0;</script>
@@ -493,15 +493,20 @@ const HANDLES = {
   hwmc:     new Set(["hwmc"]),
   syntcomp: new Set(["syntcomp"]),
 };
+// Computed in appInit(), not at module scope: in split-data reports
+// `DATA` is empty until the manifest+shards finish loading. Module-scope
+// reads of `DATA` would silently bake in an empty result.
 const FAMS_FOR = {}, SOLVERS_FOR = {};
-for(const d of DOMAIN_NAMES){
-  const native = new Set(SOLVERS.filter(s=>DOMAINS[s]===d));
-  const fams = new Set(
-    DATA.filter(r=>native.has(r.solver) && RAN.has(r.got)).map(r=>r.family));
-  FAMS_FOR[d] = fams;
-  SOLVERS_FOR[d] = SOLVERS.filter(s=>
-    (HANDLES[DOMAINS[s]]||new Set()).has(d) &&
-    DATA.some(r=>r.solver===s && fams.has(r.family) && RAN.has(r.got)));
+function computeDomainSets(){
+  for(const d of DOMAIN_NAMES){
+    const native = new Set(SOLVERS.filter(s=>DOMAINS[s]===d));
+    const fams = new Set(
+      DATA.filter(r=>native.has(r.solver) && RAN.has(r.got)).map(r=>r.family));
+    FAMS_FOR[d] = fams;
+    SOLVERS_FOR[d] = SOLVERS.filter(s=>
+      (HANDLES[DOMAINS[s]]||new Set()).has(d) &&
+      DATA.some(r=>r.solver===s && fams.has(r.family) && RAN.has(r.got)));
+  }
 }
 
 function applyDomain(){
@@ -531,6 +536,7 @@ function applyDomain(){
 }
 
 function appInit(){
+  computeDomainSets();
   const SCOPES = [
     ["overview","tab-overview",renderOverview],
     ["single","tab-single",renderSingle],
@@ -559,6 +565,10 @@ async function _gunzipJson(url){
   return JSON.parse(await blob.text());
 }
 (async()=>{
+  const status = document.createElement("div");
+  status.style.cssText = "position:fixed;top:.5em;right:.5em;background:#fff;border:1px solid #ccc;border-radius:6px;padding:.4em .8em;font-size:.85em;color:#666;z-index:99";
+  status.textContent = "Loading data…";
+  document.body.appendChild(status);
   let mf=null, base=null, lastErr=null;
   for(const b of DATA_BASES){
     try{
@@ -568,6 +578,7 @@ async function _gunzipJson(url){
     }catch(e){ lastErr = e; }
   }
   if(!mf){
+    status.remove();
     const d = document.createElement("div");
     d.className = "warn";
     d.append("Failed to load report data (" + lastErr + "). ");
@@ -578,12 +589,19 @@ async function _gunzipJson(url){
     return;
   }
   try{
-    const parts = await Promise.all(mf.files.map(f => _gunzipJson(base + f)));
+    let n = 0;
+    const parts = await Promise.all(mf.files.map(async f => {
+      const r = await _gunzipJson(base + f);
+      status.textContent = `Loading data… ${++n}/${mf.files.length}`;
+      return r;
+    }));
     DATA = parts.flat();
+    status.remove();
     if(document.readyState === "loading")
       document.addEventListener("DOMContentLoaded", appInit);
     else appInit();
   }catch(e){
+    status.remove();
     const d = document.createElement("div");
     d.className = "warn"; d.textContent = "Failed to load report shards: " + e;
     document.body.prepend(d);
@@ -591,3 +609,4 @@ async function _gunzipJson(url){
 })();
 </script>
 
+</body></html>
