@@ -88,7 +88,17 @@ def encode(
 
     for lat in circ.latches:
         v0 = step[0][lat.lit]
-        clauses.append([v0] if lat.reset == 1 else [-v0])
+        # AIGER reset convention: 0 → init 0; 1 → init 1; lat.lit (the
+        # latch's own literal) → uninitialised, i.e. the initial state is
+        # *free*. Pre-2026-05-10 we forced `else -v0` (init 0) here.
+        # That's wrong for free latches — the encoded formula then
+        # answers "reachable from state 0" not "reachable from any
+        # initial state", which can disagree with HWMCC's verdict.
+        if lat.reset == 1:
+            clauses.append([v0])
+        elif lat.reset == 0:
+            clauses.append([-v0])
+        # else: lat.reset == lat.lit (uninitialised) — leave v0 free.
 
     for t in range(k):
         cur, nxt_ = step[t], step[t + 1]
@@ -229,11 +239,16 @@ def encode_succinct(
         a, b = cur[lat.lit], nxt_lat[lat.lit]
         clauses.extend(([-EQ, -a, b], [-EQ, a, -b]))
 
-    # init: (t==0) → cur_lat == reset
+    # init: (t==0) → cur_lat == reset (only for latches with a
+    # specified reset; uninitialised latches are free at t==0).
     g0 = [t[i] for i in range(m)]  # ¬(t==0) disjunct = some bit set
     for lat in circ.latches:
         v = cur[lat.lit]
-        clauses.append(g0 + ([v] if lat.reset == 1 else [-v]))
+        if lat.reset == 1:
+            clauses.append(g0 + [v])
+        elif lat.reset == 0:
+            clauses.append(g0 + [-v])
+        # else: free initial state.
 
     # STEP ↔ (t' == t+1) ∧ ¬overflow, via ripple incrementer on t
     succ: list[int] = []
