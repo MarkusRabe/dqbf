@@ -668,6 +668,14 @@ pub fn validity_cegar(
             // forcing clause covers a |U|-|core| dimensional cube of
             // rows. On `alu_add_n4_indinv` it drops 4096 cells to ~400.
             let is_undef = undef_set.contains(&y);
+            // iter86 tried skipping the forcing check when a cell already
+            // exists for this `(y, dep|U*)`: −1 net. The skip saves
+            // ~20% on `divmod_ok` (12k rounds × 91 root flip-solves)
+            // but loses 5 `cbmc/inductive` SAT instances that need
+            // forcing to *generalize* — even with a cell at this row,
+            // a generalised forcing clause covers a cube of rows and
+            // converges the picker faster. Forcing is not redundant
+            // with cells; it complements them.
             let try_forcing = !is_undef || dep_lits.len() > 4;
             if try_forcing {
                 let mut a = dep_lits.clone();

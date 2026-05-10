@@ -2243,3 +2243,25 @@ exhausted on this family.
 full-expand picker (`circuit_synth`). No effect on `csd_maj4_d02_w04`
 (24 s UNSAT → still 24 s). The picker formula is genuinely hard
 (671 vars, 7800 clauses near phase transition); not a heuristic gap.
+
+## Refined-loop iteration 86: skip forcing flip-check for cell-covered rows (reverted, −1) (2026-05-10)
+
+**Sample**: `cbmc/succinct/divmod_ok_n6_k016` (446 e-vars, 91 roots,
+12480 CEGAR rounds, 9.5 s). Per round: ~91 consist flip-solves (one
+per disagreeing root) to derive a forcing clause. Most rows already
+have a cell at that `(y, dep|U*)`; the flip-solve is redundant.
+
+**Hypothesis**: gate the flip-solve on `arb_of.contains_key((y,
+cell_dep))`. `divmod_ok` 9.5 s → 7.8 s.
+
+**Result: −1 net** (+5 `collatz/tonly` borderline, −6
+`cbmc/inductive`). Reverted.
+
+**Constraint named: misunderstanding.** The flip-solve isn't a
+*lookup*; it's a *generalisation*. The UNSAT core from the flip is
+typically much shorter than `dep_lits` — the forcing clause covers a
+cube of rows, not just this one. Skipping it for cell-covered rows
+loses the generalisation and the picker takes more rounds to
+converge. Forcing complements cells, not duplicates them. For
+`clz_ok_n4_indinv` (SAT), removing 1 generalised forcing clause was
+worth more rounds than the per-round speedup saved.
