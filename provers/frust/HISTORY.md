@@ -2209,3 +2209,37 @@ Without it, `traffic_n4_k008_bug` takes 11 s to UNKNOWN via
 saturate-only. The probe always passes both `--cert` and `--proof`,
 masking this; debugging without `--cert` showed wrong behaviour for
 20 minutes before re-reading `extract_cert`.
+
+## Refined-loop iteration 85: ARB_BUDGET 16384 + cap=14 (reverted, −5) (2026-05-10)
+
+**Sample**: `dep_cycle_n4` (47 vars, |U|=12), `cbmc/inductive`,
+`pec_circuits/miter` `*_complete` SAT instances (35 pedant solves
+frust misses). All hit the const-arbiter `Bail` path; the roots have
+`|dep|` 12-16 which exceeds `cell_dep_cap`.
+
+**Hypothesis**: cells are allocated lazily — only `dep|U*` values
+seen in counterexamples — so the 2^|dep| worst-case isn't real. Bump
+ARB_BUDGET 8192→16384 (cost: ~64 KB CDCL state per solver) and cap to
+14, letting `cbmc/inductive` |dep|=14 roots and `dep_cycle_n4`
+|dep|=12 roots fit.
+
+**Result: −5 net.** Gained 3 `cbmc/inductive` (|dep|=14 now fits),
+lost 4 `collatz/tonly` and 1 `bmc_circuits/succinct/minmax` to the
+larger CDCL state — clause-watching scans got ~10% slower across all
+three solvers (`validity`, `consist`, `arbsolve`). Reverted both.
+
+**Constraint named: research wall.** The roots in
+`pec_circuits/_complete`, `dep_cycle/n≥4`, `circuit_synth/*`, and
+`collatz/succinct` have `|dep|` 16-22; the per-cell table can't
+represent them. iter77's prefix tree was reverted (−34) for the
+same reason. The needed change is a circuit-form Skolem for *roots*
+(the iter76 chain handles undef-y *defined under linked roots*, but
+roots themselves are still tables): when a root's forcing cores are
+short (≤6 lits), build a decision-tree from them instead of cells.
+Pedant's "default function" mechanism. Park; parameter tuning is
+exhausted on this family.
+
+**Also tried, reverted**: outer-var VSIDS boost ×100/×1e6 in the
+full-expand picker (`circuit_synth`). No effect on `csd_maj4_d02_w04`
+(24 s UNSAT → still 24 s). The picker formula is genuinely hard
+(671 vars, 7800 clauses near phase transition); not a heuristic gap.

@@ -21,6 +21,11 @@ use crate::cdcl::Cdcl;
 use crate::formula::{var, Clause, Formula, Lit, Var};
 use std::collections::{BTreeSet, HashMap};
 
+// iter85 tried 16384: gained 3 `cbmc/inductive` (|dep|=14 roots fit)
+// but lost 5 borderline `collatz/tonly` and `bmc_circuits/succinct`
+// instances to the larger validity/consist solver state. Net -2; the
+// 8 K extra slots' `set_decision(false)` skips are cheap but the var
+// count itself slows clause-watching scans by ~10%.
 const ARB_BUDGET: usize = 8192;
 
 use crate::definability::Def;

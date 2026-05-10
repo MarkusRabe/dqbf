@@ -819,6 +819,28 @@ impl Cdcl {
         }
     }
 
+    /// Seed VSIDS so `v` is picked before unseeded vars. Used by the
+    /// outer-CEGAR picker to decide topology vars (the synthesis choice)
+    /// before per-row inner vars (the consequences). The boost is
+    /// proportional to current `var_inc` so it survives the rescale at
+    /// `1e100` and decays at the same rate as conflict-derived bumps.
+    pub fn boost_activity(&mut self, v: u32, factor: f64) {
+        let v = v as usize;
+        if v > self.n_vars {
+            return;
+        }
+        self.activity[v] += self.var_inc * factor;
+        if self.pos[v] >= 0 {
+            self.heap_up(self.pos[v] as usize);
+        }
+        if self.activity[v] > 1e100 {
+            for a in self.activity.iter_mut() {
+                *a *= 1e-100;
+            }
+            self.var_inc *= 1e-100;
+        }
+    }
+
     /// Incremental solve under `assumptions` (external Lit polarity).
     /// On SAT, fills `model[var]` ∈ {-1,0,1} (0 if don't-care). On
     /// UNSAT-under-assumptions or budget exhausted, returns false.
