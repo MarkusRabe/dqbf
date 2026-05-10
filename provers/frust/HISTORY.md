@@ -2371,3 +2371,46 @@ queue was non-empty after my first change. Without the
 `!db.queue.is_empty()` guard, `dep_cycle_n1` returned (correct)
 UNSAT but a hypothetical SAT formula with a 256-clause-busy queue
 would have falsely concluded SAT. The guard makes the cap sound.
+
+## Refined-loop iteration 91: forcing-clause cert wall identified (diagnostic only) (2026-05-10)
+
+**Sample**: 533 UNSAT-n/a. 21/30 are arbsolve-exhausted (research
+wall). 3/30 are `cegar UNSAT row` where `f.clauses[U*]` is *SAT* —
+the cegar `consist` solver reaches UNSAT only with the *forcing
+clauses* added via `add_external`. `analyze_final`'s core ⊆
+*assumptions*; an empty `arb_core` only means the *cell assumptions*
+weren't needed — forcing *clauses* still participate in propagation.
+So `CegarOut::UnsatRow` is *not* a propositional refutation of
+`f.clauses[U*]` in general.
+
+**Attempted fix (reverted, +145 INVALID)**: tighten `core_ok` for
+defined-y forcings. Intent: reject forcings whose core has cell vars.
+Implementation bug: replaced `univ.contains(&var(l))` for undef-y
+with `var(l) <= n` (formula vars), which **loosened** the undef-y
+check and let through forcings conditional on *existential*
+intermediates — unsound. The defined-y "Padoa proved uniqueness"
+rationale is actually correct (the flip-solve assumptions are
+`dep_lits + ¬y` only, so the `analyze_final` core ⊆ those — no
+intermediates can appear; the comment about intermediates was
+over-cautious but not wrong).
+
+**Lesson (for the next iteration on this lead)**: the forcing
+clauses are *DQBF implicates* derived from
+`f.clauses ∧ dep|key ⊨ y=v`, not propositional implicates of
+`f.clauses` alone. Each forcing has a Q-resolution derivation (the
+flip-solve refutation, with `dep|key ∧ ¬y` treated as assumptions
+to be discharged). The `.frp` for a `cegar UNSAT row` would chain
+those derivations: forcing-as-derived-clause → row refutation. This
+is "forcing-chain stitching" — a moderate-sized cert-recovery
+project: change `CegarOut::UnsatRow(Vec<Lit>)` to carry the live
+forcings, re-derive each via `reprove_row_unsat(f, dep|key + ¬y)`,
+emit them as derived clauses, then emit the row's refutation from
+`f.clauses + derived-forcings`. Park.
+
+**Result**: 2697/3571, 2164 valid certs, 0 INVALID. The diagnostic
+print (`{} forcings live`) is the only kept change.
+
+**Gotcha**: when checking `core_ok` semantics, the *loosen* direction
+is invisible to the probe's "did anything change" diff — only the
+"+145 INVALID" verifier check caught it. The cert verifier is the
+soundness oracle, not the regression diff.

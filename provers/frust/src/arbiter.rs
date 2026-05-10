@@ -578,11 +578,21 @@ pub fn validity_cegar(
                 })
                 .collect();
             if arb_core.is_empty() {
-                // Core ⊆ universals: matrix[U*,·] propositionally
-                // UNSAT under consist (which has only original clauses
-                // + arbiter links; links inactive when arb_core empty).
+                // Core ⊆ universals. `analyze_final` returns a subset of
+                // the *assumptions* (`ca`), so an empty `arb_core` only
+                // means the cell *assumptions* weren't needed — the
+                // forcing *clauses* (added via `add_external`) can still
+                // participate in propagation. So this is *not* a
+                // propositional refutation of `f.clauses[U*]` in
+                // general; it's a refutation of `f.clauses ∧ forcings
+                // ∧ U*`. Propagate the forcing clauses to the proof
+                // emitter so it can re-derive them.
                 if debug {
-                    eprintln!("c [def] cegar UNSAT row at round {}", rounds);
+                    let nf: usize = forcing.values().map(|v| v.len()).sum();
+                    eprintln!(
+                        "c [def] cegar UNSAT row at round {} ({} forcings live)",
+                        rounds, nf
+                    );
                 }
                 return CegarOut::UnsatRow(u_assump);
             }
