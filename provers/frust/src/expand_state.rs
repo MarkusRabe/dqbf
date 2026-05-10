@@ -291,8 +291,7 @@ impl ExpandState {
                         };
                         return self.step(f, cdcl, deadline, start, debug);
                     }
-                    self.cegar =
-                        Some(crate::arbiter::CegarState::new(f, &roots, &defs, partner));
+                    self.cegar = Some(crate::arbiter::CegarState::new(f, &roots, &defs, partner));
                     self.cegar.as_mut().unwrap().defs = defs;
                 }
                 None => {

@@ -309,7 +309,14 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                     let now = start.elapsed().as_secs_f64();
                     let dl = (now + 1.5).min(cfg.timeout_s - 0.2);
                     let proof = if dl > now {
-                        crate::proof_emit::reprove_row_unsat(f, &row, 500_000, dl, &start)
+                        crate::proof_emit::reprove_row_unsat(
+                            f,
+                            &row,
+                            500_000,
+                            dl,
+                            &start,
+                            cfg.debug_expand,
+                        )
                     } else {
                         None
                     };

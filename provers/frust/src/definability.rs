@@ -90,8 +90,12 @@ pub fn padoa_split(
     // pass — quadratic in |E| with the BTreeSet walk. (iter80 perf:
     // ~4.5% wall on `pec_fifo1_n20`.)
     let nu_words = f.universals.len().div_ceil(64);
-    let u_idx: HashMap<Var, usize> =
-        f.universals.iter().enumerate().map(|(i, &u)| (u, i)).collect();
+    let u_idx: HashMap<Var, usize> = f
+        .universals
+        .iter()
+        .enumerate()
+        .map(|(i, &u)| (u, i))
+        .collect();
     let dep_bits: HashMap<Var, Vec<u64>> = f
         .deps
         .iter()
@@ -249,8 +253,12 @@ pub fn extract_interpolants(
     // `pec_fifo1_n20` (2552 e-vars × 2552 candidate z's per pass).
     // Universal IDs index a bitset; the subset check is `(z & !y) == 0`.
     let nu_words = f.universals.len().div_ceil(64);
-    let u_idx: HashMap<Var, usize> =
-        f.universals.iter().enumerate().map(|(i, &u)| (u, i)).collect();
+    let u_idx: HashMap<Var, usize> = f
+        .universals
+        .iter()
+        .enumerate()
+        .map(|(i, &u)| (u, i))
+        .collect();
     let dep_bits: HashMap<Var, Vec<u64>> = f
         .deps
         .iter()
@@ -377,7 +385,8 @@ pub fn extract_interpolants(
     if debug {
         eprintln!(
             "c [def] interpolants: {}/{} defined + {}/{} undef→linked (gates: {}, roots {})",
-            out.values().filter(|_| true).count() - undefined.iter().filter(|y| out.contains_key(y)).count(),
+            out.values().filter(|_| true).count()
+                - undefined.iter().filter(|y| out.contains_key(y)).count(),
             defined.len(),
             undefined.iter().filter(|y| out.contains_key(y)).count(),
             undefined.len(),

@@ -294,8 +294,12 @@ impl CegarState {
             next_g += d.itp.gates.len();
             let yl = y as Lit;
             match d.root {
-                0 => { vclauses.push(vec![-yl]); },
-                1 => { vclauses.push(vec![yl]); },
+                0 => {
+                    vclauses.push(vec![-yl]);
+                }
+                1 => {
+                    vclauses.push(vec![yl]);
+                }
                 r => {
                     let lr = to_v(r, &gv);
                     vclauses.push(vec![-yl, lr]);
@@ -694,8 +698,8 @@ pub fn validity_cegar(
                 // forcing is conditional on that cell's current value —
                 // which arbsolve can later flip. (This was iter71's
                 // "11 INVALID" bug.)
-                let core_ok = !is_undef
-                    || consist.last_core().iter().all(|&l| univ.contains(&var(l)));
+                let core_ok =
+                    !is_undef || consist.last_core().iter().all(|&l| univ.contains(&var(l)));
                 if !flip_sat && core_ok {
                     let then = if want > 0 { y as Lit } else { -(y as Lit) };
                     let ante: Vec<Lit> = consist

@@ -2297,3 +2297,40 @@ referenced. The dead vars cost ~|U| × rows × 5 bytes of CDCL state
 but are `decide=false` so propagation never touches them. A proper
 fix would shrink `np` but the savings are small (~512 vars for
 `csd_maj4` of 671 total).
+
+## Refined-loop iteration 89: lift universal-pivot filter in proof_emit (+5 certs) (2026-05-10)
+
+**Sample**: 543 UNSAT-n/a instances. Traced 12: 9/12 are CEGAR
+arbsolve-exhaustion (research wall, no Q-resolution proof exists),
+2/12 are `cegar UNSAT row` where `f.clauses[u_assump]` is *SAT*
+(the cegar `consist` solver had forcing clauses encoding cross-row
+constraints; the row-UNSAT is a DQBF unsat proof, not a propositional
+one), 1/12 was a free-pass row that hit a **universal pivot** in the
+chain.
+
+**Constraint named**: implementation roughness. `cdcl_row_unsat_to_frp`
+filtered `if univ.contains(&pivot) { return None }`. But the journal
+paper §soundness ("The resolution rule … soundness follows from the
+soundness of QU-resolution for DQBF") — fork resolution's `res` rule
+*is* QU-resolution, which allows universal pivots. The verifier
+already accepts them. The filter was a leftover from before the
+journal-version `res` rule was checked.
+
+**Change**: drop the filter; add per-failure-cause debug logging
+(`row SAT under f.clauses` / `chain emit failed at cr=…` / `chain
+replay drift` / `axiom not in f.clauses`) so the next iteration can
+sample the *reasons* not just the count.
+
+**Result**: 2699/3571 (-5 noise), 2166 valid certs (+5), n/a UNSAT
+543→533. 0 INVALID. The bulk of the n/a is CEGAR-arbsolve-exhaustion.
+The two `row SAT under f.clauses` cases reveal the row-UNSAT path
+uses forcing clauses; proving those would require recording each
+forcing clause's resolution chain (forcing-chain stitching) — a
+moderate-sized cert-recovery project deferred.
+
+**Gotcha**: the `_resolve` helper in `tools/verify/unsat.py` doesn't
+restrict the pivot to existential — by design (QU-resolution). But
+*tautological* resolvents are rejected. For DQBF, ∀-resolution with a
+tautological *premise* (long-distance) is unsound; the verifier's
+`is_tautology` check at the resolvent only is permissive. Worth a
+dedicated test in `tools/verify/`.

@@ -40,6 +40,7 @@ pub fn reprove_row_unsat(
     max_steps: usize,
     deadline: f64,
     start: &std::time::Instant,
+    debug: bool,
 ) -> Option<Proof> {
     let mut cdcl = Cdcl::new(f.n_vars as usize, &f.clauses);
     cdcl.enable_proof_log();
@@ -52,16 +53,28 @@ pub fn reprove_row_unsat(
     // — under j=48 contention, an unbounded reprove turned 60 ms verdicts
     // into 10 s timeouts.
     loop {
-        cdcl.solve(row, &mut model, 5_000);
+        let sat = cdcl.solve(row, &mut model, 5_000);
         if !cdcl.budget_hit {
+            if sat {
+                if debug {
+                    eprintln!("c [reprove] row SAT under f.clauses");
+                }
+                return None;
+            }
             break;
         }
         if start.elapsed().as_secs_f64() >= deadline {
+            if debug {
+                eprintln!("c [reprove] deadline {:.2}s", deadline);
+            }
             return None;
         }
     }
-    let mut p = cdcl_row_unsat_to_frp(f, &cdcl, max_steps)?;
+    let mut p = cdcl_row_unsat_to_frp_dbg(f, &cdcl, max_steps, debug)?;
     if start.elapsed().as_secs_f64() >= deadline {
+        if debug {
+            eprintln!("c [reprove] deadline after convert");
+        }
         return None;
     }
     p.compact();
@@ -74,15 +87,37 @@ pub fn reprove_row_unsat(
 /// that turns out to be universal because not every universal was
 /// assumed in partial-scan mode).
 pub fn cdcl_row_unsat_to_frp(f: &Formula, cdcl: &Cdcl, max_steps: usize) -> Option<Proof> {
+    cdcl_row_unsat_to_frp_dbg(f, cdcl, max_steps, false)
+}
+
+pub fn cdcl_row_unsat_to_frp_dbg(
+    f: &Formula,
+    cdcl: &Cdcl,
+    max_steps: usize,
+    debug: bool,
+) -> Option<Proof> {
+    macro_rules! bail {
+        ($($a:tt)*) => {{
+            if debug { eprintln!("c [reprove-frp] {}", format!($($a)*)); }
+            return None;
+        }};
+    }
     let pl = cdcl.proof.as_ref()?;
     if pl.final_chain.is_empty() {
-        return None;
+        bail!("empty final_chain");
     }
     // Every lit in the final clause must be universal so ∀-reduce → ⊥.
     if pl.final_clause.iter().any(|&l| !f.is_universal(var(l))) {
-        return None;
+        bail!(
+            "final_clause has non-universal lit: {:?}",
+            pl.final_clause
+                .iter()
+                .filter(|&&l| !f.is_universal(var(l)))
+                .take(3)
+                .collect::<Vec<_>>()
+        );
     }
-    let univ: BTreeSet<u32> = f.universals.iter().copied().collect();
+    let _ = f;
 
     // 1. Collect all crefs reachable from final_chain via ante.
     let mut order: Vec<u32> = Vec::new();
@@ -148,12 +183,35 @@ pub fn cdcl_row_unsat_to_frp(f: &Formula, cdcl: &Cdcl, max_steps: usize) -> Opti
         let mut acc: BTreeSet<Lit> = derived_of.get(&seed)?.clone();
         let mut idx = *step_of.get(&seed)?;
         for &(cr, pivot) in &chain[1..] {
-            if univ.contains(&pivot) || proof.steps.len() > cap {
+            // QU-resolution: universal pivots are allowed (the journal
+            // paper §soundness defers to QU-resolution for DQBF). The
+            // verifier accepts them. The earlier filter was a leftover
+            // from before the journal-version `res` rule was checked.
+            if proof.steps.len() > cap {
+                if debug {
+                    eprintln!("c [reprove-frp]   cap {}", cap);
+                }
                 return None;
             }
-            let other = *step_of.get(&cr)?;
+            let other = match step_of.get(&cr) {
+                Some(&v) => v,
+                None => {
+                    if debug {
+                        eprintln!("c [reprove-frp]   missing step for cr={}", cr);
+                    }
+                    return None;
+                }
+            };
             let other_lits: Vec<Lit> = derived_of.get(&cr)?.iter().copied().collect();
-            acc = resolve(&acc, &other_lits, pivot)?;
+            acc = match resolve(&acc, &other_lits, pivot) {
+                Some(a) => a,
+                None => {
+                    if debug {
+                        eprintln!("c [reprove-frp]   tautology at pivot {}", pivot);
+                    }
+                    return None;
+                }
+            };
             idx = proof.add(Step::res(&acc.iter().copied().collect(), idx, other, pivot));
         }
         Some((idx, acc))
@@ -162,14 +220,27 @@ pub fn cdcl_row_unsat_to_frp(f: &Formula, cdcl: &Cdcl, max_steps: usize) -> Opti
     let mut derived_of: HashMap<u32, BTreeSet<Lit>> = HashMap::new();
     for &cr in &order {
         if let Some(ch) = pl.ante.get(&cr) {
-            let (idx, acc) = emit_chain(&mut proof, &step_of, &derived_of, ch, max_steps)?;
+            let r = emit_chain(&mut proof, &step_of, &derived_of, ch, max_steps);
+            let (idx, acc) = match r {
+                Some(v) => v,
+                None => bail!(
+                    "chain emit failed at cr={} (cap {} or missing dep)",
+                    cr,
+                    max_steps
+                ),
+            };
             let stored: BTreeSet<Lit> = cdcl.clause_lits(cr).into_iter().collect();
             if acc != stored {
                 // Chain replay should reproduce the learned clause
                 // exactly once level-0 lits are resolved in reverse-
                 // trail order. Any drift means the recording is buggy;
                 // don't emit a wrong proof.
-                return None;
+                bail!(
+                    "chain replay drift cr={}: replay={} stored={}",
+                    cr,
+                    acc.len(),
+                    stored.len()
+                );
             }
             step_of.insert(cr, idx);
             derived_of.insert(cr, acc);
@@ -177,20 +248,24 @@ pub fn cdcl_row_unsat_to_frp(f: &Formula, cdcl: &Cdcl, max_steps: usize) -> Opti
             let lits: BTreeSet<Lit> = cdcl.clause_lits(cr).into_iter().collect();
             if !f_clauses.contains(&lits) {
                 // External (saturate cross-feed) — can't justify.
-                return None;
+                bail!("axiom cr={} not in f.clauses (|c|={})", cr, lits.len());
             }
             let idx = proof.add(Step::axiom(&lits.iter().copied().collect()));
             step_of.insert(cr, idx);
             derived_of.insert(cr, lits);
         }
     }
-    let (last, acc) = emit_chain(
+    let r = emit_chain(
         &mut proof,
         &step_of,
         &derived_of,
         &pl.final_chain,
         max_steps,
-    )?;
+    );
+    let (last, acc) = match r {
+        Some(v) => v,
+        None => bail!("final_chain emit failed"),
+    };
     // 3. ∀-reduce to ⊥. The verifier allows ∀-reduce inline with `res`,
     // so the last `res` could already be ⊥ — but emit an explicit `ured`
     // for clarity when acc isn't already empty.
