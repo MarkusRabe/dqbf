@@ -2622,3 +2622,25 @@ Neither is a quick win; both are the *next* architectural project.
 The forcing-chain stitching of iter101 and the per-cell parameter
 tuning are exhausted.
 
+
+## iter106: unit-prop pre-filter for Padoa + constant interpolants
+
+`pec_alu_add_n8_k8_bb3_complete` (2134 e-vars) timed out with all 2134
+e-vars Padoa-defined and 2099 interpolated — the bottleneck wasn't the
+Padoa loop (1 round) but the per-`y` 2-copy CDCL clones in
+`extract_interpolants`.
+
+Architectural fix (Lead 1, item 1): `unit_prop_constants` BCPs
+`f.clauses` once from the empty assignment. Existentials propagated to
+a constant are dep-defined (constant Skolem), so they skip the Padoa
+loop entirely (added directly to `defined`) and `extract_interpolants`
+emits a constant-`Itp` (`root` ∈ {0,1}) for them with no CDCL clone.
+For `pec_alu_add_n8`: 395/2115 live e-vars are unit-prop constants;
+gates 1773→1520. The instance still times out — the 35 non-interpolated
+defined-y (carry chain, large interpolants) are the wall — but the
+saved time helps borderline cases.
+
+Result: 2700→2699 (timing noise; +2 −3). 0 INVALID; 1472-instance
+fuzz clean. Sound: `unit_prop_constants` only marks vars BCP'd from
+*unit clauses*, which the matrix entails directly; their constant
+interpolant trivially satisfies the dep restriction (no inputs).

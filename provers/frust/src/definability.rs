@@ -28,6 +28,72 @@ pub struct Def {
     pub root: u32,
 }
 
+/// BCP `f.clauses` from the empty assignment. Returns `value[v]` ∈
+/// {-1,0,1} per var (1-based; index 0 unused). Existentials with a
+/// non-zero value are unit-propagated constants — trivially defined,
+/// no Padoa check needed, and their interpolant is the constant.
+///
+/// This is the "pre-filter unit-propagated existentials" step (iter106):
+/// for circuit-like matrices a large fraction of e-vars are propagated
+/// constants (Tseitin gates over already-pinned inputs), and skipping
+/// the per-`y` 2-copy CDCL clone for them frees the budget for the
+/// genuinely hard ones.
+pub fn unit_prop_constants(f: &Formula) -> Vec<i8> {
+    let n = f.n_vars as usize;
+    let mut value = vec![0i8; n + 1];
+    let mut occ: Vec<Vec<usize>> = vec![Vec::new(); 2 * (n + 1)];
+    let lidx = |l: Lit| -> usize { 2 * var(l) as usize + if l > 0 { 0 } else { 1 } };
+    for (ci, c) in f.clauses.iter().enumerate() {
+        for &l in c {
+            occ[lidx(l)].push(ci);
+        }
+    }
+    let mut q: Vec<Lit> = f
+        .clauses
+        .iter()
+        .filter(|c| c.len() == 1)
+        .map(|c| c[0])
+        .collect();
+    while let Some(l) = q.pop() {
+        let v = var(l);
+        let want = if l > 0 { 1i8 } else { -1 };
+        if value[v as usize] != 0 {
+            if value[v as usize] != want {
+                // Conflict at level 0 — formula propositionally UNSAT.
+                // The Padoa loop will surface that; just stop here.
+                return value;
+            }
+            continue;
+        }
+        value[v as usize] = want;
+        // Watch clauses where ¬l appears: they may have become unit.
+        for &ci in &occ[lidx(-l)] {
+            let mut un: Option<Lit> = None;
+            let mut sat = false;
+            for &m in &f.clauses[ci] {
+                let mv = var(m) as usize;
+                if value[mv] == 0 {
+                    if un.is_some() {
+                        un = None;
+                        break;
+                    }
+                    un = Some(m);
+                } else if (value[mv] > 0) == (m > 0) {
+                    sat = true;
+                    break;
+                }
+            }
+            if !sat {
+                if let Some(u) = un {
+                    q.push(u);
+                }
+                // un=None && !sat: all-false → conflict; surface later.
+            }
+        }
+    }
+    value
+}
+
 /// Padoa fixpoint with selector-guarded link clauses so a single
 /// incremental CDCL instance serves all per-y checks. Returns `None`
 /// if the budget runs out before converging.
@@ -110,14 +176,36 @@ pub fn padoa_split(
         .collect();
     let is_sub = |z: &[u64], y: &[u64]| z.iter().zip(y).all(|(&a, &b)| a & !b == 0);
 
+    // Pre-filter: existentials that BCP to a constant from the empty
+    // assignment are trivially dep-defined (constant Skolem). Skipping
+    // them in the Padoa loop is the iter106 fix — for circuit-like
+    // matrices (`pec_alu_add_n8`: 2134 e-vars) a chunk are Tseitin
+    // gates over pinned inputs and don't need a 2-copy CDCL solve.
+    let prop = unit_prop_constants(f);
+    let n_prop_const = f
+        .deps
+        .keys()
+        .filter(|&&y| live.contains(&y) && prop[y as usize] != 0)
+        .count();
+    if debug && n_prop_const > 0 {
+        eprintln!(
+            "c [def] unit-prop pre-filter: {} of {} live e-vars are constants",
+            n_prop_const,
+            live.len()
+        );
+    }
     let mut defined: Vec<Var> = f
         .deps
         .keys()
         .copied()
-        .filter(|y| !live.contains(y))
+        .filter(|&y| !live.contains(&y) || prop[y as usize] != 0)
         .collect();
     let mut is_defined: HashSet<Var> = defined.iter().copied().collect();
-    let mut todo: Vec<Var> = live.iter().copied().collect();
+    let mut todo: Vec<Var> = live
+        .iter()
+        .copied()
+        .filter(|&y| prop[y as usize] == 0)
+        .collect();
     todo.sort_by_key(|&y| (deps[&y].len(), y));
 
     let budget_per = ((1_000_000 / live.len().max(1)) as u64).max(500);
@@ -290,12 +378,36 @@ pub fn extract_interpolants(
     let mut model = vec![0i8; 2 * n as usize + 1];
 
     let mut out: HashMap<Var, Def> = HashMap::new();
+    // iter106: unit-propagated existentials get a constant interpolant
+    // directly (`root` ∈ {0,1}). No 2-copy CDCL clone, no McMillan, no
+    // budget. They're already in `defined` (the Padoa pre-filter); this
+    // just shortcuts the interpolation. Constants are trivially
+    // dep(y)-functions so they can be linked by every later y.
+    let prop = unit_prop_constants(f);
+    let mut n_const = 0usize;
+    for &y in defined {
+        if !live.contains(&y) || prop[y as usize] == 0 {
+            continue;
+        }
+        let root = if prop[y as usize] > 0 { 1 } else { 0 };
+        out.insert(
+            y,
+            Def {
+                itp: Itp::new(),
+                root,
+            },
+        );
+        n_const += 1;
+    }
+    if debug && n_const > 0 {
+        eprintln!("c [def] {} constant interpolants from unit-prop", n_const);
+    }
     // Linkable z's: interpolated y's *and* free roots. Both are decided
     // — their Skolem function is known (an interpolant or the cell
     // table) — so subsequent y's can be unique-given-them. Roots come
     // first in `linkable` because they have the smallest dep (sort
     // order) and are processed first.
-    let mut linkable: Vec<Var> = Vec::new();
+    let mut linkable: Vec<Var> = out.keys().copied().collect();
     // y's already processed in this fixpoint with no progress possible:
     // - undef-y that came back SAT given current links → free root.
     //   It's *added* to `linkable` (others can reference it) but marked
