@@ -1,13 +1,27 @@
-"""Render a multi-solver benchmark JSONL to a self-contained HTML report.
+"""Render a multi-solver benchmark JSONL to an HTML report.
 
 Three tabs (Overview / Single solver / Compare), each with its own
-family + result filter, all driven by inline vanilla JS over an
-embedded copy of the result rows. Single file, no external assets,
-works offline.
+family + result filter, all driven by vanilla JS.
+
+Two output modes:
+- **inline** (`render`): single self-contained file; the result rows
+  are embedded as `const DATA=[...]`. Works offline, can be sent as
+  one file. ~8 MB for a full train-set run. Use for `results/train.html`.
+- **split** (`render_split`): a small HTML shell that fetches
+  `data/<name>.manifest.json` listing per-(solver, family) `.json.gz`
+  shards and assembles `DATA` in the browser. Shards are
+  content-addressed (hash of the gzipped bytes), so re-running a
+  bench where only one solver changed deduplicates to that solver's
+  shards. Backfilling a new family for an existing report = write its
+  shards + append paths to the manifest; the HTML and old shards
+  don't change. Needs HTTP (`python3 -m http.server`) — `fetch()` is
+  blocked over `file://`. Use for `docs/dev_reports/`.
 """
 
 from __future__ import annotations
 
+import gzip
+import hashlib
 import html as _html
 import json
 from collections import defaultdict
@@ -688,7 +702,7 @@ function applyDomain(){
   renderOverview(); renderSingle(); renderPair();
 }
 
-document.addEventListener("DOMContentLoaded",()=>{
+function appInit(){
   const SCOPES = [
     ["overview","tab-overview",renderOverview],
     ["single","tab-single",renderSingle],
@@ -706,7 +720,45 @@ document.addEventListener("DOMContentLoaded",()=>{
   for(const r of $$("#domain input[name=domain]")) r.addEventListener("change", applyDomain);
   applyDomain();
   showTab("tab-overview");
-});
+}
+"""
+
+# Inline mode: DATA is already defined; run appInit on DOM-ready.
+_JS_BOOT_INLINE = (
+    '<script>document.addEventListener("DOMContentLoaded",appInit);</script>'
+)
+
+# Split mode: DATA is empty until the manifest's shards are fetched and
+# decompressed (DecompressionStream — needs HTTP, not file://).
+_JS_BOOT_SPLIT = """\
+<script>
+async function _gunzipJson(url){
+  const r = await fetch(url);
+  if(!r.ok) throw new Error(`${url}: ${r.status}`);
+  const ds = new DecompressionStream("gzip");
+  const blob = await new Response(r.body.pipeThrough(ds)).blob();
+  return JSON.parse(await blob.text());
+}
+(async()=>{
+  try{
+    const mf = await (await fetch(MANIFEST_URL)).json();
+    const parts = await Promise.all(
+      mf.files.map(f => _gunzipJson(MANIFEST_URL.replace(/[^/]*$/, "") + f)));
+    DATA = parts.flat();
+    if(document.readyState === "loading")
+      document.addEventListener("DOMContentLoaded", appInit);
+    else appInit();
+  }catch(e){
+    const d = document.createElement("div");
+    d.className = "warn";
+    d.append("Failed to load report data: " + e + ". ");
+    const c = document.createElement("code");
+    c.textContent = "python3 -m http.server";
+    d.append("Serve over HTTP — e.g. ", c, " in docs/dev_reports/.");
+    document.body.prepend(d);
+  }
+})();
+</script>
 """
 
 
@@ -725,16 +777,16 @@ def _domain_selector(domains: dict[str, str]) -> str:
     return f'<div id="domain"><b>Domain:</b>{"".join(pills)}</div>'
 
 
-def render(rows: list[dict], out: Path, timeout_s: float) -> None:
+def _shell(rows: list[dict], timeout_s: float, data_block: str, boot: str) -> str:
+    """The HTML around `data_block`. `data_block` defines (or arranges
+    to define) `DATA`; everything else is static and rendered here."""
     solvers = sorted({r["solver"] for r in rows})
     families = sorted({r["family"] for r in rows})
     reg = registry()
     domains = {s: (reg[s].domain if s in reg else "dqbf") for s in solvers}
 
-    slim = [{k: r.get(k) for k in _JS_FIELDS} for r in rows]
-    data_block = (
+    meta_block = (
         "<script>"
-        f"const DATA={_js_json(slim)};"
         f"const SOLVERS={_js_json(solvers)};"
         f"const FAMILIES={_js_json(families)};"
         f"const DOMAINS={_js_json(domains)};"
@@ -750,7 +802,6 @@ def render(rows: list[dict], out: Path, timeout_s: float) -> None:
         '<button data-tab="tab-compare">Compare</button>'
         "</nav>"
     )
-
     overview_ctl = _local_controls("overview", families, "")
     b_default = solvers[1] if len(solvers) > 1 else (solvers[0] if solvers else "")
     single_ctl = _local_controls(
@@ -773,17 +824,81 @@ def render(rows: list[dict], out: Path, timeout_s: float) -> None:
         ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True
     ).stdout.strip()
     stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-    html = f"""<!doctype html><meta charset=utf-8><title>multi-solver report</title>
+    return f"""<!doctype html><meta charset=utf-8><title>multi-solver report</title>
 <style>{CSS}</style>
 <h1>Multi-solver report <small style="color:#888;font-size:.55em">@ {_esc(head)} · {_esc(stamp)}</small></h1>
 {_warnings(rows, solvers)}
 {data_block}
+{meta_block}
 {_domain_selector(domains)}
 {tabs_nav}
 <section id="tab-overview" class="tab panel">{overview_ctl}<div id="overview"></div></section>
 <section id="tab-single" class="tab panel">{single_ctl}<div id="single"></div></section>
 <section id="tab-compare" class="tab panel">{pair_ctl}<div id="pair"></div></section>
 <script>{_JS}</script>
+{boot}
 """
-    out.write_text(html)
+
+
+def render(rows: list[dict], out: Path, timeout_s: float) -> None:
+    """Self-contained inline report (one file, works over file://)."""
+    slim = [{k: r.get(k) for k in _JS_FIELDS} for r in rows]
+    data_block = f"<script>const DATA={_js_json(slim)};</script>"
+    out.write_text(_shell(rows, timeout_s, data_block, _JS_BOOT_INLINE))
     print(f"wrote {out}")
+
+
+def _slug(s: str) -> str:
+    return s.replace("/", "~").replace(" ", "_")
+
+
+def _write_shards(rows: list[dict], data_dir: Path) -> list[str]:
+    """Write per-(solver, family) gzipped JSON shards under `data_dir`.
+    Filenames are `<solver>--<family-slug>--<hash[:12]>.json.gz` where
+    the hash is over the gzipped bytes — content-addressed, so two
+    reports with identical results for a solver share the shard. Idempotent:
+    skips files that already exist. Returns the basenames written/found."""
+    data_dir.mkdir(parents=True, exist_ok=True)
+    by_sf: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    for r in rows:
+        by_sf[(r["solver"], r["family"])].append({k: r.get(k) for k in _JS_FIELDS})
+    files: list[str] = []
+    for (sv, fam), shard_rows in sorted(by_sf.items()):
+        # Sort for determinism (same content → same hash regardless of run order).
+        shard_rows.sort(key=lambda r: r["path"])
+        gz = gzip.compress(json.dumps(shard_rows, separators=(",", ":")).encode(), mtime=0)
+        h = hashlib.sha256(gz).hexdigest()[:12]
+        name = f"{_slug(sv)}--{_slug(fam)}--{h}.json.gz"
+        p = data_dir / name
+        if not p.exists():
+            p.write_bytes(gz)
+        files.append(name)
+    return files
+
+
+def render_split(rows: list[dict], out: Path, timeout_s: float) -> None:
+    """Shell HTML + content-addressed shards in `<out.parent>/data/`.
+    Backfill a new family later: append rows to that family's jsonl,
+    call `render_split` again with the *combined* rows, and only the new
+    family's shards (plus the manifest and HTML) change on disk."""
+    data_dir = out.parent / "data"
+    before = {p.name for p in data_dir.glob("*.json.gz")} if data_dir.exists() else set()
+    files = _write_shards(rows, data_dir)
+    manifest_name = f"{out.stem}.manifest.json"
+    (data_dir / manifest_name).write_text(json.dumps({"files": files}, indent=1))
+    data_block = f'<script>let DATA=[];const MANIFEST_URL="data/{manifest_name}";</script>'
+    out.write_text(_shell(rows, timeout_s, data_block, _JS_BOOT_SPLIT))
+    n_new = sum(1 for f in files if f not in before)
+    print(f"wrote {out} ({len(files)} shards, {n_new} new)")
+
+
+def extract_inline_data(html_path: Path) -> list[dict]:
+    """Pull the `DATA` array out of an inline-format report HTML, for
+    migrating old reports to the split format."""
+    import re
+
+    src = html_path.read_text()
+    m = re.search(r"const DATA\s*=\s*(\[.*?\]);", src, re.DOTALL)
+    if not m:
+        raise ValueError(f"{html_path}: no inline DATA block")
+    return json.loads(m.group(1).replace("<\\/", "</"))

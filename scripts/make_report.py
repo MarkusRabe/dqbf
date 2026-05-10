@@ -206,14 +206,51 @@ PREVIEW = "https://htmlpreview.github.io/?" + RAW
 def write_index() -> None:
     items = sorted(REPORTS.glob("20*.html"), reverse=True)
     lines = ["# dqbf — dev reports", ""]
-    lines.append("| date | label | view |")
-    lines.append("|---|---|---|")
+    lines.append(
+        "Reports from `2026-05-10` onward use the **split-data format**: "
+        "the HTML fetches per-(solver, family) `.json.gz` shards from "
+        "`data/`. Open them over HTTP — `python3 -m http.server` in this "
+        "directory — `fetch()` is blocked over `file://`. Older reports "
+        "are self-contained.\n"
+    )
+    lines.append("| date | label | size | view |")
+    lines.append("|---|---|---|---|")
     for p in items:
         parts = p.stem.split("_", 2)
         d = "_".join(parts[:2])
         lab = parts[2] if len(parts) > 2 else ""
-        lines.append(f"| {d} | {lab} | [rendered]({PREVIEW}{p.name}) · [source]({p.name}) |")
+        kb = p.stat().st_size // 1024
+        sz = f"{kb//1024}.{kb%1024//100}M" if kb > 1024 else f"{kb}K"
+        lines.append(f"| {d} | {lab} | {sz} | [rendered]({PREVIEW}{p.name}) · [source]({p.name}) |")
     (REPORTS / "README.md").write_text("\n".join(lines) + "\n")
+
+
+def archive(jsonl_path: str | Path, label: str, timeout_s: float = 10.0) -> Path:
+    """Render `jsonl_path` to `docs/dev_reports/<stamp>_<label>.html` in the
+    split-data format and refresh the index. This is the convention for
+    all reports from frust-v2.82 onward — call instead of
+    `cp results/train.html docs/dev_reports/...`."""
+    from benchmarks.runner.multi_report import render_split
+
+    rows = [json.loads(ln) for ln in Path(jsonl_path).read_text().splitlines() if ln.strip()]
+    REPORTS.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M")
+    out = REPORTS / f"{stamp}_{_slug(label)}.html"
+    render_split(rows, out, timeout_s)
+    write_index()
+    return out
+
+
+def migrate_inline(html_paths: list[Path], timeout_s: float = 10.0) -> None:
+    """Re-render old inline reports in the split format under the same
+    name (same stamp/label, new content). Seeds the shard pool so future
+    archives dedup against them."""
+    from benchmarks.runner.multi_report import extract_inline_data, render_split
+
+    for p in html_paths:
+        rows = extract_inline_data(p)
+        render_split(rows, p, timeout_s)
+    write_index()
 
 
 def _slug(s: str) -> str:
