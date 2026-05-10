@@ -754,11 +754,18 @@ async function _loadSolvers(names, status){
   if(!want.length) return;
   const files = want.flatMap(s => _manifest.solvers[s]);
   let n = 0;
-  const parts = await Promise.all(files.map(async f => {
+  // allSettled so one failed shard (transient CDN error, 1700+ shards
+  // over htmlpreview) doesn't kill the report — drop failures, log a
+  // count. The shard is one (solver, family) pair; a missing one shows
+  // a blank cell, which is degraded but usable.
+  const results = await Promise.allSettled(files.map(async f => {
     const r = await _gunzipJson(_dataBase + f);
     if(status) status.textContent = `Loading ${++n}/${files.length}…`;
     return r;
   }));
+  const parts = results.filter(r=>r.status==="fulfilled").map(r=>r.value);
+  const failed = results.filter(r=>r.status==="rejected").length;
+  if(failed) console.warn(`${failed}/${files.length} shards failed to load`);
   DATA = DATA.concat(parts.flat());
   for(const s of want) _loadedSolvers.add(s);
 }
@@ -860,11 +867,12 @@ async function _gunzipJson(url){
   }
   try{
     let n = 0;
-    const parts = await Promise.all(mf.files.map(async f => {
+    const results = await Promise.allSettled(mf.files.map(async f => {
       const r = await _gunzipJson(base + f);
       status.textContent = `Loading data… ${++n}/${mf.files.length}`;
       return r;
     }));
+    const parts = results.filter(r=>r.status==="fulfilled").map(r=>r.value);
     DATA = parts.flat();
     status.remove();
     if(document.readyState === "loading")
