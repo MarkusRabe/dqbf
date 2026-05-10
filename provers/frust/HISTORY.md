@@ -2414,3 +2414,16 @@ print (`{} forcings live`) is the only kept change.
 is invisible to the probe's "did anything change" diff — only the
 "+145 INVALID" verifier check caught it. The cert verifier is the
 soundness oracle, not the regression diff.
+
+## Refined-loop iteration 93: scale reprove deadline to remaining budget (+4 certs) (2026-05-10)
+
+**Hypothesis**: the `now + 1.5` reprove deadline was too tight for
+instances that decide quickly (small `now`) but need a longer
+chain→frp conversion. `over_w6_*` has 35 k crefs in the chain — the
+emit alone takes ~0.5 s. Scale the deadline to 60% of remaining,
+clamped to `[1.5, 6.0]`.
+
+**Result**: 2698/3571, 2168 valid certs (+4), 0 INVALID. Modest;
+the `chain emit failed` cases I sampled were all hitting the 500 k
+step cap, not the deadline. The cap is a separate (and probably
+correct) gate against pathological proofs.

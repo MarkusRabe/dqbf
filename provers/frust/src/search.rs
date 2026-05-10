@@ -307,7 +307,14 @@ pub fn solve(f: &Formula, cfg: &Config) -> Output {
                 }
                 crate::expand_state::Step::UnsatRow(row) => {
                     let now = start.elapsed().as_secs_f64();
-                    let dl = (now + 1.5).min(cfg.timeout_s - 0.2);
+                    // The verdict is known; reprove is best-effort cert
+                    // recovery. Give it up to 60% of the *remaining*
+                    // budget — the earlier `now + 1.5` cap dropped certs
+                    // for instances that decide quickly (now small) and
+                    // need a longer reprove (the chain → frp conversion
+                    // alone is ~0.5 s on `over_w6_*` with 35 k crefs).
+                    let remaining = cfg.timeout_s - 0.2 - now;
+                    let dl = now + (remaining * 0.6).clamp(1.5, 6.0).min(remaining.max(0.0));
                     let proof = if dl > now {
                         crate::proof_emit::reprove_row_unsat(
                             f,
