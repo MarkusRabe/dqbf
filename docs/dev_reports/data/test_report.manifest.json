@@ -1,0 +1,55 @@
+{
+ "solvers": {
+  "frust-v2.146": [
+   "frust-v2.146--dqbf_qbflib~balabanov--97969ef8d791.json.gz",
+   "frust-v2.146--dqbf_qbflib~bloem--b3cd68698670.json.gz",
+   "frust-v2.146--dqbf_qbflib~scholl--ff4cbfe09b8e.json.gz",
+   "frust-v2.146--dqbf_qbflib~tentrup--978ed30c82ca.json.gz"
+  ],
+  "dqbdd": [
+   "dqbdd--dqbf_qbflib~balabanov--8f4ca74b5856.json.gz",
+   "dqbdd--dqbf_qbflib~bloem--183c952558b6.json.gz",
+   "dqbdd--dqbf_qbflib~scholl--741cffe5dc0f.json.gz",
+   "dqbdd--dqbf_qbflib~tentrup--fa4397174a23.json.gz"
+  ],
+  "pedant": [
+   "pedant--dqbf_qbflib~balabanov--154c49c3412e.json.gz",
+   "pedant--dqbf_qbflib~bloem--1b4e8f7a0647.json.gz",
+   "pedant--dqbf_qbflib~scholl--295b3efdcaf8.json.gz",
+   "pedant--dqbf_qbflib~tentrup--33aa93da5f7c.json.gz"
+  ],
+  "hqs": [
+   "hqs--dqbf_qbflib~balabanov--ddb161eb4bc9.json.gz",
+   "hqs--dqbf_qbflib~bloem--6f4bc8fe9e61.json.gz",
+   "hqs--dqbf_qbflib~scholl--7f281dbabfd5.json.gz",
+   "hqs--dqbf_qbflib~tentrup--518788b3bb78.json.gz"
+  ],
+  "cadet": [
+   "cadet--dqbf_qbflib~balabanov--20fa187fa95d.json.gz",
+   "cadet--dqbf_qbflib~bloem--846a736891df.json.gz",
+   "cadet--dqbf_qbflib~scholl--e5509964dafe.json.gz",
+   "cadet--dqbf_qbflib~tentrup--ec33eb029146.json.gz"
+  ],
+  "caqe": [
+   "caqe--dqbf_qbflib~balabanov--f299165b7a01.json.gz",
+   "caqe--dqbf_qbflib~bloem--03b36d531e82.json.gz",
+   "caqe--dqbf_qbflib~scholl--92f50c9f1f27.json.gz",
+   "caqe--dqbf_qbflib~tentrup--617235db53d0.json.gz"
+  ]
+ },
+ "families": [
+  "dqbf_qbflib/balabanov",
+  "dqbf_qbflib/bloem",
+  "dqbf_qbflib/scholl",
+  "dqbf_qbflib/tentrup"
+ ],
+ "domains": {
+  "cadet": "qbf",
+  "caqe": "qbf",
+  "dqbdd": "dqbf",
+  "frust-v2.146": "dqbf",
+  "hqs": "dqbf",
+  "pedant": "dqbf"
+ },
+ "timeout": 10.0
+}

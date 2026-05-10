@@ -1,6 +1,8 @@
 # dqbf — dev reports
 
-**[Multi-solver report](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/report.html)** — one HTML, all solver versions. Toggle versions in the *solver versions* panel; only the latest of each is loaded by default. See [CHANGELOG.md](CHANGELOG.md) for the history of when each version was archived.
+**[Train-set report](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/report.html)** — one HTML, all solver versions. Toggle versions in the *solver versions* panel; only the latest of each is loaded by default. See [CHANGELOG.md](CHANGELOG.md) for the history of when each version was archived.
+
+**[Test-set report](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/test_report.html)** — same format, over `benchmarks/test/` (competition / external sets). Milestone evaluation only; **never optimize the loop against these results**.
 
 Loads per-(solver, family) `.json.gz` shards from `data/`. Needs HTTP — `python3 -m http.server` in this directory, or use the GitHub-preview link above (CDN-backed).
 
