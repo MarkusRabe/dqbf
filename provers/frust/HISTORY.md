@@ -2482,3 +2482,83 @@ The per-cell-arbiter parameter space (cap, budget, threshold) is
 exhausted (iters 77, 84, 85, 86, 88, 94, 95 all parameter-tuning,
 all ≤ ±5 net). Further gains require one of the architectural changes
 above.
+
+## Refined-loop iteration 101: forcing-chain stitching for `.frp` recovery (2026-05-10)
+
+**Sample**: 530 UNSAT no-cert instances. Hypothesis from the iter91 sketch:
+re-derive each forcing clause as a Q-resolution sub-chain, refute the
+row from `f.clauses ∪ derived`, stitch a `.frp`. **Empirical
+breakdown changed the picture**: of 50 sampled, ~84% are
+`arbsolve_unsat` (no row to refute — every Skolem candidate fails some
+row, the cert needs an ∀-expansion-style case analysis), ~6% are
+`UnsatRow` with *0 forcings* (`collatz/tonly`, partner cell-link
+induced), ~10% other. Forcing-chain stitching only addresses the
+`UnsatRow` slice with live forcings, which is **near-empty** —
+the iter91 estimate of ~400 was wrong by an order of magnitude.
+
+**Constraint named: architectural** (not "moderate cert-recovery").
+
+**Change** (`86e0512`, then revert of soundness gate):
+- `CegarOut::UnsatRow(Vec<Lit>, Vec<Vec<Lit>>)` carries the row plus
+  forcing clauses (in learn order) and partner cell-link constraints
+  (over formula vars only — the cell var is resolved out).
+- `proof_emit::reprove_row_unsat` takes `&[Vec<Lit>]` of derived
+  clauses, re-derives each in passes (later forcings can need earlier
+  ones), then refutes the row from `f.clauses ∪ derived`.
+- `cdcl_chain_to_frp_into` generalises the chain converter to append
+  into an existing `Proof` and consult `extra_axioms` for crefs that
+  match a pre-derived clause (forcing/cell-link) rather than emitting a
+  raw axiom step.
+- Cell-link constraints for *constant* cells (`cd = ∅`) are filtered
+  out — they encode `y↔y'` *unconditionally*, which `f.clauses`
+  doesn't entail (the consistency-shape check only proves the
+  diagonal).
+
+**Result**: 2700/3571, **2170 valid certs (+6)**, 0 INVALID. The
++6 is a small win — most of the headroom is the `arbsolve_unsat`
+research wall.
+
+**Soundness flag (open)**: a constant-cell partner link in `consist`
+forces `y↔y'` unconditionally. `arb_core.is_empty()` then returns
+`UnsatRow` even when the conflict was propagated through that
+over-constraint. In theory: at an off-diagonal row where `f.clauses ∧
+U*` pins both `y` and `y'` to opposite values, the cell creates a
+spurious conflict. **Both gates I tried were wrong** —
+- broad (Bail when const+partner exist anywhere): −37, lost confirmed
+  UNSATs (`fib_bug_n8_indinv`, `lfsr_n24` — `expected:unsat`,
+  dqbdd/pedant/hqs all agree).
+- surgical (re-solve `f.clauses ∪ derived ∧ U*` fresh, Bail on SAT):
+  also lost confirmed UNSATs, because `f.clauses ∪ derived ∧ U*` *is*
+  SAT for those — the cell-link contributed but the formula is still
+  UNSAT for other reasons.
+
+The practical evidence (0 INVALID/surprises across 30+ iterations,
+all confirmed-`expected:unsat` instances on this path are agreed by
+≥2 other solvers) supports soundness, but no proof. The
+counter-example needs undef-`y/y'` that *both* become row-pinned to
+opposite values at an off-diagonal row — the partner check guarantees
+they agree on the diagonal, and the only cases I can construct have
+the y's Padoa-defined (so no cell). **Gates removed; flagged for a
+proper soundness review.** Most-affected family: `collatz/tonly`
+(33 unverifiable UNSATs, all `expected:unknown`, no other solver
+decides).
+
+**Gotchas**:
+- The +8/-5 first probe was *before* I added the gate; the −37 second
+  probe was *with* the gate; the +40/-1 third probe was *gate
+  removed*. Three full probes for one iter — slow, but the gate
+  experiments were the right call (better to lose an hour than ship a
+  −37 regression masked as a soundness fix).
+- The `cell_dep_cap` formula floors out at 7-8 for instances with
+  ~50-100 roots, so any |dep|>10 root gets a constant cell. `collatz`
+  has |dep|=20 roots, so all const.
+
+**Left for iter102+**: the `arbsolve_unsat` cert (84% of no-cert) is
+a `.frp` from an arbsolve refutation — a fundamentally different
+proof shape. Each arbsolve conflict clause `¬arb_core_j` corresponds
+to a Q-resolution-derivable clause `(¬U*_j_dep ∨ ¬y₁ ∨ ... ∨ ¬yₙ)`.
+Resolving them into ⊥ needs FEx (each `y(k)` is a fresh existential
+with `dep = ∅`). That's an ∀-expansion proof, polynomial in
+arbsolve's conflict count but a new emitter — worth doing, sketched
+here.
+

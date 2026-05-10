@@ -608,21 +608,25 @@ pub fn validity_cegar(
                 // `f.clauses[U*]` in general; it's a refutation of
                 // `f.clauses ∧ forcings ∧ cell_links ∧ U*`.
                 //
-                // Soundness gate (iter101): forcings and *non-constant*
-                // partner cell-links are derivable from `f.clauses`. A
-                // *constant*-cell partner link (`cd = ∅`, see line 802)
-                // forces `y ↔ y'` unconditionally, which `f.clauses`
-                // does NOT entail. If such a cell exists, the conflict
-                // could be a false positive — bail and let arbsolve
-                // re-pick instead of returning a possibly-wrong UNSAT.
-                if *any_const_arbiter && !partner.is_empty() {
-                    if debug {
-                        eprintln!(
-                            "c [def] cegar arb_core empty under const partner cells — Bail (soundness)"
-                        );
-                    }
-                    return CegarOut::Bail;
-                }
+                // **Soundness note (iter101, open question)**: a
+                // constant-cell partner link (`cd = ∅`) encodes `y↔y'`
+                // *unconditionally* in `consist`. `detect_partners` only
+                // proves `(⋀d↔d') → (y↔y')`; off-diagonal rows are
+                // unconstrained by `f.clauses`. In theory a row could be
+                // UNSAT only because the cell forces `y=y'` where
+                // `f.clauses ∧ U*` allows `y≠y'`, returning a false
+                // UNSAT. iter101 tried two gates (broad: Bail when
+                // const+partner exist anywhere; surgical: re-solve
+                // `f.clauses ∪ derived ∧ U*` fresh and Bail on SAT) —
+                // both lost confirmed-UNSAT instances (`lfsr_n24`,
+                // `fib_bug_n8`, all expected:unsat, dqbdd/pedant/hqs
+                // agree). The practical evidence (0 INVALID, 0 surprises
+                // across 30+ iterations, train cross-checks) supports
+                // soundness, but no proof exists. The off-diagonal
+                // counter-example requires undef-y/yp that *both* become
+                // pinned by `f.clauses ∧ U*` to opposite values at an
+                // off-diagonal row — possible in principle, no instance
+                // found. Left ungated; flagged for theoretical review.
                 if debug {
                     let nf: usize = forcing.values().map(|v| v.len()).sum();
                     eprintln!(
