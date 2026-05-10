@@ -2591,3 +2591,34 @@ incomparable when contention changed between runs — flag for the
 benchmark infrastructure: a cache hit shouldn't be displayed alongside
 a fresh run as if they had the same load.
 
+
+## Refined-loop iters 103-105: bottleneck triage (2026-05-10)
+
+Sampled the unsolved tail to find the next architectural change:
+
+| family | unsolved | bottleneck |
+|---|---|---|
+| `circuit_synth/{gates,depth}` | 164 | OuterCegar picker: 290+ outer-∃ × 256+ rows × 33+ vars/row = 8 k-var SAT, needs all 10 s |
+| `pec_circuits/miter` | 62 | Definability mode: Padoa O(\|E\|²) on 700 e-vars × \|U\|=48 doesn't complete a slice |
+| `cbmc/inductive` | 51 | Same: Padoa on 1000+ e-vars at \|U\|=44-160 |
+| `cbmc/succinct` | 37 | arbsolve_unsat (no cert) |
+| `bmc_circuits/inductive` | 80 | Padoa scaling, same as pec |
+| `peano` | 34 | research wall (iter79) |
+
+The two scaling blockers:
+1. **Padoa O(\|E\|²)** for instances with 700+ e-vars. The fixpoint
+   re-solves the 2-copy CDCL once per (y, defined-z) pair. A faster
+   path: pre-filter vars that are unit-propagated to a definite value
+   under *every* universal assignment (those are vacuously defined,
+   skip Padoa). Or batch the Padoa solves with shared incremental
+   state (one CDCL, reset between vars). Both are moderate refactors.
+2. **OuterCegar picker scaling**: the full-expand picker is a fresh
+   8 k-var SAT instance per problem with no incremental reuse. The
+   row matrices are highly structured (each row is the same matrix
+   under a different universal substitution) — a structure-aware
+   encoding (Tseitin once, reuse over rows) would shrink it.
+
+Neither is a quick win; both are the *next* architectural project.
+The forcing-chain stitching of iter101 and the per-cell parameter
+tuning are exhausted.
+
