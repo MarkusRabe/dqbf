@@ -2785,3 +2785,38 @@ propagate through the 24-bit-wide latch in time).
 - Var-id is still the *deterministic last-resort* tiebreak — only
   matters when activity, |dep|, AND dep_key all tie. Acceptable: the
   goal is to remove the load-bearing dependence, not all references.
+
+## iter117-119: refine the conflict-directed worklist (Phase 1)
+
+**iter117**: blocker-readiness. Record per-y the *set* of blockers
+(not just a count). y's readiness = fraction of its blockers now
+linkable. Process highest-readiness first. This is the chain order:
+a y whose blockers are all linkable interpolates next, regardless of
+var-id. Train: −82 (vs −85 in iter116 alone). Roots:
+fwd 20/44/62 (was 22/42/69), rev 22/48/80 (was 22/57/262).
+
+**iter118 (reverted)**: dep-key removal from sort key. Worse — the
+dep-set hash separates the {1,2,3,4} and {5,6,7,8} sub-tiers which
+actually helps the chain bootstrap.
+
+**iter119 (reverted)**: stuck-count eager promotion (promote after
+2 same-blocker failures). Worse — promotes too aggressively, more
+roots. The clean deferred-promotion-with-readiness is better.
+
+**Phase 1 conclusion**: the conflict-directed VSIDS with blocker-
+readiness is order-independent (revid delta 10-30% vs 60-160% for the
+old var-id ordering) at a −82 train cost (~3%). The fundamental
+trade-off: eager promotion (the old code) bootstraps the chain in 1
+pass but bakes in the var-id order; deferred promotion is order-
+independent but takes O(roots) deadlock rounds. The blocker-readiness
+makes each round productive, but the round count is still the wall.
+
+**Lessons for Phase 2** (matrix-structure features):
+- The clause-neighbor graph is too dense (Tseitin + consistency
+  clauses) for BFS depth to discriminate.
+- The blocker SET (not count) is the key signal — it encodes the
+  exact dependency, not a proxy.
+- The dep-set hash within a |dep| tier matters (sub-tier separation
+  encodes the BMC current/next state structure).
+- A Tseitin gate-pattern detector could distinguish "defining" from
+  "consistency" clauses; the chain order is in the defining clauses.
