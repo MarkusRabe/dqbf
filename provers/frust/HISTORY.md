@@ -2820,3 +2820,11 @@ makes each round productive, but the round count is still the wall.
   encodes the BMC current/next state structure).
 - A Tseitin gate-pattern detector could distinguish "defining" from
   "consistency" clauses; the chain order is in the defining clauses.
+
+## iter120: blocker-aware skip
+
+Refine the linked_z skip: re-try a y if any of its blockers became
+linkable since the last failure (not just if linked_z grew). The
+blocker may not be a usable link (`dep ⊄ dep(y)`) but its rooting
+shrinks the symmetry space. Train: −72 (vs −82). Roots: fwd
+19/43/60/110 vs old 15/40/55/104 — within ~5-10% of var-id now.
