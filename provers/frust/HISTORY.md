@@ -2562,3 +2562,32 @@ with `dep = ∅`). That's an ∀-expansion proof, polynomial in
 arbsolve's conflict count but a new emitter — worth doing, sketched
 here.
 
+
+## Refined-loop iteration 102: saturate-budget cap when expand pending (2026-05-10, reverted)
+
+**Hypothesis**: `circuit_synth/gates` instances enter OuterCegar with
+~290 outer-∃; the picker's full-expand SAT solve needs every conflict-
+budget chunk it can get, but saturate's `choose_fork`/given-clause loop
+shows up as 25% of wall time in a perf profile. Cap saturate's slice
+to 0.5 s when expand is still Pending.
+
+**Result**: 2700/3571, 2169 valid (−1), 0 INVALID. Probe diff +3/-3
+(noise). **Reverted** — saturate's cross-feed clauses help some
+instances; the cap is a wash. The picker bottleneck is real but the
+fix isn't budget reallocation; it needs a smarter picker (incremental
+encoding, reuse the row decompositions across solver restarts) or a
+different mode (the row matrices are highly structured — circuit
+synthesis encodings, all rows share the same gate template).
+
+**Gotcha**: the iter101 report's `frust-v2.101 = 2657 vs frust-v2.95 =
+2729` looked like a −72 regression but is a **cache-vs-fresh
+artifact**: the v2.95 column in the report is cached from a less-
+contended run; v2.101's column was run fresh under j=32 with 11
+solvers contending. Direct re-test of the 78 "lost" instances shows
+identical timing for both binaries (all ~10.4 s timeout in isolation).
+The probe (single-solver j=32) is the fair baseline: iter101 was +5/+6
+over iter100, not −72. The cache makes the report's frust-vX columns
+incomparable when contention changed between runs — flag for the
+benchmark infrastructure: a cache hit shouldn't be displayed alongside
+a fresh run as if they had the same load.
+
