@@ -2449,3 +2449,36 @@ flip-solve costs ~10 ms/round; for small-dep undef-y the cell is
 cheaper and exact. iter88's lesson holds: forcing complements cells,
 but only when it *generalizes* (long-dep undef-y need a forcing to
 cover a cube; short-dep undef-y are already point-precise with cells).
+
+## Refined-loop iters 96-100: report and noise-floor characterisation (2026-05-10)
+
+iter96 report: frust-v2.95 = 2729/3571 (76%), 2148 valid certs,
+**+257 over dqbdd**. The probe-vs-report variance (~30 instances) is
+pure load/timing noise; the +257 lead has been stable across 5 reports
+(iters 78, 82, 88, 92, 96).
+
+Iters 89-95 net: +1 solved, +7 valid certs, 0 INVALID. The
+iter76 interpolation-chain breakthrough (+239) was the architectural
+win for this round; iters 89-95 confirmed the remaining unsolved
+families are all at hard architectural walls:
+
+- **arbsolve-exhaustion UNSAT certs** (~400 instances): proving a
+  CEGAR refutation as Q-resolution requires "forcing-chain
+  stitching" — re-derive each forcing clause's flip-solve refutation,
+  emit them as derived clauses, then refute the row from
+  `f.clauses + derived-forcings`. Moderate cert-recovery project.
+- **constant-arbiter Bail** (`pec_circuits/_complete`,
+  `cbmc/inductive`, `circuit_synth/*`): roots with `|dep|>13` need a
+  circuit-form Skolem cert. The forcing+default mechanism (pedant's
+  "default function") needs the const-arbiter cell-link to be
+  *conditional on no forcing matching* — a Tseitin-encoded
+  un-covered indicator, ~50 lines, but soundness-sensitive. Deferred
+  with a sketch in iter90.
+- **`peano`, `collatz`, `dep_cycle`**: spec-by-recursion families
+  where the Skolem isn't pointwise determinable; need
+  invariant-strengthening or counterexample-guided SFEx. Research wall.
+
+The per-cell-arbiter parameter space (cap, budget, threshold) is
+exhausted (iters 77, 84, 85, 86, 88, 94, 95 all parameter-tuning,
+all ≤ ±5 net). Further gains require one of the architectural changes
+above.
