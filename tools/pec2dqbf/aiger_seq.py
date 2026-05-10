@@ -62,7 +62,16 @@ def parse_seq_aag(text: str) -> SeqAig:
     hdr = lines[0].split()
     if hdr[0] != "aag" or len(hdr) < 6:
         raise ValueError(f"bad AIGER header: {lines[0]!r}")
+    # AIGER 1.9 header: aag M I L O A [B [C [J [F]]]]. Pre-1.9 has only
+    # the first 6 fields. HWMCC instances use B (bad-state outputs)
+    # rather than O. We treat them like outputs — `bad` is whichever is
+    # first — and ignore C/J/F (constraint/justice/fairness, used for
+    # liveness which our BMC encoders don't model).
     m, ni, nl, no, na = (int(x) for x in hdr[1:6])
+    nb = int(hdr[6]) if len(hdr) > 6 else 0
+    nc = int(hdr[7]) if len(hdr) > 7 else 0
+    nj = int(hdr[8]) if len(hdr) > 8 else 0
+    nf = int(hdr[9]) if len(hdr) > 9 else 0
     pos = 1
     inputs = [int(lines[pos + k]) for k in range(ni)]
     pos += ni
@@ -73,6 +82,9 @@ def parse_seq_aag(text: str) -> SeqAig:
     pos += nl
     outputs = [int(lines[pos + k]) for k in range(no)]
     pos += no
+    bads = [int(lines[pos + k]) for k in range(nb)]
+    pos += nb
+    pos += nc + nj + nf  # skip constraints/justice/fairness
     gates: list[tuple[int, int, int]] = []
     for k in range(na):
         g, a, b = (int(t) for t in lines[pos + k].split())
@@ -80,12 +92,13 @@ def parse_seq_aag(text: str) -> SeqAig:
     pos += na
     syms: dict[str, str] = {}
     for ln in lines[pos:]:
-        if ln[0] in "iloc" and " " in ln:
+        if ln[0] in "ilobc" and " " in ln:
             key, name = ln.split(" ", 1)
             syms[key] = name
         elif ln == "c":
             break
-    return SeqAig(m, inputs, latches, outputs, gates, syms)
+    # Treat bad-state outputs as outputs: `bad` returns outputs[0].
+    return SeqAig(m, inputs, latches, outputs or bads, gates, syms)
 
 
 def load_seq_aag(path: str | Path) -> SeqAig:
