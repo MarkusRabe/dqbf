@@ -127,14 +127,29 @@ def _aag_text(aig: Path) -> str:
         out.unlink(missing_ok=True)
 
 
-def _aig_size(aig: Path) -> int:
-    """The AIGER header field `M` (max var index) as a circuit-size proxy."""
+def _aig_header(aig: Path) -> list[int]:
     head = aig.open("rb").read(64).split(b"\n", 1)[0].decode(errors="replace")
     parts = head.split()
     try:
-        return int(parts[1])
-    except (IndexError, ValueError):
-        return 1 << 30
+        return [int(x) for x in parts[1:]]
+    except ValueError:
+        return [1 << 30]
+
+
+def _aig_size(aig: Path) -> int:
+    """The AIGER header field `M` (max var index) as a circuit-size proxy."""
+    h = _aig_header(aig)
+    return h[0] if h else (1 << 30)
+
+
+def _has_constraints(aig: Path) -> bool:
+    """AIGER 1.9 C/J/F fields. Our BMC encoders ignore invariant
+    constraints / justice / fairness, so encoding such a circuit asks a
+    *different* (more permissive) question and would silently disagree
+    with abc/HWMCC's verdict. Skip them."""
+    h = _aig_header(aig)
+    # h = [M, I, L, O, A, B, C, J, F] — indices 6, 7, 8 are C/J/F.
+    return any(h[i] for i in range(6, min(9, len(h))))
 
 
 @click.command()
@@ -145,10 +160,15 @@ def _aig_size(aig: Path) -> int:
 def main(out: str, n_smallest: int, bounds: str, max_vars: int) -> None:
     base = Path(out)
     ks = [int(x) for x in bounds.split(",")]
-    aigs = sorted(INSTANCES.rglob("*.aig"), key=_aig_size)[:n_smallest]
-    if not aigs:
+    all_aigs = sorted(INSTANCES.rglob("*.aig"), key=_aig_size)
+    if not all_aigs:
         print("no .aig under instances/ — run download.sh first", file=sys.stderr)
         sys.exit(1)
+    # Filter circuits with C/J/F sections — encoding them would ignore
+    # the constraints and silently disagree with HWMCC's verdict.
+    aigs = [a for a in all_aigs if not _has_constraints(a)][:n_smallest]
+    n_filtered = sum(1 for a in all_aigs if _has_constraints(a))
+    print(f"filtered {n_filtered}/{len(all_aigs)} circuits with C/J/F sections")
     results = _load_results()
     manifests: dict[tuple[str, str], list[dict]] = {}
     skipped: list[str] = []
