@@ -4,6 +4,7 @@ Reports from `2026-05-10` onward use the **split-data format**: the HTML fetches
 
 | date | label | size | view |
 |---|---|---|---|
+| 2026-05-10_0200 | iter96-noisefloor | 156K | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-10_0200_iter96-noisefloor.html) · [source](2026-05-10_0200_iter96-noisefloor.html) |
 | 2026-05-10_0136 | iter92-prooflog-fixes | 156K | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-10_0136_iter92-prooflog-fixes.html) · [source](2026-05-10_0136_iter92-prooflog-fixes.html) |
 | 2026-05-10_0026 | iter88-univ-subst | 156K | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-10_0026_iter88-univ-subst.html) · [source](2026-05-10_0026_iter88-univ-subst.html) |
 | 2026-05-09_2257 | iter82-bitset-mc-skip | 156K | [rendered](https://htmlpreview.github.io/?https://raw.githubusercontent.com/MarkusRabe/dqbf/main/docs/dev_reports/2026-05-09_2257_iter82-bitset-mc-skip.html) · [source](2026-05-09_2257_iter82-bitset-mc-skip.html) |
