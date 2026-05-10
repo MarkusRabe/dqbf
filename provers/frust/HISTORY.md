@@ -2732,3 +2732,56 @@ clusters:
 The 163 circuit_synth instances all enter `OuterCegar` and stall at
 the full-expand picker (256 rows × ~100 outer-∃). The picker SAT
 encoding is fresh per problem — sharing the gate templates would help.
+
+## iter116: conflict-directed VSIDS worklist (order-independence)
+
+**Goal (Markus-directed)**: replace the var-id-as-unroll-order
+tiebreak in `extract_interpolants` with a content-based heuristic.
+The var-id tiebreak was load-bearing (iter111 −155); reversing or
+shuffling existential IDs (`scripts/revid.py`) nearly doubled the
+root count and blew the cell budget.
+
+**Approach**: conflict-directed activity (VSIDS). When `y` fails to
+interpolate (the 2-copy CDCL is SAT), the model gives a "symmetry
+witness" — every clause-neighbor `z` where `z_A ≠ z_B` is a blocker
+for `y`. Bump every blocker; process highest-activity first. On
+deadlock (no progress), promote the highest-activity undef-y to root
+(it was blocking the most other y's). Per-y `linked_z`-size skip
+prevents O(|cand| × rounds) re-solves.
+
+Three approaches explored and discarded en route:
+1. Heap-based activity bump (clause-neighbor count): O(|cand| × bumps)
+   solves, try_cap blowup.
+2. Round-based activity bump (linkable-neighbor count): too coarse,
+   −138 train.
+3. BFS depth from linkable seeds: the clause-neighbor graph is dense
+   (Tseitin + consistency clauses), depths saturate at 2-3 hops.
+4. Conflict-directed (committed): the 2-copy SAT model is the *exact*
+   blocker signal the static sort encodes by var-id.
+
+**Order-independence** (`bmc_circuits/succinct/updown`):
+
+| | fwd | rev | shf |
+|---|---:|---:|---:|
+| n4_k008 (old: 15/24/22) | 22 | 22 | 22 |
+| n16_k024 (old: 40/84/86) | 42 | 57 | 57 |
+| n24_k008 (old: 55/124/118) | 69 | 262 | 310 |
+| n12_k024 (old: 32/?/?) | 39 | 42 | 45 |
+| n8_k024 (old: 24/?/?) | 30 | 32 | 35 |
+
+**Trade-off**: 2705 → 2620 on train (−85). Forward-ID root counts are
+~20-30% above the var-id heuristic. The hard remainder: `n24_k008`
+where the rev/shf deltas are still large (the chain's bumps don't
+propagate through the 24-bit-wide latch in time).
+
+**Gotchas**:
+- The clause-neighbor graph is dense (avg degree 5-18) because the
+  consistency clauses (`y_t(s)=y_t(s')`) link cross-row gates. BFS
+  depth saturates; only the conflict signal separates the chain.
+- Without the `linked_z`-size skip, every pending y is re-solved
+  every round (n24_k008: 48 rounds × 435 candidates ≈ 20k solves vs.
+  the old code's ~870). The skip cuts to "only when a relevant
+  linkable was added."
+- Var-id is still the *deterministic last-resort* tiebreak — only
+  matters when activity, |dep|, AND dep_key all tie. Acceptable: the
+  goal is to remove the load-bearing dependence, not all references.
