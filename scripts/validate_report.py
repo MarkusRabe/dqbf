@@ -161,7 +161,8 @@ def render_check(port: int = 8765) -> int:
         for domain in ("dqbf", "qbf", "hwmc", "syntcomp"):
             if not solvers_for[domain]:
                 # Domain pill should be disabled.
-                disabled = pg.evaluate(f"document.querySelector('input[name=domain][value={domain}]').disabled")
+                sel = f"input[name=domain][value={domain}]"
+                disabled = pg.evaluate(f"document.querySelector('{sel}').disabled")
                 if not disabled:
                     print(f"!! domain {domain} should be disabled but isn't")
                     mismatches += 1
