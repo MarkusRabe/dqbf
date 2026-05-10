@@ -2882,3 +2882,44 @@ better content signal would be a *full-formula BCP probe under a few
 random universal assignments*: the order in which existentials get
 unit-propagated IS the chain order, and it's content-derived. This
 is `O(|cand|)` extra BCP per probe — cheap. Worth trying as iter125+.
+
+## iter121-145: order-independence wrap-up
+
+iter121-125 explored Phase 3 leads (BCP probe ordering, ML feature
+analysis); none beat the conflict-directed VSIDS from iter120. The
+remaining iterations were reserved for ML model training; the feature
+analysis (spearman 0.48 for the best linear combination) shows the
+chain order isn't statically predictable, so the model wasn't built.
+
+**iter120 report** (frust-v2.120): 2557/3571 vs frust-v2.115 2663
+(−106 under bench contention; −72 on the probe). Still leads dqbdd
+(2472) by +85.
+
+**iter121 (reverted)**: BCP-probe ordering — run BCP under random
+universal assignments, use the propagation order as the worklist
+priority. Helps `updown` (−3 roots) but blows up `cmp_pipe`
+(110→360): cmp_pipe's matrix doesn't propagate from universal seeds
+in chain order (the comparators have wide fan-in).
+
+**Final state**: the conflict-directed VSIDS with blocker-readiness
++ blocker-aware skip (iter120, `e0123cb`) is the committed
+order-independent ordering. Trade-off documented honestly:
+- forward-ID root counts: ~10% above var-id (15→19, 40→43, 55→60,
+  104→110 on the updown/cmp_pipe samples)
+- reversed/shuffled-ID root deltas: 5-30% (was 60-160% with var-id)
+- train-set cost: −72 to −106 (~3-4%)
+
+**Remaining hard cases**: `updown_n24_k008` (60 fwd → 209 rev) and
+`cmp_pipe_n16_k008` (110 fwd → 375 rev). The chain has hundreds of
+y's and the round-based fixpoint doesn't converge before the 10s
+deadline under the worst processing orders. A faster convergence
+would need either a topo-sort precomputation (complex on the dense
+clause graph) or learned chain-position predictions (the static
+features don't carry the signal).
+
+**Decision deferred to Markus**: the var-id ordering can be restored
+(`git revert e0123cb..HEAD`) if the −72 cost outweighs the
+order-independence benefit. The regression test
+(`tests/integration/tiny/revid_chain_sat.dqdimacs`) and the
+`scripts/revid.py` tool stay either way to detect future encoders
+that violate the var-id-as-unroll-order assumption.
