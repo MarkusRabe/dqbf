@@ -613,12 +613,16 @@ pub fn extract_interpolants(
                 .filter(|&z| z != y && is_sub(&dep_bits[&z], dyb))
                 .collect();
             // Skip if the *relevant* link set hasn't grown since last
-            // failure. The linkable set always grows, but `y` only
-            // benefits from new z's with `dep(z) ⊆ dep(y)` — that's what
-            // `linked_z` captures. Without this, every pending y is
-            // re-solved every round (O(|cand| × rounds) tries, ~50× the
-            // work the static sort needs for a chain).
-            if last_failed_at.get(&y).is_some_and(|&l| l >= linked_z.len()) {
+            // failure AND no blocker became linkable. The linked_z size
+            // catches the general case; the blocker check catches the
+            // case where a blocker became linkable but linked_z didn't
+            // grow (e.g. dep(blocker) ⊄ dep(y), so it's not a link
+            // for y but its rooting may have shrunk y's search space).
+            let blocker_satisfied = blocker_set
+                .get(&y)
+                .map(|bs| bs.iter().any(|z| out.contains_key(z) || decided.contains(z)))
+                .unwrap_or(false);
+            if last_failed_at.get(&y).is_some_and(|&l| l >= linked_z.len()) && !blocker_satisfied {
                 continue;
             }
             // Test on the shared CDCL (no proof log, no clone).
