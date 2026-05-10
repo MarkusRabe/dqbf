@@ -2828,3 +2828,57 @@ linkable since the last failure (not just if linked_z grew). The
 blocker may not be a usable link (`dep ⊄ dep(y)`) but its rooting
 shrinks the symmetry space. Train: −72 (vs −82). Roots: fwd
 19/43/60/110 vs old 15/40/55/104 — within ~5-10% of var-id now.
+
+## iter121-125: order-independence — Phase 1+2 conclusion
+
+**Summary**: 5 iterations of refining the conflict-directed VSIDS
+worklist. The trajectory:
+
+| iter | change | train Δ | fwd roots (n4/n16/n24/cmp) |
+|---|---|---:|---|
+| baseline (var-id) | — | 2705 | 15/40/55/104 |
+| 116 | conflict-directed VSIDS | −85 | 22/42/69/290 |
+| 117 | + blocker-readiness | −82 | 20/44/62/111 |
+| 118 (rev) | dep-key removal | worse | — |
+| 119 (rev) | stuck-count eager | worse | — |
+| 120 | + blocker-aware skip | −72 | 19/43/60/110 |
+
+**Order-independence achieved (partial)**: forward/reversed root
+deltas dropped from ~60-160% (var-id) to ~10-30% on most instances.
+`updown_n24_k008` reversed remains hard (60→209): the chain has more
+y's than the conflict-directed signal can order before the deadline.
+
+**Cost**: −72 train (~2.7%). Mostly `bmc_circuits/succinct` and
+`cbmc/succinct` instances near the timeout boundary.
+
+**The fundamental trade-off** (explored exhaustively across 8
+sub-experiments): the static var-id sort + eager root promotion
+bootstraps the chain in **one pass** because (a) var-id encodes the
+chain order, (b) eager promotion adds a SAT-y to `linkable`
+immediately. Removing (a) requires (b) to be deferred (else the wrong
+root is baked in), and deferred promotion takes O(roots) deadlock
+rounds. The conflict-directed signal makes each round productive but
+can't collapse the round count without knowing the chain order in
+advance — which requires either the var-id contract or a model.
+
+**Phase 3 (ML model) feasibility**: feature/var-id correlation on
+12k existentials from 30 BMC succinct instances:
+
+| feature | spearman r |
+|---|---:|
+| BFS depth from constants | 0.59 |
+| occurrence count | −0.36 |
+| short-clause degree | −0.40 |
+| linear combination | 0.48 |
+
+A 0.48 spearman is too weak to replace var-id. The chain order is
+genuinely hard to predict from static structure: the consistency
+clauses (cross-row gate equality) make the clause graph dense, and
+the Tseitin defining clauses don't have a unique syntactic signature.
+
+**Recommendation**: the conflict-directed VSIDS at −72 is a
+defensible trade-off. For the BMC succinct family specifically, a
+better content signal would be a *full-formula BCP probe under a few
+random universal assignments*: the order in which existentials get
+unit-propagated IS the chain order, and it's content-derived. This
+is `O(|cand|)` extra BCP per probe — cheap. Worth trying as iter125+.
