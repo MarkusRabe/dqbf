@@ -307,6 +307,7 @@ pub fn padoa_split(
 /// CEGAR loop must search. Their cell count is what arbsolve has to
 /// enumerate, so shrinking 138→5 collapses the round count.
 ///
+
 /// Returns `(interpolants, roots)`. `roots ⊆ undefined`.
 pub fn extract_interpolants(
     f: &Formula,
@@ -332,16 +333,54 @@ pub fn extract_interpolants(
         .flat_map(|c| c.iter().map(|&l| var(l)))
         .collect();
     let undef_set: HashSet<Var> = undefined.iter().copied().collect();
-    let mut order: Vec<Var> = defined
+    let candidates: Vec<Var> = defined
         .iter()
         .chain(undefined.iter())
         .copied()
         .filter(|y| live.contains(y))
         .collect();
-    // Process by (|dep|, var-id). Var-id is the BMC unrolling order for
-    // succinct/inductive encodings (step-0 vars precede step-1), so the
-    // chain `y_0 → y_1 → …` bootstraps from one root, not k of them.
-    order.sort_by_key(|&y| (f.deps[&y].len(), y));
+    let cand_set: HashSet<Var> = candidates.iter().copied().collect();
+    // Clause-neighbor adjacency: y ~ z iff some clause contains both.
+    // Used for VSIDS-style activity bumping — when y becomes linkable,
+    // bump every undecided z it shares a clause with (z might now be
+    // interpolatable using y as a link). This is the content-based
+    // signal that replaces the var-id-as-unroll-order heuristic; see
+    // `feedback_no_var_id_dep` and HISTORY iter116.
+    let mut neighbors: HashMap<Var, Vec<Var>> =
+        candidates.iter().map(|&y| (y, Vec::new())).collect();
+    {
+        let mut seen: HashSet<(Var, Var)> = HashSet::new();
+        for c in &f.clauses {
+            let cvs: Vec<Var> = c
+                .iter()
+                .map(|&l| var(l))
+                .filter(|v| cand_set.contains(v))
+                .collect();
+            for i in 0..cvs.len() {
+                for j in (i + 1)..cvs.len() {
+                    let (a, b) = (cvs[i], cvs[j]);
+                    if a != b && seen.insert((a.min(b), a.max(b))) {
+                        neighbors.get_mut(&a).unwrap().push(b);
+                        neighbors.get_mut(&b).unwrap().push(a);
+                    }
+                }
+            }
+        }
+    }
+    // Content-based deterministic tiebreak: hash of the dep set (lex
+    // sorted). Two y's with identical content (same dep set, same
+    // clause-neighbor structure) are interchangeable; this gives a
+    // stable but ID-independent order between them.
+    let dep_key: HashMap<Var, u64> = candidates
+        .iter()
+        .map(|&y| {
+            let mut h: u64 = 0;
+            for &d in &f.deps[&y] {
+                h = h.wrapping_mul(0x100_0000_01B3).wrapping_add(d as u64);
+            }
+            (y, h)
+        })
+        .collect();
 
     // Bitset dep representation: the linkable-z subset check is
     // `O(|order|^2 × |U|)` over the fixpoint. With `BTreeSet::is_subset`
@@ -461,16 +500,78 @@ pub fn extract_interpolants(
     // - any y the budget hit — re-trying every pass burns the deadline.
     let mut decided: HashSet<Var> = HashSet::new();
     let mut roots: Vec<Var> = Vec::new();
-    // Fixpoint: each pass links z's already in `linkable`, so the
-    // reference graph stays acyclic by construction.
-    'passes: loop {
-        let before = out.len() + roots.len();
-        for &y in &order {
+    // ---- VSIDS-style adaptive worklist (iter116) -----------------------
+    // Replaces the static `(|dep|, var-id)` sort: var-id encoded the
+    // BMC-unrolling step order for our generators, an unstated contract
+    // that breaks on a non-conforming encoder (`scripts/revid.py` →
+    // 24 roots vs 15 on `updown_n4_k008`). The worklist is content-driven:
+    //
+    //   activity[y] = #linkable clause-neighbors (signal: y can use them
+    //                 as interpolation links → likely interpolatable).
+    //   tiebreak    = (|dep(y)|, dep-set hash) — content, not var-id.
+    //
+    // - A successful interpolation bumps every undecided clause-neighbor
+    //   (the new linkable z opens a path).
+    // - A SAT-y (not interpolatable with the current links) is *deferred*,
+    //   not promoted to root immediately. It re-enters the queue at its
+    //   current activity; if a neighbor later becomes linkable, the bump
+    //   gives it another shot before any root promotion.
+    // - On deadlock (queue drained, no progress, some y's pending):
+    //   promote the pending undef-y with the *lowest* activity to root —
+    //   it has the fewest linkable neighbors, so it's the most likely to
+    //   be a true root rather than a chain link waiting on a predecessor.
+    //   Bump its neighbors and retry.
+    //
+    // Convergence: O(roots) deadlock rounds × O(|candidates|) tries. For
+    // a chain that bootstraps from constants (the BMC succinct case)
+    // there is no deadlock and the bump propagation finishes in one round
+    // regardless of processing order.
+    // Pending: candidates not yet decided.
+    let mut pending: Vec<Var> = candidates
+        .iter()
+        .copied()
+        .filter(|y| !out.contains_key(y) && !decided.contains(y))
+        .collect();
+    // `last_failed_at[y]` records the linkable-set size at which `y`
+    // last failed. Skip `y` in the next round if the set hasn't grown.
+    let mut last_failed_at: HashMap<Var, usize> = HashMap::new();
+    // Conflict-directed activity (VSIDS): when `y` fails (SAT), the
+    // 2-copy SAT model gives an assignment where `y_A ≠ y_B`. Every
+    // clause-neighbor `z` that *also* differs (`z_A ≠ z_B`) is a
+    // "blocker" for `y` — linking `z` would break the symmetry and let
+    // `y` interpolate. Bump every blocker; process highest-activity
+    // first. Geometric decay so old conflicts age out. This is the
+    // content-derived signal Markus asked for ("heuristics like
+    // VSIDS"); it replaces the var-id-as-unroll-order heuristic. See
+    // `feedback_no_var_id_dep` and HISTORY iter116.
+    let mut conflict_act: HashMap<Var, f64> = candidates.iter().map(|&y| (y, 0.0)).collect();
+    let mut conflict_inc: f64 = 1.0;
+    const CONFLICT_DECAY: f64 = 1.05;
+    let mut n_rounds = 0usize;
+    let mut n_bumps = 0usize;
+    'rounds: loop {
+        n_rounds += 1;
+        if start.elapsed().as_secs_f64() >= deadline {
+            break;
+        }
+        pending.retain(|y| !out.contains_key(y) && !decided.contains(y));
+        if pending.is_empty() {
+            break;
+        }
+        // Sort: conflict activity (desc), then |dep| (asc), dep hash,
+        // var-id (deterministic last resort).
+        let act_q: HashMap<Var, u64> = pending
+            .iter()
+            .map(|&y| (y, (conflict_act[&y] * 1024.0) as u64))
+            .collect();
+        pending.sort_by_key(|&y| (u64::MAX - act_q[&y], f.deps[&y].len(), dep_key[&y], y));
+        let mut progress = false;
+        for &y in &pending.clone() {
             if out.contains_key(&y) || decided.contains(&y) {
                 continue;
             }
             if start.elapsed().as_secs_f64() >= deadline {
-                break 'passes;
+                break 'rounds;
             }
             let dy: BTreeSet<Var> = f.deps[&y].clone();
             let dyb = &dep_bits[&y];
@@ -479,35 +580,45 @@ pub fn extract_interpolants(
                 .copied()
                 .filter(|&z| z != y && is_sub(&dep_bits[&z], dyb))
                 .collect();
+            // Skip if the *relevant* link set hasn't grown since last
+            // failure. The linkable set always grows, but `y` only
+            // benefits from new z's with `dep(z) ⊆ dep(y)` — that's what
+            // `linked_z` captures. Without this, every pending y is
+            // re-solved every round (O(|cand| × rounds) tries, ~50× the
+            // work the static sort needs for a chain).
+            if last_failed_at.get(&y).is_some_and(|&l| l >= linked_z.len()) {
+                continue;
+            }
             // Test on the shared CDCL (no proof log, no clone).
             let mut sh_assump: Vec<Lit> = vec![y as Lit, -shift(y as Lit)];
             for &u in dy.iter().chain(linked_z.iter()) {
                 sh_assump.push(sel2[&u]);
             }
             let sh_sat = shared.solve(&sh_assump, &mut shared_model, 50_000);
-            let unsat = if shared.budget_hit {
-                // Fall through to the clone path which has its own
-                // budget; on a second budget-hit, treat as not-defined
-                // and retry next pass (the original behaviour).
-                false
-            } else if sh_sat {
-                false
-            } else {
-                true
-            };
-            if !unsat && !shared.budget_hit {
-                // SAT — y not interpolatable with this link set. No
-                // clone needed.
-                if undef_set.contains(&y) {
-                    decided.insert(y);
-                    roots.push(y);
-                    linkable.push(y);
+            if !shared.budget_hit && sh_sat {
+                // SAT — not interpolatable. Bump the blockers.
+                for &z in neighbors.get(&y).map(|v| v.as_slice()).unwrap_or(&[]) {
+                    if out.contains_key(&z) || decided.contains(&z) {
+                        continue;
+                    }
+                    let za = shared_model[z as usize];
+                    let zb = shared_model[shift(z as Lit).unsigned_abs() as usize];
+                    if za != 0 && zb != 0 && za != zb {
+                        *conflict_act.get_mut(&z).unwrap() += conflict_inc;
+                        n_bumps += 1;
+                    }
                 }
+                conflict_inc *= CONFLICT_DECAY;
+                if conflict_inc > 1e30 {
+                    for v in conflict_act.values_mut() {
+                        *v /= conflict_inc;
+                    }
+                    conflict_inc = 1.0;
+                }
+                last_failed_at.insert(y, linked_z.len());
                 continue;
             }
-            // UNSAT (or shared budget-hit): re-solve with proof log to
-            // extract the interpolant. Clone `base` (no selectors →
-            // minimal proof) and add link clauses directly.
+            // UNSAT (or shared budget-hit): re-solve with proof log.
             let mut cdcl = base.clone();
             for &u in dy.iter().chain(linked_z.iter()) {
                 let (a, b) = (u as Lit, shift(u as Lit));
@@ -516,30 +627,26 @@ pub fn extract_interpolants(
             }
             let unsat = !cdcl.solve(&[y as Lit, -shift(y as Lit)], &mut model, 50_000);
             if cdcl.budget_hit {
-                // Retry on the next pass: with more linked z's the proof
-                // is shorter (some of the carry chain is already known
-                // unique). The deadline cuts the fixpoint; unreached
-                // undef-y become roots via the post-loop. (iter76 made
-                // budget-hit decide-immediately — that turned a 50k-
-                // conflict budget miss into a permanent root for
-                // `peano_add_n10` result bits, even though they're
-                // interpolatable once the lookup table is linked.)
+                last_failed_at.insert(y, linked_z.len());
                 continue;
             }
             if !unsat {
-                if undef_set.contains(&y) {
-                    // Free root. Decided once: re-processing under a
-                    // later-decided z would create a y→z→y reference
-                    // cycle in the cert.
-                    decided.insert(y);
-                    roots.push(y);
-                    linkable.push(y);
+                // Same conflict-directed bump (clone confirmed SAT).
+                for &z in neighbors.get(&y).map(|v| v.as_slice()).unwrap_or(&[]) {
+                    if out.contains_key(&z) || decided.contains(&z) {
+                        continue;
+                    }
+                    let za = model[z as usize];
+                    let zb = model[shift(z as Lit).unsigned_abs() as usize];
+                    if za != 0 && zb != 0 && za != zb {
+                        *conflict_act.get_mut(&z).unwrap() += conflict_inc;
+                    }
                 }
-                // Defined-y SAT here means it needs more z's; leave for
-                // the next pass (the original behaviour).
+                conflict_inc *= CONFLICT_DECAY;
+                last_failed_at.insert(y, linked_z.len());
                 continue;
             }
-            let shared: HashSet<Var> = dy.iter().chain(linked_z.iter()).copied().collect();
+            let sharedv: HashSet<Var> = dy.iter().chain(linked_z.iter()).copied().collect();
             let side = |cr: u32| -> Side {
                 if cdcl.clause_lits(cr).iter().all(|&l| var(l) <= nu) {
                     Side::A
@@ -547,19 +654,62 @@ pub fn extract_interpolants(
                     Side::B
                 }
             };
-            let a_local = |v: Var| v <= nu && !shared.contains(&v);
-            if let Some((itp, root)) = mcmillan(&cdcl, side, &shared, a_local) {
-                out.insert(y, Def { itp, root });
-                linkable.push(y);
-            } else if undef_set.contains(&y) {
+            let a_local = |v: Var| v <= nu && !sharedv.contains(&v);
+            let became_linkable =
+                if let Some((itp, root)) = mcmillan(&cdcl, side, &sharedv, a_local) {
+                    out.insert(y, Def { itp, root });
+                    linkable.push(y);
+                    true
+                } else if undef_set.contains(&y) {
+                    decided.insert(y);
+                    roots.push(y);
+                    linkable.push(y);
+                    true
+                } else {
+                    false
+                };
+            if became_linkable {
+                progress = true;
+                last_failed_at.remove(&y);
+            }
+        }
+        if progress {
+            continue;
+        }
+        // Deadlock: nothing interpolated this round and the pending set
+        // is non-empty. Promote the *highest*-activity pending undef-y
+        // to root: it was the most-frequent blocker across all the SAT
+        // models this round, so making it a root unblocks the most
+        // other y's and fastest collapses the chain. Content tiebreaks
+        // (|dep|, dep hash, var-id last).
+        let next_root = pending
+            .iter()
+            .copied()
+            .filter(|y| !out.contains_key(y) && !decided.contains(y) && undef_set.contains(y))
+            .max_by_key(|&y| {
+                (
+                    (conflict_act[&y] * 1024.0) as u64,
+                    std::cmp::Reverse((f.deps[&y].len(), dep_key[&y], y)),
+                )
+            });
+        match next_root {
+            None => break,
+            Some(y) => {
                 decided.insert(y);
                 roots.push(y);
                 linkable.push(y);
+                last_failed_at.remove(&y);
             }
         }
-        if out.len() + roots.len() == before {
-            break;
-        }
+    }
+    if debug {
+        eprintln!(
+            "c [def] worklist: {} rounds, {} blocker bumps, {} interp, {} roots",
+            n_rounds,
+            n_bumps,
+            out.len(),
+            roots.len()
+        );
     }
     // Padoa-undef y's never reached (deadline) are roots — sound,
     // because the cell arbiter is a fallback for any free y.
